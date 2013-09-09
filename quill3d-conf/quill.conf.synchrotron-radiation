@@ -1,0 +1,74 @@
+# Синхротронное излучение в классической области
+# Если в коде положить bz = 2, то теоретически максимум
+# энергетического спектра должен прийтись на 4.4 МэВ.
+
+# Общий вид строк: имя_переменной = [значение] [размерность]
+# значение (double) или размерность (string) можно не указывать
+# Пробелы и части строк, следующие за '#', игнорируются
+
+#n_sr = 16; # число потоков; default: 8
+
+dt = 0.08 # lambda
+# dx = 0.0505 # lambda
+# Если dx не задан, то он вычисляется автоматически так, чтобы
+# алгоритм NDFX давал наименьшую дисперсию, но был устойчив
+dy = 0.3 # lambda
+dz = 0.3 # lambda
+
+lambda = 0.91 um # default: cm; possible: um; lambda_p
+
+ne = 4e19 # default: cm^{-3}; possible: ncr
+
+xlength = 20 # default: lambda; possible: um, fs
+ylength = 22 # default: lambda; possible: um
+zlength = 21 # default: lambda; possible: um
+
+t_end = 12 # default: lambda; possible: um, mm, cm
+
+output_period = 4 # default: lambda; possible: um, mm, cm
+
+xsigma = 1.2 # default: lambda; possible: um, fs
+ysigma = 6 # default: lambda; possible: um
+zsigma = 6 # default: lambda; possible: um
+
+x0 = 16 # default: lambda; possible: um, fs
+# x0fout = 8 # default value: xlength/2; default units: lambda; possible: um, fs
+
+polarization = circular # default: linear; possible: circular
+# P = 70 TW # peak power; default: csg; possible: PW, TW
+# I = 4e20 W/cm^2 # peak intensity; default: cgs; possible: W/cm^2
+a0 = 2
+#a0y = 0
+#a0z = 10
+
+mwindow = off # devault: on; possible: on, off
+#e_components_for_output = xyz # default: none; possible: x, y, z, xy, xz, yz, xyz
+#b_components_for_output = xyz # default: none; possible: x, y, z, xy, xz, yz, xyz
+
+f_envelope = cos # default: gauss, possible: cos
+
+beam = on # default: off; possible: on, off
+beam_particles = e # default: e; possible: e, p, ph
+Nb = 1e5 # number of particles in the beam
+epsb = -1e3 # MeV; possible: mc^2; epsb<0 -> ux<0
+xb = 3 # default: lambda; possible: um, fs
+rb = 4 # default: lambda; possible: um
+x0b = 4 # default: lambda; possible: um, fs
+
+xnpic = 4
+ynpic = 4
+znpic = 4
+
+particles_for_output = epph # default: e; possible: e, ep, eph, epph
+
+deps = 10 MeV # default: MeV; possible: mc^2
+neps = 105
+enthp = 50
+
+#deps_p = 0.5 MeV # default value = deps; default units: MeV; possible: mc^2
+#neps_p = 110 # default = neps
+#enthp_p = 1 # default = enthp
+
+deps_ph = 0.2 MeV # default value = deps; default units: MeV; possible: mc^2
+neps_ph = 150 # default = neps
+enthp_ph = 50 # default = enthp

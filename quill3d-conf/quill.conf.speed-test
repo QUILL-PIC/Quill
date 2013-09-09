@@ -1,0 +1,70 @@
+# speed test
+
+# history:
+# 09Sep2012 - place-revision - 74 s
+
+#n_sr = 16; # число потоков; default: 8
+
+dt = 0.08 # lambda
+# dx = 0.0505 # lambda
+# Если dx не задан, то он вычисляется автоматически так, чтобы
+# алгоритм NDFX давал наименьшую дисперсию, но был устойчив
+dy = 0.3 # lambda
+dz = 0.3 # lambda
+
+lambda = 0.91 um # default: cm; possible: um; lambda_p
+
+ne = 4e19 # default: cm^{-3}; possible: ncr
+
+xlength = 20 # default: lambda; possible: um, fs
+ylength = 22 # default: lambda; possible: um
+zlength = 21 # default: lambda; possible: um
+
+t_end = 24 # default: lambda; possible: um, mm, cm
+
+output_period = 4 # default: lambda; possible: um, mm, cm
+
+xsigma = 2 # default: lambda; possible: um, fs
+ysigma = 3.7 # default: lambda; possible: um
+zsigma = 3.7 # default: lambda; possible: um
+
+x0 = 4 # default: lambda; possible: um, fs
+# x0fout = 8 # default value: xlength/2; default units: lambda; possible: um, fs
+
+polarization = linear # default: linear; possible: circular
+P = 70 TW # peak power; default: csg; possible: PW, TW
+# I = 4e20 W/cm^2 # peak intensity; default: cgs; possible: W/cm^2
+#a0 = 10
+#a0y = 0
+#a0z = 10
+
+#mwindow = off # default: on; possible: on, off
+#e_components_for_output = xyz # default: none; possible: x, y, z, xy, xz, yz, xyz
+#b_components_for_output = xyz # default: none; possible: x, y, z, xy, xz, yz, xyz
+
+f_envelope = cos # default: gauss, possible: cos
+
+beam = on # default: off; possible: on, off
+Nb = 5e8 # number of particles in the beam
+epsb = 5 # MeV; possible: mc^2
+xb = 1 # default: lambda; possible: um, fs
+rb = 1 # default: lambda; possible: um
+x0b = 10 # default: lambda; possible: um, fs
+
+xnpic = 2
+ynpic = 1
+znpic = 1
+
+particles_for_output = epph # default: e; possible: e, ep, eph, epph
+
+deps = 0.5 MeV # default: MeV; possible: mc^2
+neps = 140
+enthp = 20
+
+#deps_p = 0.5 MeV # default value = deps; default units: MeV; possible: mc^2
+#neps_p = 140 # default = neps
+#enthp_p = 1 # default = enthp
+
+deps_ph = 0.2 MeV # default value = deps; default units: MeV; possible: mc^2
+neps_ph = 100 # default = neps
+enthp_ph = 1 # default = enthp

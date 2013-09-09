@@ -1,0 +1,82 @@
+# Параметры, близкие к параметрам двумерного численного эксперимента в
+# работе C. P. Ridgers et al., PRL 108, 165006 (2012)
+
+# Общий вид строк: имя_переменной = [значение] [размерность]
+# значение (double) или размерность (string) можно не указывать
+# Пробелы и части строк, следующие за '#', игнорируются
+
+#n_sr = 16; # число потоков; default: 8
+
+dt = 0.01 # lambda
+# dx = 0.0505 # lambda
+# Если dx не задан, то он вычисляется автоматически так, чтобы
+# алгоритм NDFX давал наименьшую дисперсию, но был устойчив
+dy = 0.2 # lambda
+dz = 0.2 # lambda
+
+lambda = 1 um # default: cm; possible: um; lambda_p
+
+ne = 7.8e23 # default: cm^{-3}; possible: ncr
+
+xlength = 64 # default: lambda; possible: um, fs
+ylength = 35 # default: lambda; possible: um
+zlength = 35 # default: lambda; possible: um
+
+t_end = 36 # default: lambda; possible: um, mm, cm
+
+output_period = 0.5 # default: lambda; possible: um, mm, cm
+
+f_envelope = focused2 # default: gauss, possible: cos, focused
+polarization = linear # default: linear; possible: circular
+xsigma = 9 # default: lambda; possible: um, fs
+ysigma = 7 # default: lambda; possible: um
+zsigma = 7 # default: lambda; possible: um
+x0 = 18 # default: lambda; possible: um, fs
+#P = 70 TW # peak power; default: cgs; possible: PW, TW
+#I = 4e20 W/cm^2 # peak intensity; default: cgs; possible: W/cm^2
+W = 28000 J # default units: cgs; possible: J
+#a0 = 1
+#a0y = 1
+#a0z = 1
+phase = 0 pi # default: 0; default units: rad, possible: pi
+y0 = 0 # default: 0; default units: lambda; possible: um
+z0 = 0 # default: 0; default units: lambda; possible: um
+
+mwindow = off # devault: on; possible: on, off
+#e_components_for_output = xyz # default: none; possible: x, y, z, xy, xz, yz, xyz
+#b_components_for_output = xyz # default: none; possible: x, y, z, xy, xz, yz, xyz
+# x0fout = 8 # default value: xlength/2; default units: lambda; possible: um, fs
+
+#beam = on # default: off; possible: on, off
+#beam_particles = ph # default: e; possible: e, p, ph
+Nb = 5e8 # number of particles in the beam
+epsb = 5 # MeV; possible: mc^2
+xb = 1 # default: lambda; possible: um, fs
+rb = 1 # default: lambda; possible: um
+x0b = 10 # default: lambda; possible: um, fs
+
+film = on # default: off; possible: on
+x0film = 32 # default: 0; default units: lambda, possible: um, fs
+filmwidth = 1 # default: lambda, possible: um, fs
+nfilm = 7.8e23 # default: cm^{-3}; possible: ncr
+
+xnpic = 1
+ynpic = 2
+znpic = 2
+
+particles_for_output = epph # default: e; possible: e, ep, eph, epph
+
+deps = 7 MeV # default: MeV; possible: mc^2
+neps = 200
+enthp = 10
+
+#deps_p = 0.5 MeV # default value = deps; default units: MeV; possible: mc^2
+#neps_p = 140 # default = neps
+#enthp_p = 10 # default = enthp
+
+deps_ph = 7 MeV # default value = deps; default units: MeV; possible: mc^2
+neps_ph = 200 # default = neps
+enthp_ph = 10 # default = enthp
+
+#pmerging = on # default: off; possible: on
+#crpc = 2.0 # critical ratio of the number of particles to the number of cells

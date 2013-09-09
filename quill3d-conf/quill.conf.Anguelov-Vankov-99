@@ -1,0 +1,87 @@
+# V. Anguelov, H. Vankov, J. Phys. G., 1999, Fig. 3.
+# http://arXiv.org/abs/astro-ph/0001221v1
+
+# ВНИМАНИЕ! Под числом электронов на Рис. 3 подразумевается суммарное
+# число электронов и позитронов!
+
+# L = E_0^{1/3}/q
+# q = 3.9e6*(E/E_S)^{2/3} GeV^{1/3}/cm
+
+# В соответствии с выбранными параметрами:
+# r.l. = L = 100 \lambda
+# \chi(1e-3*E_0) = 100
+#
+# Изменения в коде:
+# b_z = 40.8
+# Частицы с E<1e-3*E_0 удаляются
+
+# Общий вид строк: имя_переменной = [значение] [размерность]
+# значение (double) или размерность (string) можно не указывать
+# Пробелы и части строк, следующие за '#', игнорируются
+
+#n_sr = 4; # число потоков; default: 8
+
+dt = 0.1 # lambda
+# dx = 0.0505 # lambda
+# Если dx не задан, то он вычисляется автоматически так, чтобы
+# алгоритм NDFX давал наименьшую дисперсию, но был устойчив
+dy = 0.3 # lambda
+dz = 0.3 # lambda
+
+lambda = 0.91 um # default: cm; possible: um; lambda_p
+
+ne = 4e19 # default: cm^{-3}; possible: ncr
+
+xlength = 8 # default: lambda; possible: um, fs
+ylength = 22 # default: lambda; possible: um
+zlength = 21 # default: lambda; possible: um
+
+t_end = 800 # default: lambda; possible: um, mm, cm
+
+output_period = 20 # default: lambda; possible: um, mm, cm
+
+xsigma = 1 # default: lambda; possible: um, fs
+ysigma = 6 # default: lambda; possible: um
+zsigma = 6 # default: lambda; possible: um
+
+x0 = 16 # default: lambda; possible: um, fs
+# x0fout = 8 # default value: xlength/2; default units: lambda; possible: um, fs
+
+polarization = circular # default: linear; possible: circular
+# P = 70 TW # peak power; default: csg; possible: PW, TW
+# I = 4e20 W/cm^2 # peak intensity; default: cgs; possible: W/cm^2
+a0 = 0
+#a0y = 0
+#a0z = 10
+
+mwindow = on # devault: on; possible: on, off
+#e_components_for_output = xyz # default: none; possible: x, y, z, xy, xz, yz, xyz
+#b_components_for_output = xyz # default: none; possible: x, y, z, xy, xz, yz, xyz
+
+f_envelope = cos # default: gauss, possible: cos
+
+beam = on # default: off; possible: on, off
+beam_particles = ph # default: e; possible: e, p, ph
+Nb = 1e9 #1e10 # number of particles in the beam
+epsb = 4.9e8 # MeV; possible: mc^2; epsb<0 -> ux<0
+xb = 2 #3 # default: lambda; possible: um, fs
+rb = 4 #8 # default: lambda; possible: um
+x0b = 4 # default: lambda; possible: um, fs
+
+xnpic = 2
+ynpic = 1
+znpic = 1
+
+particles_for_output = epph # default: e; possible: e, ep, eph, epph
+
+deps = 4.9e6 MeV # default: MeV; possible: mc^2
+neps = 105
+enthp = 50
+
+#deps_p = 0.5 MeV # default value = deps; default units: MeV; possible: mc^2
+#neps_p = 110 # default = neps
+#enthp_p = 1 # default = enthp
+
+#deps_ph = 500 MeV # default value = deps; default units: MeV; possible: mc^2
+#neps_ph = 200 # default = neps
+#enthp_ph = 50 # default = enthp
