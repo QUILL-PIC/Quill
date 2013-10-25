@@ -6,35 +6,37 @@ import os
 import datetime as dt
 import rmtlib
 
-conf = '.film-and-lp-model'
+import numpy as np # qwe
 
-rmtlib.p0name = 'ne'
-p0value = rmtlib.geometric_progression(2e22,1e24,10)
-rmtlib.p0unit = ''
+config = '.laser-piston'
 
-rmtlib.pname = 'a0'
-pvalue = rmtlib.geometric_progression(50,2500,10)
-rmtlib.punit = ''
+# parameter 0
+rmtlib.p0_name = 'ne'
+p0_value = rmtlib.geometric_progression(5.5e22,3.16*5.5e22,2)
+rmtlib.p0_unit = ''
 
-rmtlib.pp_operation = ['density','energy','ph_spectrum','mollweide','ions'] # post-processing operations
-rmtlib.ppo_parameter = [6,159,6e-9,0,0] # t for output, energy normalization, etc.
+# parameter 1
+rmtlib.p1_name = 'a0'
+p1_value = rmtlib.geometric_progression(100,316,2)
+rmtlib.p1_unit = ''
+
+# see list of pp_operations in rmtlib.py
+rmtlib.pp_operation = ['density','spectrum','tracks','i:x-ux','energy'] # post-processing operations
 
 rmtlib.cwd = os.getcwd() # current directory
 t = dt.datetime.now()
 
-rmtlib.mode = 'w'
-
-print rmtlib.p0name+', '+rmtlib.p0unit+',',p0value
-print rmtlib.pname+', '+rmtlib.punit+',',pvalue
-print rmtlib.pp_operation, rmtlib.ppo_parameter
+print rmtlib.p0_name+', '+rmtlib.p0_unit+',',p0_value
+print rmtlib.p1_name+', '+rmtlib.p1_unit+',',p1_value
+print rmtlib.pp_operation
 os.chdir('../')
-os.system('./parse.sh '+conf+' > conf')
+os.system('./parse.sh '+config+' > conf')
 
-for p0 in p0value:
-    rmtlib.prepare_conf(p0,True)
-    for p in pvalue:
-	rmtlib.prepare_conf(p)
-	print rmtlib.p0name+' = '+str(p0)+' '+rmtlib.p0unit
-	print rmtlib.pname+' = '+str(p)+' '+rmtlib.punit
+for p0 in p0_value:
+    for p1 in p1_value:
+	rmtlib.prepare_conf(p0,p1,config)
+	print rmtlib.p0_name+' = '+str(p0)+' '+rmtlib.p0_unit
+	print rmtlib.p1_name+' = '+str(p1)+' '+rmtlib.p1_unit
+	os.system('rm results/track_*')
 	os.system('cat conf | ./quill')
-	rmtlib.ppo(p,conf,t.strftime('%y-%m-%d--%H-%M-%S'),p0)
+	rmtlib.ppo(p0,p1,config,t.strftime('%y-%m-%d--%H-%M-%S'))

@@ -6,3 +6,5 @@ results/
 *.png
 *.gif
 *.swp
+*.pyc
+results-*/

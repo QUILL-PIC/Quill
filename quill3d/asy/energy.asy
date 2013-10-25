@@ -6,13 +6,13 @@ defaultpen(linewidth(0.7)+fontsize(10));
 // energymin вычисляется как минимальное положительное значение.
 // Если t1<=t0, то строится график от t0 до максимального значения t
 
-real energymax = 0;
-real energymin = 0;
+real energymin = 0e2;
+real energymax = 2e4;
 
 real t0 = 0; // lambda/c
 real t1 = 0;
 
-string scale = "log"; // possible: linear, log
+string scale = "linear"; // possible: linear, log
 string species = "ofepgi"; // possible: o (overall), f (fields), e, p, g (gamma-quants), i (ions), ep, eg, etc.
 
 //----------------------------------------
@@ -161,13 +161,13 @@ if (scale=="log")
     m = log(energymin)/log(10) - 1;
     for (int i=0;i<n;i=i+1)
     {
-	if (energy_e[i]!=0) energy_e[i] = log(energy_e[i])/log(10); else energy_e[i] = m;
-	if (energy_p[i]!=0) energy_p[i] = log(energy_p[i])/log(10); else energy_p[i] = m;
-	if (energy_g[i]!=0) energy_g[i] = log(energy_g[i])/log(10); else energy_g[i] = m;
-	if (energy_f[i]!=0) energy_f[i] = log(energy_f[i])/log(10); else energy_f[i] = m;
-	if (energy_o[i]!=0) energy_o[i] = log(energy_o[i])/log(10); else energy_o[i] = m;
+	if (energy_e[i]>0) energy_e[i] = log(energy_e[i])/log(10); else energy_e[i] = m;
+	if (energy_p[i]>0) energy_p[i] = log(energy_p[i])/log(10); else energy_p[i] = m;
+	if (energy_g[i]>0) energy_g[i] = log(energy_g[i])/log(10); else energy_g[i] = m;
+	if (energy_f[i]>0) energy_f[i] = log(energy_f[i])/log(10); else energy_f[i] = m;
+	if (energy_o[i]>0) energy_o[i] = log(energy_o[i])/log(10); else energy_o[i] = m;
 	for (int j=0;j<n_ion_populations;j=j+1)
-	    if (energy_i[j][i]!=0) energy_i[j][i] = log(energy_i[j][i])/log(10); else energy_i[j][i] = m;
+	    if (energy_i[j][i]>0) energy_i[j][i] = log(energy_i[j][i])/log(10); else energy_i[j][i] = m;
     }
 }
 if (electrons==true)

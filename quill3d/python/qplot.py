@@ -107,7 +107,7 @@ def particles(t=0,space=['x','y'],particles='geip',colors='bgmrcyk',r=5,alpha=0.
 	plt.colorbar()
     if save2=='':
 	plt.show()
-    else:
+    elif save2!=None:
 	plt.savefig(save2)
 
 def tracks(space=['x','y'],particles='geip',t0=0,t1=0,colors='bgmrcyk',cmaps=['jet'],clims2all=0,axis=[],save2='',r=2,data_folder='../results/'):

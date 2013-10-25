@@ -27,7 +27,7 @@ clock_t start_time;
 double seconds;
 clock_t main_thread_time;
 double file_name_accuracy;
-bool mwindow;
+bool mwindow,mwseed;
 double crpc,ppd;
 double phase,phi;
 ddi* p_last_ddi; // ddi включает t_end, output_period и f - счётчик для вывода данных в файлы
@@ -44,6 +44,7 @@ double tr_start,xtr1,ytr1,ztr1,xtr2,ytr2,ztr2;
 std::string e_components_for_output;
 std::string b_components_for_output;
 std::string f_envelope;
+bool sscos; // super-super cos
 std::string beam;
 std::string beam_particles;
 std::string particles_for_output;
@@ -338,42 +339,42 @@ int main()
 		f_reflection3 += tmpf[jj];
 	    }
 	}
-	for (int i=0;i<n_sr;i++) psr[i].f_init_cos(a0y,a0z,xsigma,ysigma,zsigma,xlength-x0-dx*i*(nx_sr - nx_ich),b_sign,xlength/2-x0,phase,y00,z00);
+	for (int i=0;i<n_sr;i++) psr[i].f_init_cos(a0y,a0z,xsigma,ysigma,zsigma,xlength-x0-dx*i*(nx_sr - nx_ich),sscos,b_sign,xlength/2-x0,phase,y00,z00);
 	if (phi!=0) {
-	    for (int i=0;i<n_sr;i++) psr[i].f_init_cos(a0y,a0z,xsigma,ysigma,zsigma,x0-dx*i*(nx_sr - nx_ich),b_sign,-xlength/2+x0,phase,-y00,-z00,1,phi);
+	    for (int i=0;i<n_sr;i++) psr[i].f_init_cos(a0y,a0z,xsigma,ysigma,zsigma,x0-dx*i*(nx_sr - nx_ich),sscos,b_sign,-xlength/2+x0,phase,-y00,-z00,1,phi);
 	}
 	else if (lp_reflection1=="xy") {
-	    for (int i=0;i<n_sr;i++) psr[i].f_init_cos((1-2*(f_reflection1=="y"))*a0y,(1-2*(f_reflection1=="z"))*a0z,xsigma,ysigma,zsigma,xlength-x0-dx*i*(nx_sr - nx_ich),xlength/2-x0,b_sign,phase,y00,-z00,1);
+	    for (int i=0;i<n_sr;i++) psr[i].f_init_cos((1-2*(f_reflection1=="y"))*a0y,(1-2*(f_reflection1=="z"))*a0z,xsigma,ysigma,zsigma,xlength-x0-dx*i*(nx_sr - nx_ich),xlength/2-x0,sscos,b_sign,phase,y00,-z00,1);
 	    if (lp_reflection2=="xz") {
-		for (int i=0;i<n_sr;i++) psr[i].f_init_cos((1-2*(f_reflection2=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,xlength-x0-dx*i*(nx_sr - nx_ich),xlength/2-x0,b_sign,phase,-y00,z00,1);
-		for (int i=0;i<n_sr;i++) psr[i].f_init_cos((1-2*(f_reflection2=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,xlength-x0-dx*i*(nx_sr - nx_ich),xlength/2-x0,b_sign,phase,-y00,-z00,1);
+		for (int i=0;i<n_sr;i++) psr[i].f_init_cos((1-2*(f_reflection2=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,xlength-x0-dx*i*(nx_sr - nx_ich),xlength/2-x0,sscos,b_sign,phase,-y00,z00,1);
+		for (int i=0;i<n_sr;i++) psr[i].f_init_cos((1-2*(f_reflection2=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,xlength-x0-dx*i*(nx_sr - nx_ich),xlength/2-x0,sscos,b_sign,phase,-y00,-z00,1);
 		if (lp_reflection3=="yz") {
-		    for (int i=0;i<n_sr;i++) psr[i].f_init_cos((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,x0-dx*i*(nx_sr - nx_ich),-xlength/2+x0,b_sign,phase,y00,z00,1);
-		    for (int i=0;i<n_sr;i++) psr[i].f_init_cos((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,x0-dx*i*(nx_sr - nx_ich),-xlength/2+x0,b_sign,phase,y00,-z00,1);
-		    for (int i=0;i<n_sr;i++) psr[i].f_init_cos((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,x0-dx*i*(nx_sr - nx_ich),-xlength/2+x0,b_sign,phase,-y00,z00,1);
-		    for (int i=0;i<n_sr;i++) psr[i].f_init_cos((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,x0-dx*i*(nx_sr - nx_ich),-xlength/2+x0,b_sign,phase,-y00,-z00,1);
+		    for (int i=0;i<n_sr;i++) psr[i].f_init_cos((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,x0-dx*i*(nx_sr - nx_ich),-xlength/2+x0,sscos,b_sign,phase,y00,z00,1);
+		    for (int i=0;i<n_sr;i++) psr[i].f_init_cos((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,x0-dx*i*(nx_sr - nx_ich),-xlength/2+x0,sscos,b_sign,phase,y00,-z00,1);
+		    for (int i=0;i<n_sr;i++) psr[i].f_init_cos((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,x0-dx*i*(nx_sr - nx_ich),-xlength/2+x0,sscos,b_sign,phase,-y00,z00,1);
+		    for (int i=0;i<n_sr;i++) psr[i].f_init_cos((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,x0-dx*i*(nx_sr - nx_ich),-xlength/2+x0,sscos,b_sign,phase,-y00,-z00,1);
 		}
 	    }
 	    else if (lp_reflection2=="yz") {
-		for (int i=0;i<n_sr;i++) psr[i].f_init_cos((1-2*(f_reflection2=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,x0-dx*i*(nx_sr - nx_ich),-xlength/2+x0,b_sign,phase,y00,z00,1);
-		for (int i=0;i<n_sr;i++) psr[i].f_init_cos((1-2*(f_reflection2=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,x0-dx*i*(nx_sr - nx_ich),-xlength/2+x0,b_sign,phase,y00,-z00,1);
+		for (int i=0;i<n_sr;i++) psr[i].f_init_cos((1-2*(f_reflection2=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,x0-dx*i*(nx_sr - nx_ich),-xlength/2+x0,sscos,b_sign,phase,y00,z00,1);
+		for (int i=0;i<n_sr;i++) psr[i].f_init_cos((1-2*(f_reflection2=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,x0-dx*i*(nx_sr - nx_ich),-xlength/2+x0,sscos,b_sign,phase,y00,-z00,1);
 		if (lp_reflection3=="xz") {
-		    for (int i=0;i<n_sr;i++) psr[i].f_init_cos((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,x0-dx*i*(nx_sr - nx_ich),-xlength/2+x0,b_sign,phase,-y00,z00,1);
-		    for (int i=0;i<n_sr;i++) psr[i].f_init_cos((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,xlength-x0-dx*i*(nx_sr - nx_ich),xlength/2-x0,b_sign,phase,-y00,z00,1);
-		    for (int i=0;i<n_sr;i++) psr[i].f_init_cos((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,x0-dx*i*(nx_sr - nx_ich),-xlength/2+x0,b_sign,phase,-y00,-z00,1);
-		    for (int i=0;i<n_sr;i++) psr[i].f_init_cos((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,xlength-x0-dx*i*(nx_sr - nx_ich),xlength/2-x0,b_sign,phase,-y00,-z00,1);
+		    for (int i=0;i<n_sr;i++) psr[i].f_init_cos((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,x0-dx*i*(nx_sr - nx_ich),-xlength/2+x0,sscos,b_sign,phase,-y00,z00,1);
+		    for (int i=0;i<n_sr;i++) psr[i].f_init_cos((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,xlength-x0-dx*i*(nx_sr - nx_ich),xlength/2-x0,sscos,b_sign,phase,-y00,z00,1);
+		    for (int i=0;i<n_sr;i++) psr[i].f_init_cos((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,x0-dx*i*(nx_sr - nx_ich),-xlength/2+x0,sscos,b_sign,phase,-y00,-z00,1);
+		    for (int i=0;i<n_sr;i++) psr[i].f_init_cos((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,xlength-x0-dx*i*(nx_sr - nx_ich),xlength/2-x0,sscos,b_sign,phase,-y00,-z00,1);
 		}
 	    }
 	}
 	else if (lp_reflection1=="xz") {
-	    for (int i=0;i<n_sr;i++) psr[i].f_init_cos((1-2*(f_reflection1=="y"))*a0y,(1-2*(f_reflection1=="z"))*a0z,xsigma,ysigma,zsigma,xlength-x0-dx*i*(nx_sr - nx_ich),xlength/2-x0,b_sign,phase,-y00,z00,1);
+	    for (int i=0;i<n_sr;i++) psr[i].f_init_cos((1-2*(f_reflection1=="y"))*a0y,(1-2*(f_reflection1=="z"))*a0z,xsigma,ysigma,zsigma,xlength-x0-dx*i*(nx_sr - nx_ich),xlength/2-x0,sscos,b_sign,phase,-y00,z00,1);
 	    if (lp_reflection2=="yz") {
-		for (int i=0;i<n_sr;i++) psr[i].f_init_cos((1-2*(f_reflection2=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,x0-dx*i*(nx_sr - nx_ich),-xlength/2+x0,b_sign,phase,-y00,z00,1);
-		for (int i=0;i<n_sr;i++) psr[i].f_init_cos((1-2*(f_reflection2=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,x0-dx*i*(nx_sr - nx_ich),-xlength/2+x0,b_sign,phase,y00,z00,1);
+		for (int i=0;i<n_sr;i++) psr[i].f_init_cos((1-2*(f_reflection2=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,x0-dx*i*(nx_sr - nx_ich),-xlength/2+x0,sscos,b_sign,phase,-y00,z00,1);
+		for (int i=0;i<n_sr;i++) psr[i].f_init_cos((1-2*(f_reflection2=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,x0-dx*i*(nx_sr - nx_ich),-xlength/2+x0,sscos,b_sign,phase,y00,z00,1);
 	    }
 	}
 	else if (lp_reflection1=="yz") {
-	    for (int i=0;i<n_sr;i++) psr[i].f_init_cos((1-2*(f_reflection1=="y"))*a0y,(1-2*(f_reflection1=="z"))*a0z,xsigma,ysigma,zsigma,x0-dx*i*(nx_sr - nx_ich),-xlength/2+x0,b_sign,phase,y00,z00,1);
+	    for (int i=0;i<n_sr;i++) psr[i].f_init_cos((1-2*(f_reflection1=="y"))*a0y,(1-2*(f_reflection1=="z"))*a0z,xsigma,ysigma,zsigma,x0-dx*i*(nx_sr - nx_ich),-xlength/2+x0,sscos,b_sign,phase,y00,z00,1);
 	}
     }
     for(int i=0;i<n_sr;i++) psr[i].f_zeroing_on_boundaries();
@@ -848,23 +849,25 @@ int main()
 	if (mwindow==1&&(l+1)*dt>nmw*dx)
 	{
 	    nmw = nmw + 1;
-	    double n;
-	    n=1/(k0*k0);
-	    int_vector3d cell_pos;
-	    cell_pos.i = nx_sr - 3;
-	    int_vector3d v_npic;
-	    v_npic.i = xnpic;
-	    v_npic.j = ynpic;
-	    v_npic.k = znpic;
-	    for(int j=0;j<int(ylength/dy);j++)
-	    {
-		for(int k=0;k<int(zlength/dz);k++)
+	    if (mwseed==1) {
+		double n;
+		n=1/(k0*k0);
+		int_vector3d cell_pos;
+		cell_pos.i = nx_sr - 3;
+		int_vector3d v_npic;
+		v_npic.i = xnpic;
+		v_npic.j = ynpic;
+		v_npic.k = znpic;
+		for(int j=0;j<int(ylength/dy);j++)
 		{
-		    cell_pos.j=j;
-		    cell_pos.k=k;
-		    psr[n_sr-1].fill_cell_by_particles(-1,cell_pos,v_npic,n);
-		    if (ions=="on")
+		    for(int k=0;k<int(zlength/dz);k++)
+		    {
+			cell_pos.j=j;
+			cell_pos.k=k;
 			psr[n_sr-1].fill_cell_by_particles(-1,cell_pos,v_npic,n);
+			if (ions=="on")
+			    psr[n_sr-1].fill_cell_by_particles(-1,cell_pos,v_npic,n);
+		    }
 		}
 	    }
 	}
@@ -1264,6 +1267,9 @@ int init()
 	    current->value = current->value/lambda;
 	    current->units="lambda";
 	}
+	if (current->units=="t_end") {
+	    current-> value = current->value*(t_end-dt)/2/PI;
+	}
 	output_period = current->value*2*PI;
 	p_current_ddi = p_last_ddi;
 	p_last_ddi = new ddi;
@@ -1401,6 +1407,11 @@ int init()
     current = find("f_envelope",first);
     f_envelope = current->units;
     if (f_envelope=="") f_envelope = "cos";
+    sscos = 0;
+    if (f_envelope=="sscos") {
+	f_envelope = "cos";
+	sscos = 1;
+    }
     current = find("b_sign",first);
     if (current->value!=-1) b_sign = 1;
     else b_sign = 0;
@@ -1439,6 +1450,9 @@ int init()
     current = find("mwindow",first);
     mwindow = 1;
     if (current->units=="off") mwindow = 0;
+    current = find("mwseed",first);
+    mwseed = 1;
+    if (current->units=="off") mwseed = 0;
     current = find("e_components_for_output",first);
     e_components_for_output = current->units;
     current = find("b_components_for_output",first);
@@ -1803,9 +1817,16 @@ int init()
 	fout_log<<"mwindow\n"<<"off"<<"\n";
     else
 	fout_log<<"mwindow\n"<<"on"<<"\n";
+    if (mwseed==0)
+	fout_log<<"mwseed\n"<<"off"<<"\n";
+    else
+	fout_log<<"mwseed\n"<<"on"<<"\n";
     fout_log<<"e_components_for_output\n"<<e_components_for_output<<"\n";
     fout_log<<"b_components_for_output\n"<<b_components_for_output<<"\n";
-    fout_log<<"f_envelope\n"<<f_envelope<<"\n";
+    if (sscos==0)
+	fout_log<<"f_envelope\n"<<f_envelope<<"\n";
+    else
+	fout_log<<"f_envelope\n"<<"sscos"<<"\n";
     fout_log<<"b_sign\n"<<2.0*b_sign-1<<"\n";
     fout_log<<"x0\n"<<x0/2/PI<<"\n";
     fout_log<<"y0\n"<<y00/2/PI<<"\n";

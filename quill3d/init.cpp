@@ -1,7 +1,7 @@
 #include <cmath>
 #include "main.h"
 
-void spatial_region::f_init_cos(double a0y, double a0z, double xsigma, double ysigma, double zsigma, double x0, bool b_sign, double x1, double phase, double y0, double z0, bool append, double phi)
+void spatial_region::f_init_cos(double a0y, double a0z, double xsigma, double ysigma, double zsigma, double x0, bool sscos, bool b_sign, double x1, double phase, double y0, double z0, bool append, double phi)
 {
     /* Для f_init_gauss xsigma, ysigma и zsigma имели смысл
      * половины масштабов лазерного импульса на уровне 1/e^2 (по
@@ -16,10 +16,22 @@ void spatial_region::f_init_cos(double a0y, double a0z, double xsigma, double ys
      * f_init_gauss, поэтому вместо xsigma, ysigma и zsigma для
      * описания огибающей используются половины полных размеров
      * импульса xs, ys и zs */
+    /* Если sscos==1, то огибающая задаётся в форме "супер-супер
+     * косинуса"; для того, чтобы вычисление a_0 по энергии импульса
+     * (при задании в конфиг-файле W) было верным, ширина импульса
+     * вычисляется так, чтобы интеграл от квадрата его огибающей
+     * совпадал с соответствующим интегралом от гауссова импульса */
     double x,y,z,xi;
-    double xs = xsigma*2*sqrt(2*PI)/3;
-    double ys = ysigma*2*sqrt(2*PI)/3;
-    double zs = zsigma*2*sqrt(2*PI)/3;
+    double xs, ys, zs;
+    if (sscos==0) {
+	xs = xsigma*2*sqrt(2*PI)/3;
+	ys = ysigma*2*sqrt(2*PI)/3;
+	zs = zsigma*2*sqrt(2*PI)/3;
+    } else {
+	xs = 0.822*xsigma;
+	ys = 0.822*ysigma;
+	zs = 0.822*zsigma;
+    }
     double cosx,cosy,cosz,sinx,siny,sinz,tr_envelope;
     double y12,z12;
     y12 = 0.5*ny*dy;
@@ -74,22 +86,38 @@ void spatial_region::f_init_cos(double a0y, double a0z, double xsigma, double ys
 		xi = x + phase;
 		y = y0x*(i*dx-x0) + y0y*(j*dy-y12-y0) + y0z*(k*dz-z12-z0);
 		z = z0x*(i*dx-x0) + z0y*(j*dy-y12-y0) + z0z*(k*dz-z12-z0);
+		// vector potential envelope = (cosx*cosy*cosz)^2;
 		if (x<xs&&x>-xs&&y<ys&&y>-ys&&z<zs&&z>-zs)
 		{
-		    cosx = cos(PI*x/2/xs);
-		    cosy = cos(PI*y/2/ys);
-		    cosz = cos(PI*z/2/zs);
-		    sinx = sin(PI*x/2/xs);
-		    siny = sin(PI*y/2/ys);
-		    sinz = sin(PI*z/2/zs);
-		    tr_envelope = cosy*cosy*cosz*cosz;
-		    // envelope = (cosx*cosy*cosz)^2;
-		    ey = a0y*tr_envelope*(cos(xi)*cosx*cosx - PI/xs*sin(xi)*cosx*sinx);
-		    ez = -a0z*tr_envelope*(sin(xi)*cosx*cosx + PI/xs*cos(xi)*cosx*sinx);
-		    bz = ey;
-		    by = -ez;
-		    ex = a0y*sin(xi)*cosx*cosx*cosz*cosz*PI/ys*cosy*siny + a0z*cos(xi)*cosx*cosx*cosy*cosy*PI/zs*cosz*sinz;
-		    bx = -a0z*cos(xi)*cosx*cosx*PI/ys*cosz*cosz*cosy*siny + a0y*sin(xi)*cosx*cosx*cosy*cosy*PI/zs*cosz*sinz;
+		    if (sscos==0) {
+			cosx = cos(PI*x/2/xs);
+			cosy = cos(PI*y/2/ys);
+			cosz = cos(PI*z/2/zs);
+			sinx = sin(PI*x/2/xs);
+			siny = sin(PI*y/2/ys);
+			sinz = sin(PI*z/2/zs);
+			tr_envelope = cosy*cosy*cosz*cosz;
+			ey = a0y*tr_envelope*(cos(xi)*cosx*cosx - PI/xs*sin(xi)*cosx*sinx);
+			ez = a0z*tr_envelope*(sin(xi)*cosx*cosx + PI/xs*cos(xi)*cosx*sinx);
+			bz = ey;
+			by = -ez;
+			ex = a0y*sin(xi)*cosx*cosx*cosz*cosz*PI/ys*cosy*siny - a0z*cos(xi)*cosx*cosx*cosy*cosy*PI/zs*cosz*sinz;
+			bx = a0z*cos(xi)*cosx*cosx*PI/ys*cosz*cosz*cosy*siny + a0y*sin(xi)*cosx*cosx*cosy*cosy*PI/zs*cosz*sinz;
+		    } else {
+			cosx = cos(PI*x*x*x*x/2/(xs*xs*xs*xs));
+			cosy = cos(PI*y*y*y*y/2/(ys*ys*ys*ys));
+			cosz = cos(PI*z*z*z*z/2/(zs*zs*zs*zs));
+			sinx = sin(PI*x*x*x*x/2/(xs*xs*xs*xs));
+			siny = sin(PI*y*y*y*y/2/(ys*ys*ys*ys));
+			sinz = sin(PI*z*z*z*z/2/(zs*zs*zs*zs));
+			tr_envelope = cosy*cosy*cosz*cosz;
+			ey = a0y*tr_envelope*(cos(xi)*cosx*cosx - 4*PI*x*x*x/(xs*xs*xs*xs)*sin(xi)*cosx*sinx);
+			ez = a0z*tr_envelope*(sin(xi)*cosx*cosx + 4*PI*x*x*x/(xs*xs*xs*xs)*cos(xi)*cosx*sinx);
+			bz = ey;
+			by = -ez;
+			ex = a0y*sin(xi)*4*PI*y*y*y/(ys*ys*ys*ys)*cosx*cosx*cosz*cosz*cosy*siny - a0z*cos(xi)*4*PI*z*z*z/(zs*zs*zs*zs)*cosx*cosx*cosy*cosy*cosz*sinz;
+			bx = a0z*cos(xi)*4*PI*y*y*y/(ys*ys*ys*ys)*cosx*cosx*cosz*cosz*cosy*siny + a0y*sin(xi)*4*PI*z*z*z/(zs*zs*zs*zs)*cosx*cosx*cosy*cosy*cosz*sinz;
+		    }
 		    if (b_sign==0)
 		    {
 			bx = -bx;
