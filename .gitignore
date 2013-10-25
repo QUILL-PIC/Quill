@@ -1,7 +1,6 @@
 quill
 *.o
 conf
-results/
 *.eps
 *.png
 *.gif
