@@ -1,6 +1,6 @@
 CXX := g++
 CXXFLAGS := -O3 -march=native -ffast-math -std=c++0x
-debug: CXXFLAGS := -g
+debug: CXXFLAGS := -g -std=c++0x
 CXXLIBS := -lpthread -lnuma
 OBJECTS := advance.o deposition.o fout.o init.o low-level.o main.o mc.o plist.o
 

@@ -28,7 +28,8 @@ double seconds;
 clock_t main_thread_time;
 double file_name_accuracy;
 bool mwindow,mwseed;
-double crpc,ppd;
+double crpc;
+double* ppd;
 double phase,phi;
 ddi* p_last_ddi; // ddi включает t_end, output_period и f - счётчик для вывода данных в файлы
 ddi* p_current_ddi;
@@ -88,7 +89,8 @@ void* thread_function(void* arg)
     numa_run_on_node(int(i*n_numa_nodes/n_sr));
     while(l<p_last_ddi->t_end/dt)
     {
-	if (pmerging_now=="on") psr[i].pmerging(ppd);
+	if (pmerging_now=="on")
+	    psr[i].pmerging(ppd,pmerging);
 	psr[i].birth_from_vacuum(8*PI*PI/(dx*dy*dz)*2.818e-13/lambda); // 2.818e-13 = e^2/mc^2
         psr[i].padvance(freezing);
 	psr[i].compute_N(nm*(i!=0),nm*(i!=n_sr-1),dx*dy*dz*1.11485e13*lambda/(8*PI*PI*PI));
@@ -190,6 +192,8 @@ int main()
 
     ofstream fout_log("results/log",ios::app); // ios:app mode - append to the file
     fout_log<<"start time: "<<ctime(&inaccurate_time);
+
+    ppd = new double[3+n_ion_populations];
 
     nx_sr = ( xlength/dx + nx_ich*(n_sr-1) )/n_sr; // nx = nx_sr*n_sr - nx_ich*(n_sr-1);
     if(nx_ich*(n_sr-1)>=xlength/dx) {cout<<"\033[31m"<<"main: too many slices, aborting..."<<"\033[0m"<<endl; return 1;}
@@ -819,20 +823,61 @@ int main()
 
         cout<<"\033[33m"<<"ct/lambda = "<<l*dt/2/PI<<"\tstep# "<<l<<"\033[0m";
 
-	int N_qp;
-	N_qp = 0;
-	for (int i=0;i<n_sr;i++) N_qp += psr[i].N_qp;
-	if (pmerging=="on"&&N_qp>crpc*xlength*ylength*zlength/(dx*dy*dz))
-	{
-	    pmerging_now = "on";
-	    // portion of particles that will be deleted
-	    ppd = ( N_qp - crpc*xlength*ylength*zlength/(dx*dy*dz) )/N_qp;
-	    cout<<"\t\033[36m"<<"ppd = "<<ppd<<"\033[0m";
+	int N_qp_e, N_qp_p, N_qp_g;
+	int* N_qp_i;
+	N_qp_e = 0;
+	N_qp_p = 0;
+	N_qp_g = 0;
+	N_qp_i = new int[n_ion_populations];
+	for (int i=0;i<n_ion_populations;i++)
+	    N_qp_i[i] = 0;
+	for (int i=0;i<n_sr;i++) {
+	    N_qp_e += psr[i].N_qp_e;
+	    N_qp_p += psr[i].N_qp_p;
+	    N_qp_g += psr[i].N_qp_g;
+	    for (int j=0;j<n_ion_populations;j++)
+		N_qp_i[j] += psr[i].N_qp_i[j];
 	}
-	else
-	{
-	    pmerging_now = "off";
+	double crnp = crpc*xlength*ylength*zlength/(dx*dy*dz);
+	pmerging_now = "off";
+	if (pmerging=="ti") {
+	    int N_qp;
+	    N_qp = N_qp_e + N_qp_p + N_qp_g;
+	    for (int i;i<n_ion_populations;i++)
+		N_qp += N_qp_i[i];
+	    if (N_qp>(3+n_ion_populations)*crnp) {
+		pmerging_now = "on";
+		// portion of particles that will be deleted
+		ppd[0] = (N_qp - (3+n_ion_populations)*crnp)/N_qp;
+		cout<<"\t\033[36m"<<"ppd = "<<ppd[0]<<"\033[0m";
+	    }
+	} else if (pmerging=="nl") {
+	    bool merge = (N_qp_e>crnp)||(N_qp_p>crnp)||(N_qp_g>crnp);
+	    for (int i;i<n_ion_populations;i++)
+		merge = merge || (N_qp_i[i]>crnp);
+	    if (merge) {
+		pmerging_now = "on";
+		// portion of particles that will be deleted
+		for (int i=0;i<3+n_ion_populations;i++)
+		    ppd[i] = 0;
+		if (N_qp_e>crnp)
+		    ppd[0] = (N_qp_e - crnp)/N_qp_e;
+		if (N_qp_p>crnp)
+		    ppd[1] = (N_qp_p - crnp)/N_qp_p;
+		if (N_qp_g>crnp)
+		    ppd[2] = (N_qp_g - crnp)/N_qp_g;
+		for (int i=0;i<n_ion_populations;i++) {
+		    if (N_qp_i[i]>crnp)
+			ppd[3+i] = (N_qp_i[i] - crnp)/N_qp_i[i];
+		}
+		cout<<"\t\033[36m"<<"ppd =";
+		for (int i=0;i<3+n_ion_populations;i++) {
+		    cout<<' '<<ppd[i];
+		}
+		cout<<"\033[0m";
+	    }
 	}
+	delete[] N_qp_i;
 
 	if (freezing==1)
 	{
@@ -1126,6 +1171,8 @@ int main()
     delete[] sr_mutex_c;
 
     delete[] icmr;
+
+    delete[] ppd;
 
     fout_N.close();
     fout_energy.close();

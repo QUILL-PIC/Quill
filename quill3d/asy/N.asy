@@ -113,12 +113,12 @@ if (scale=="log")
 }
 if (particles=="e"||particles=="ep"||particles=="eph"||particles=="epph")
 {
-    draw(pic1,graph(t,N_e,Straight),p+blue);
+    draw(pic1,graph(t,N_e,Straight),p+0.7*green);
 }
 if (particles=="p"||particles=="ep"||particles=="pph"||particles=="epph")
     draw(pic1,graph(t,N_p,Straight),p+red);
 if (particles=="ph"||particles=="eph"||particles=="pph"||particles=="epph")
-    draw(pic1,graph(t,N_ph,Straight),p+0.7*green);
+    draw(pic1,graph(t,N_ph,Straight),p+blue);
 xlimits(pic1,t0,t1);
 ylimits(pic1,Nmin,Nmax,Crop);
 xaxis(pic1,"$ct/\lambda$",BottomTop,LeftTicks,false);

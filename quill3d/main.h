@@ -45,7 +45,8 @@ class spatial_region
     //
 public:
     double N_e,N_p,N_ph;
-    int N_qp; // N_qp - number of quasiparticles
+    int N_qp_e, N_qp_p, N_qp_g; // N_qp - number of quasiparticles
+    int* N_qp_i;
     double energy_f,energy_e,energy_p,energy_ph;
     double* ienergy; // energies of ion populations
     double N_freezed;
@@ -182,7 +183,8 @@ public:
 					  (второй аргумент)! */
     double tilde_w(double&,double&,double&);
     double mathcal_W(vector3d&,vector3d&);
-    void pmerging(double);
+    void pmerging(double*,string);
+    double _ppd(double,double); // вспомогательная функция
 };
 
 class film

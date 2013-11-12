@@ -190,10 +190,11 @@ xtr2 = 17 # default: lambda; possible: um, fs
 ytr2 = 19 # default: lambda; possible: um
 ztr2 = 19 # default: lambda; possible: um
 
-# алгоритм слияния квазичастиц
-pmerging = on # default: off; possible: on
-# критическое отношение числа квазичастиц к числу ячеек
-crpc = 1.0
+# алгоритм слияния квазичастиц; nl - nonlinear(q), ti -
+# type-independently
+pmerging = ti # default: off; possible: nl, ti
+# критическое отношение числа квазичастиц одного сорта к числу ячеек
+crpc = 0.25
 
 # алгоритм «заморозки» частиц в магнитном поле
 freezing = off # default: off; possible: on

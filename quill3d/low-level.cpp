@@ -196,6 +196,9 @@ void spatial_region::create_arrays(int nx0, int ny0, int nz0, int seed, int node
 
     pv = numa_alloc_onnode(sizeof(double)*n_ion_populations,node_number);
     ienergy = (double*) pv;
+
+    pv = numa_alloc_onnode(sizeof(int)*n_ion_populations,node_number);
+    N_qp_i = (int*) pv;
 }
 
 spatial_region::~spatial_region()
@@ -319,6 +322,9 @@ spatial_region::~spatial_region()
 
     pv = (void*) ienergy;
     numa_free(pv, sizeof(double*)*n_ion_populations);
+
+    pv = (void*) N_qp_i;
+    numa_free(pv, sizeof(int*)*n_ion_populations);
 }
 
 spatial_region::plist::particle* spatial_region::new_particle()

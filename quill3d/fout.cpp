@@ -40,7 +40,11 @@ void spatial_region::compute_N(int n1, int n2, double a)
     N_e = 0;
     N_p = 0;
     N_ph = 0;
-    N_qp = 0;
+    N_qp_e = 0;
+    N_qp_p = 0;
+    N_qp_g = 0;
+    for (int i=0;i<n_ion_populations;i++)
+	N_qp_i[i] = 0;
     plist::particle* current;
     for (int i=n1; i<nx-n2; i++)
     {
@@ -51,13 +55,22 @@ void spatial_region::compute_N(int n1, int n2, double a)
 		current = cp[i][j][k].pl.head;
 		while (current!=0)
 		{
-		    N_qp += 1;
-		    if (current->cmr==-1)
+		    if (current->cmr==-1) {
 			N_e -= current->q;
-		    else if (current->cmr==1)
+			N_qp_e += 1;
+		    }
+		    else if (current->cmr==1) {
 			N_p += current->q;
-		    else if (current->cmr==0)
+			N_qp_p += 1;
+		    }
+		    else if (current->cmr==0) {
 			N_ph += current->q;
+			N_qp_g += 1;
+		    }
+		    for (int ii=0;ii<n_ion_populations;ii++) {
+			if (current->cmr==icmr[ii])
+			    N_qp_i[ii] += 1;
+		    }
 		    current = current->next;
 		}
 	    }
@@ -520,7 +533,7 @@ void spatial_region::fout_tracks(double a, int nm) {
 			file_name = file_name + "_";
 			sprintf(file_num_pchar,"%d",current->trn);
 			file_name = file_name + file_num_pchar;
-			ofstream fout(file_name,ios::app);
+			ofstream fout(file_name.c_str(),ios::app);
 			fout<<current->q<<'\n'<<current->x*dx/2/PI+a<<'\n'<<current->y*dy/2/PI<<'\n'<<current->z*dz/2/PI<<'\n'<<current->ux<<'\n'<<current->uy<<'\n'<<current->uz<<'\n'<<current->g<<'\n'<<current->chi<<'\n';
 		    }
 		    current = current->next;

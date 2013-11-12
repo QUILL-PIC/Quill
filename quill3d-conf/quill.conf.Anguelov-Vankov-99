@@ -55,6 +55,9 @@ a0 = 0
 #a0z = 10
 
 mwindow = on # devault: on; possible: on, off
+# включает или отключает добавление частиц на передней границе области
+# при работе движущегося окна
+mwseed = off # default: on; possible: on, off
 #e_components_for_output = xyz # default: none; possible: x, y, z, xy, xz, yz, xyz
 #b_components_for_output = xyz # default: none; possible: x, y, z, xy, xz, yz, xyz
 
@@ -85,3 +88,9 @@ enthp = 50
 #deps_ph = 500 MeV # default value = deps; default units: MeV; possible: mc^2
 #neps_ph = 200 # default = neps
 #enthp_ph = 50 # default = enthp
+
+# алгоритм слияния квазичастиц; nl - nonlinear(q), ti -
+# type-independently
+#pmerging = nl # default: off; possible: nl, ti
+# критическое отношение числа квазичастиц одного сорта к числу ячеек
+#crpc = 0.03

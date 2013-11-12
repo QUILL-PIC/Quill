@@ -7,7 +7,7 @@ defaultpen(linewidth(0.7)+fontsize(10));
 // Если t1<=t0, то строится график от t0 до максимального значения t
 
 real energymin = 0e2;
-real energymax = 2e4;
+real energymax = 0e4;
 
 real t0 = 0; // lambda/c
 real t1 = 0;

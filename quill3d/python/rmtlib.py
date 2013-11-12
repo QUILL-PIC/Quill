@@ -88,10 +88,10 @@ def ppo(pv0,pv1,config,t):
 	    qplot.tracks(['x','t'],'ie',colors='mg',data_folder='results/',save2=s)
 	if operation=='i:x-ux':
 	    plt.clf()
-	    qplot.particles(0.01*np.floor(0.25*resread.output_period*100*np.floor(resread.t_end/resread.output_period)),['x','ux'],'i',colors='c',data_folder='results/',save2=None)
-	    qplot.particles(0.01*np.floor(0.5*resread.output_period*100*np.floor(resread.t_end/resread.output_period)),['x','ux'],'i',colors='r',data_folder='results/',save2=None)
-	    qplot.particles(0.01*np.floor(0.75*resread.output_period*100*np.floor(resread.t_end/resread.output_period)),['x','ux'],'i',colors='g',data_folder='results/',save2=None)
-	    qplot.particles(0.01*np.floor(resread.output_period*100*np.floor(resread.t_end/resread.output_period)),['x','ux'],'i',colors='b',data_folder='results/',save2=s)
+	    qplot.particles(0.01*np.floor(0.25*resread.output_period*100*np.floor(resread.t_end/resread.output_period)),['x','ux'],'i',colors='c',alpha=0.02,data_folder='results/',save2=None)
+	    qplot.particles(0.01*np.floor(0.5*resread.output_period*100*np.floor(resread.t_end/resread.output_period)),['x','ux'],'i',colors='r',alpha=0.02,data_folder='results/',save2=None)
+	    qplot.particles(0.01*np.floor(0.75*resread.output_period*100*np.floor(resread.t_end/resread.output_period)),['x','ux'],'i',colors='g',alpha=0.02,data_folder='results/',save2=None)
+	    qplot.particles(0.01*np.floor(resread.output_period*100*np.floor(resread.t_end/resread.output_period)),['x','ux'],'i',colors='b',alpha=0.02,data_folder='results/',save2=s)
 	if operation=='energy':
 	    tmp = resread.t_data('energy')
 	    plt.clf()
