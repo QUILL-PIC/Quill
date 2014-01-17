@@ -56,8 +56,11 @@ f_envelope = focused # default: cos, possible: focused, sscos
 # импульсов и, следовательно, их направление распространения на
 # противоположное
 b_sign = 1 # default: 1, possible: -1
-# поляризация лазерного импульса
-polarization = linear # default: linear; possible: circular
+# поляризация лазерного импульса; в случае эллиптической поляризации
+# необходимо задать значение - отношение a0z к a0y=a0; эллиптическая
+# поляризация будет задана корректно только в том случае, если задано
+# a_0, а не P, I, W и т. п.
+polarization = 0.5 elliptic # default: linear; possible: circular, elliptic
 # размеры лазерного импульса
 xsigma = 2.8 # default: lambda; possible: um, fs
 ysigma = 2.8 # default: lambda; possible: um

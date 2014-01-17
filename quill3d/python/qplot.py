@@ -296,7 +296,7 @@ def spectrum(t=None,particles='geip',colors='bgmrcyk',sptype='simple',axis=[],sa
     'Examples:\n\
     spectrum() # plots spectrum for all particles\n\
     at t_end'
-    plt.xlabel('eps, MeV')
+    plt.xlabel('kinetic energy, MeV')
     plt.ylabel('dN/deps, a.u.')
     if axis!=[]:
 	plt.axis(axis)

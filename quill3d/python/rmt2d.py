@@ -12,16 +12,19 @@ config = '.laser-piston'
 
 # parameter 0
 rmtlib.p0_name = 'ne'
-p0_value = rmtlib.geometric_progression(7e22,3e23,2)
-rmtlib.p0_unit = ''
+#p0_value = rmtlib.geometric_progression(7e22,3e23,2)
+p0_value = np.array([431])
+rmtlib.p0_unit = 'ncr'
 
 # parameter 1
 rmtlib.p1_name = 'a0'
-p1_value = rmtlib.geometric_progression(400,2500,4)
+#p1_value = rmtlib.geometric_progression(400,2500,4)
+p1_value = np.array([2800])
+#p1_value = np.linspace(200,400,3)
 rmtlib.p1_unit = ''
 
 # see list of pp_operations in rmtlib.py
-rmtlib.pp_operation = ['density','spectrum','tracks','i:x-ux','energy'] # post-processing operations
+rmtlib.pp_operation = ['density','spectrum','i:x-ux','energy','i:x-y-ux','i:spectrum','mollweide'] # post-processing operations
 
 rmtlib.cwd = os.getcwd() # current directory
 t = dt.datetime.now()

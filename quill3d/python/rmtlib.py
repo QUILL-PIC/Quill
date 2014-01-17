@@ -60,9 +60,13 @@ def prepare_conf(pv0,pv1,config):
 	a0 = pv0*(p0_name=='a0') + pv1*(p1_name=='a0')
 	ne = pv0*(p0_name=='ne') + pv1*(p1_name=='ne')
 	if a0!=0:
-	    p_substitution('t_end',np.ceil(22+1.e-7*a0**3))
+	    #p_substitution('t_end',np.ceil(22+1.e-7*a0**3))
+	    #p_substitution('t_end',np.ceil(22+1.e-7*a0**3/(1+1e-16*a0**5)))
+	    p_substitution('t_end',np.ceil(16+180*np.exp(-(a0-1700)**2/7.e5)))
 	    if ne!=0:
-		p_substitution('deps',2+1.7e-5*a0**2)
+		#p_substitution('deps',2+1.7e-5*a0**2)
+		#p_substitution('deps',3e-5*a0**2/(1+3e-13*a0**4))
+		p_substitution('deps',45*np.exp(-(a0-2150)**2/1.3e6))
 
 def ppo(pv0,pv1,config,t):
     'Post-processing operations'
@@ -83,21 +87,48 @@ def ppo(pv0,pv1,config,t):
 	if operation=='spectrum':
 	    plt.clf()
 	    qplot.spectrum(0.01*np.floor(resread.output_period*100*np.floor(resread.t_end/resread.output_period)),data_folder='results/',save2=s)
+	if operation=='i:spectrum':
+	    plt.clf()
+	    qplot.spectrum(0.01*np.floor(0.25*resread.output_period*100*np.floor(resread.t_end/resread.output_period)),'i','r',data_folder='results/',save2=s)
+	    qplot.spectrum(0.01*np.floor(0.5*resread.output_period*100*np.floor(resread.t_end/resread.output_period)),'i','g',data_folder='results/',save2=s)
+	    qplot.spectrum(0.01*np.floor(resread.output_period*100*np.floor(resread.t_end/resread.output_period)),'i','b',data_folder='results/',save2=s)
 	if operation=='tracks':
 	    plt.clf()
 	    qplot.tracks(['x','t'],'ie',colors='mg',data_folder='results/',save2=s)
 	if operation=='i:x-ux':
 	    plt.clf()
-	    qplot.particles(0.01*np.floor(0.25*resread.output_period*100*np.floor(resread.t_end/resread.output_period)),['x','ux'],'i',colors='c',alpha=0.02,data_folder='results/',save2=None)
-	    qplot.particles(0.01*np.floor(0.5*resread.output_period*100*np.floor(resread.t_end/resread.output_period)),['x','ux'],'i',colors='r',alpha=0.02,data_folder='results/',save2=None)
-	    qplot.particles(0.01*np.floor(0.75*resread.output_period*100*np.floor(resread.t_end/resread.output_period)),['x','ux'],'i',colors='g',alpha=0.02,data_folder='results/',save2=None)
-	    qplot.particles(0.01*np.floor(resread.output_period*100*np.floor(resread.t_end/resread.output_period)),['x','ux'],'i',colors='b',alpha=0.02,data_folder='results/',save2=s)
+	    alpha = 2e-3
+	    qplot.particles(0.01*np.floor(0.25*resread.output_period*100*np.floor(resread.t_end/resread.output_period)),['x','ux'],'i',colors='r',alpha=alpha,data_folder='results/',save2=None)
+	    qplot.particles(0.01*np.floor(0.5*resread.output_period*100*np.floor(resread.t_end/resread.output_period)),['x','ux'],'i',colors='g',alpha=alpha,data_folder='results/',save2=None)
+	    qplot.particles(0.01*np.floor(resread.output_period*100*np.floor(resread.t_end/resread.output_period)),['x','ux'],'i',colors='b',alpha=alpha,data_folder='results/',save2=s)
+	if operation=='mollweide':
+	    plt.clf()
+	    qplot.mollweide(0.01*np.floor(0.125*resread.output_period*100*np.floor(resread.t_end/resread.output_period)),data_folder='results/',save2=s)
+	if operation=='i:x-y-ux':
+	    plt.clf()
+	    plt.subplot(2,2,1)
+	    qplot.particles(0.01*np.floor(0.125*resread.output_period*100*np.floor(resread.t_end/resread.output_period)),['x','y','ux'],'i',cmap='jet',gamma=3,data_folder='results/',save2=None)
+	    plt.subplot(2,2,2)
+	    qplot.particles(0.01*np.floor(0.25*resread.output_period*100*np.floor(resread.t_end/resread.output_period)),['x','y','ux'],'i',cmap='jet',gamma=3,data_folder='results/',save2=None)
+	    plt.subplot(2,2,3)
+	    qplot.particles(0.01*np.floor(0.5*resread.output_period*100*np.floor(resread.t_end/resread.output_period)),['x','y','ux'],'i',cmap='jet',gamma=3,data_folder='results/',save2=None)
+	    plt.subplot(2,2,4)
+	    qplot.particles(0.01*np.floor(resread.output_period*100*np.floor(resread.t_end/resread.output_period)),['x','y','ux'],'i',cmap='jet',gamma=3,data_folder='results/',save2=s)
 	if operation=='energy':
 	    tmp = resread.t_data('energy')
 	    plt.clf()
 	    plt.plot(tmp[:,0],tmp[:,1],'k',tmp[:,0],tmp[:,2],'g',tmp[:,0],tmp[:,3],'r',tmp[:,0],tmp[:,4],'b',tmp[:,0],tmp[:,5],'m',tmp[:,0],tmp[:,1]+tmp[:,2]+tmp[:,3]+tmp[:,4]+tmp[:,5],'--k')
 	    plt.xlabel('ct/lambda')
 	    plt.ylabel('Energy, J')
+	    #
+	    ncr = 9.11e-28*(3e10*2*np.pi/resread.lmbda)**2/(4*np.pi*4.8e-10**2)
+	    fit13 = 0.5*tmp[0,1]*1.1*(tmp[:,0]*2*np.pi)**(1./3)/(resread.xsigma*2*np.pi)*(1836*resread.ne/ncr*resread.filmwidth*2*np.pi*2/(resread.a0y**2+resread.a0z**2))**(2./3)
+	    plt.plot(tmp[:,0],fit13,'--c')
+	    #
+	    tmp1 = tmp[np.floor(2./resread.dt):np.floor(8./resread.dt),0]
+	    fit1 = 0.5*tmp[0,1]*0.8*np.sqrt(1836*resread.ne/ncr*2/(resread.a0y**2+resread.a0z**2))/resread.xsigma*(tmp1-tmp1[0])
+	    plt.plot(tmp1,fit1,'--y')
+	    #
 	    plt.savefig(s)
 	    energy0 = tmp[0,1]
 	    tmp = tmp[-1,1:]

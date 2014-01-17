@@ -1435,6 +1435,10 @@ int init()
 	a0z = a0y;
 	polarization = current->units;
     }
+    if (current->units=="elliptic") {
+	a0z = current->value*a0y;
+	polarization = current->units;
+    }
     current = find("a0y",first);
     if (current->value!=0)
     {

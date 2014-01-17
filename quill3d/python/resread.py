@@ -26,6 +26,9 @@ deps_i = 0
 a0y = 0
 a0z = 0
 lmbda = 0
+ne = 0
+xsigma = 0
+filmwidth = 0
 
 data_folder = '../results/'
 t = '0'
@@ -33,7 +36,7 @@ t = '0'
 def read_parameters(log=None):
     'Reads nx, ny, etc. from *log*.'
     global dx,dy,dz,dt,nx,ny,nz,output_period,n_ion_populations,icmr,t_end,tr_start,\
-    deps,deps_p,deps_ph,deps_i,a0y,a0z,lmbda
+    deps,deps_p,deps_ph,deps_i,a0y,a0z,lmbda,ne,xsigma,filmwidth
     if log is None:
 	log = data_folder+'log'
     icmr = []
@@ -77,6 +80,12 @@ def read_parameters(log=None):
 	    a0z = float(f.next())
 	if line=='lambda\n':
 	    lmbda = float(f.next())
+	if line=='ne\n':
+	    ne = float(f.next())
+	if line=='xsigma\n':
+	    xsigma = float(f.next())
+	if line=='filmwidth\n':
+	    filmwidth = float(f.next())
     f.close()
 
 def density(name='rho',plane='xy'):
