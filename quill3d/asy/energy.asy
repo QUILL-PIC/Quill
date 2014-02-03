@@ -171,24 +171,28 @@ if (scale=="log")
     }
 }
 if (electrons==true)
-    draw(pic1,graph(t,energy_e,Straight),p+blue+0.1*(red+green));
+    draw(pic1,graph(t,energy_e,Straight),p+0.3*green);
 if (positrons==true)
     draw(pic1,graph(t,energy_p,Straight),p+red);
 if (gamma==true)
-    draw(pic1,graph(t,energy_g,Straight),p+0.3*green);
+    draw(pic1,graph(t,energy_g,Straight),p+blue+0.1*(red+green));
 if (fields==true)
     draw(pic1,graph(t,energy_f,Straight),p);
 if (overall==true)
     draw(pic1,graph(t,energy_o,Straight),p+dashed);
 if (ions==true)
 {
-    srand(seconds());
-    real r = rand()/randMax;
-    real g = rand()/randMax;
-    real b = 0.5*rand()/randMax;
-    for (int j=0;j<n_ion_populations;j=j+1)
-    {
-	draw(pic1,graph(t,energy_i[j],Straight),p+r*red+g*green+b*blue);
+    if (n_ion_populations>1) {
+	srand(seconds());
+	real r = rand()/randMax;
+	real g = rand()/randMax;
+	real b = 0.5*rand()/randMax;
+	for (int j=0;j<n_ion_populations;j=j+1)
+	{
+	    draw(pic1,graph(t,energy_i[j],Straight),p+r*red+g*green+b*blue);
+	}
+    } else {
+	draw(pic1,graph(t,energy_i[0],Straight),p+red+blue);
     }
 }
 xlimits(pic1,t0,t1);

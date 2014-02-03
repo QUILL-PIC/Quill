@@ -12,14 +12,14 @@ defaultpen(linewidth(0.7)+fontsize(10));
 //
 // Если min_dndeps=0 и scale="log", то min_dndeps вычисляется как 1e-5*max_dndeps
 
-real file_number = 12;
+real file_number = 33;
 real max_dndeps = 1e14;
 real min_dndeps = 1e0;
 real max_dndeps_energy = 0e10;
 real min_dndeps_energy = 0;
 real epsmax = 1e4; // MeV
 
-string particles = "i"; // possible: e, p, g, i, ep, igp, etc.
+string particles = "epgi"; // possible: e, p, g, i, ep, igp, etc.
 string scale = "log"; // possible: linear, log
 string sp_type = "simple"; // possible: simple, energy
 
@@ -48,9 +48,11 @@ else
 real overall_en_e=0;
 real overall_en_p=0;
 real overall_en_g=0;
+real overall_en_i=0;
 real Ne = 0;
 real Np = 0;
 real Ng = 0;
+real Nnuclons = 0;
 
 real deps_e;
 int neps_e;
@@ -245,11 +247,18 @@ if (ions)
 	for( i=0;i<neps_i;i=i+1 )
 	{
 	    dndeps_i[ii][i] = (1-type+type*eps_i[i])*data[i];
+	    overall_en_i += eps_i[i]*data[i]*deps_i;
+	    Nnuclons += data[i]*deps_i;
 	}
 	//dndeps_i[ii][0] = dndeps_i[ii][1];
 	max_dndeps_i = max(max_dndeps_i,max(dndeps_i[ii]));
 	write("icmr = "+format("%g",icmr[ii]));
     }
+
+    write("overall ion energy [MeV] = "+format("%g",overall_en_i));
+    write("Nnuclons = "+format("%g",Nnuclons));
+    if (Nnuclons!=0)
+	write("<eps_nuclon>[MeV] = "+format("%g",overall_en_i/Nnuclons));
 }
 
 if (max_dndeps==0)

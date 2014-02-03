@@ -1,8 +1,8 @@
 // Строит зависимости rho и w от x на оси области моделирования
 
-real file_number = 8;
-real x1 = 9; // lambda
-real x2 = 11; // если x2=0, то приравнивается равным nx*dx
+real file_number = 16.12;
+real x1 = 10; // lambda
+real x2 = 15; // если x2=0, то приравнивается равным nx*dx
 /* если norm=0, то определяется по максимальному значению
  * автоматически */
 real enorm = 0;
@@ -14,9 +14,9 @@ real wnorm = 0;
 
 string f1name,f2name,f3name,f4name;
 f1name = "rho_p"; // red
-f2name = "rho_ph"; // green
-f3name = "rho"; // blue
-f4name = "w"; // magenta
+f2name = "rho_ph"; // blue
+f3name = "rho"; // green
+f4name = "w"; // orange
 
 //----------------------------------------
 
@@ -152,9 +152,9 @@ pen p = linejoin(2)+linewidth(0.5);
 
 picture pic1;
 if (f1name!="") draw(pic1,graph(x,f1,Straight),p+red);
-if (f2name!="") draw(pic1,graph(x,f2,Straight),p+0.7*green);
-if (f3name!="") draw(pic1,graph(x,f3,Straight),p+blue);
-if (f4name!="") draw(pic1,graph(x,f4,Straight),p+red+blue);
+//if (f2name!="") draw(pic1,graph(x,f2,Straight),p+blue);
+if (f3name!="") draw(pic1,graph(x,f3,Straight),p+0.7*green);
+//if (f4name!="") draw(pic1,graph(x,f4,Straight),p+red+0.3*green);
 xlimits(pic1,x1,x2);
 xaxis(pic1,"$x/\lambda$",BottomTop,LeftTicks,true);
 yaxis(pic1,"$n$",LeftRight,RightTicks,true);

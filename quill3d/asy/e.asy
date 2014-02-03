@@ -3,10 +3,10 @@
 // qwe! в случае вывода не всех компонент поля (yz, e.g.) даёт ошибку
 
 string f1name,f2name,f3name; // possible: ex, ey, ez, bx, by, bz
-f1name = "ey"; // red
-f2name = "ez"; // green
-f3name = "ey"; // blue
-real flim = 1500;
+f1name = "ex"; // red
+f2name = "ey"; // green
+f3name = "bz"; // blue
+real flim = 1000;
 
 //----------------------------------------
 
@@ -88,7 +88,7 @@ draw(pic1,graph(x,f1,Straight),p+red);
 draw(pic1,graph(x,f2,Straight),p+0.7*green);
 draw(pic1,graph(x,f3,Straight),p+blue);
 xlimits(pic1,0,dx*nx);
-//ylimits(pic1,-flim,flim,Crop);
+ylimits(pic1,-flim,flim,Crop);
 //qwe; ylimits(pic1,min(f3),max(f3),Crop);
 /*qwe real tmpmax = 0;
 real tmp;
