@@ -42,6 +42,7 @@ int n_ion_populations;
 double* icmr;
 int n_tracks;
 double tr_start,xtr1,ytr1,ztr1,xtr2,ytr2,ztr2;
+double mwspeed,nelflow,vlflow,mcrlflow,nerflow,vrflow,mcrrflow;
 std::string e_components_for_output;
 std::string b_components_for_output;
 std::string f_envelope;
@@ -97,7 +98,7 @@ void* thread_function(void* arg)
 	psr[i].compute_energy(nm*(i!=0),nm*(i!=n_sr-1),0.5*dx*dy*dz*3.691e4*lambda/1e7,8.2e-14*dx*dy*dz*1.11485e13*lambda/(8*PI*PI*PI)); // энергия в Джоулях
 	psr[i].fout_tracks(i*(nx_sr-nx_ich)*dx/2/PI,nm);
         psr[i].fadvance_ndfx();
-	if (mwindow==1) psr[i].moving_window(l,nmw);
+	if (mwindow==1) psr[i].moving_window(l,nmw,mwspeed);
     
         // обмен данными на приграничной области слоёв
         if(n_sr>1)
@@ -107,7 +108,7 @@ void* thread_function(void* arg)
             if(i!=n_sr-1) pthread_mutex_lock(&sr_mutex_m[i]);
             if(i!=0) pthread_mutex_lock(&sr_mutex_m2[i]);
 	    //
-	    if (mwindow==1&&(l+1)*dt>nmw*dx)
+	    if (mwindow==1&&(l+1)*dt*mwspeed>nmw*dx)
 	    {
 		/* в этом случае функция moving_window
 		 * произвела сдвиг содержимого *psr[i]
@@ -891,7 +892,7 @@ int main()
 	cout<<endl;
 
         // добавление частиц для движущегося окна (moving_window)
-	if (mwindow==1&&(l+1)*dt>nmw*dx)
+	if (mwindow==1&&(l+1)*dt*mwspeed>nmw*dx)
 	{
 	    nmw = nmw + 1;
 	    if (mwseed==1) {
@@ -910,12 +911,73 @@ int main()
 			cell_pos.j=j;
 			cell_pos.k=k;
 			psr[n_sr-1].fill_cell_by_particles(-1,cell_pos,v_npic,n);
-			if (ions=="on")
-			    psr[n_sr-1].fill_cell_by_particles(-1,cell_pos,v_npic,n);
+			//if (ions=="on")
+			    // psr[n_sr-1].fill_cell_by_particles(-1,cell_pos,v_npic,n); // bug??! this adds electrons, not ions; qwe
 		    }
 		}
 	    }
 	}
+
+	// добавление частиц для нейтральных потоков (neutral flows)
+	static double xlflow = 1;
+	if ( xlflow >= 1 ) {
+	    xlflow -= 1;
+	    double n=nelflow/xnpic; // in n_{cr}
+	    int_vector3d cell_pos, v_npic;
+	    v_npic.i = 1; // с xnpic приходится обхоиться отдельно, см. ниже
+	    v_npic.j = ynpic;
+	    v_npic.k = znpic;
+	    for (int j=0;j<int(ylength/dy);j++) {
+		for (int k=0;k<int(zlength/dz);k++) {
+		    cell_pos.j=j;
+		    cell_pos.k=k;
+		    for ( int ii=0; ii<xnpic; ii++ ) {
+			double x0;
+			x0 = xlflow - float(ii)/xnpic;
+			if ( x0 >= 0 ) {
+			    cell_pos.i = 3;
+			} else {
+			    cell_pos.i = 2;
+			    x0 += 1;
+			}
+			psr[0].fill_cell_by_particles(-1,cell_pos,v_npic,n,vlflow/sqrt(1-vlflow*vlflow),x0-0.5); // 0.5 - for a compensation in fill_cell... for xnpic = 1
+			if (ions=="on")
+			    psr[0].fill_cell_by_particles(1/(proton_mass*mcrlflow),cell_pos,v_npic,n,vlflow/sqrt(1-vlflow*vlflow),x0-0.5);
+		    }
+		}
+	    }
+	}
+	xlflow += dt*vlflow/dx;
+	//
+	static double xrflow = 1;
+	if ( xrflow >= 1 ) {
+	    xrflow -= 1;
+	    double n=nerflow/xnpic; // in n_{cr}
+	    int_vector3d cell_pos, v_npic;
+	    v_npic.i = 1; // с xnpic приходится обхоиться отдельно, см. ниже
+	    v_npic.j = ynpic;
+	    v_npic.k = znpic;
+	    for (int j=0;j<int(ylength/dy);j++) {
+		for (int k=0;k<int(zlength/dz);k++) {
+		    cell_pos.j=j;
+		    cell_pos.k=k;
+		    for ( int ii=0; ii<xnpic; ii++ ) {
+			double x0;
+			x0 = xrflow - float(ii)/xnpic;
+			if ( x0 >= 0 ) {
+			    cell_pos.i = nx_sr - 4;
+			} else {
+			    cell_pos.i = nx_sr - 3;
+			    x0 += 1;
+			}
+			psr[n_sr-1].fill_cell_by_particles(-1,cell_pos,v_npic,n,-vrflow/sqrt(1-vrflow*vrflow),(1-x0)-0.5);
+			if (ions=="on")
+			    psr[n_sr-1].fill_cell_by_particles(1/(proton_mass*mcrrflow),cell_pos,v_npic,n,-vrflow/sqrt(1-vrflow*vrflow),(1-x0)-0.5);
+		    }
+		}
+	    }
+	}
+	xrflow += dt*vrflow/dx;
         
         // вывод данных в файлы (продолжение)
         if(l*dt>=[](ddi* a) {double b=a->f*a->output_period; if(a->prev!=0) b+=(a->prev)->t_end; return b;} (p_current_ddi))
@@ -1633,6 +1695,24 @@ int init()
 	    tmp_s = current->units;
 	} while (tmp_s!="on"&&tmp!=0);
     }
+    // neutral flows
+    current = find("mwspeed",first);
+    mwspeed = current->value;
+    current = find("nelflow",first);
+    nelflow = current->value*ne/(1.11485e+13/lambda/lambda);
+    current = find("vlflow",first);
+    vlflow = current->value;
+    current = find("mcrlflow",first);
+    mcrlflow = current->value;
+    current = find("nerflow",first);
+    nerflow = current->value*ne/(1.11485e+13/lambda/lambda);
+    current = find("vrflow",first);
+    vrflow = current->value;
+    current = find("mcrrflow",first);
+    mcrrflow = current->value;
+    if (nelflow!=0 || nerflow!=0)
+	mwindow = 0;
+    //
     if (ions=="on")
     { // counting of ion populations
 	int n;
@@ -1643,6 +1723,10 @@ int init()
 	    n++;
 	    tmp_p_film = tmp_p_film->prev;
 	}
+	if (nelflow!=0)
+	    n++;
+	if (nerflow!=0)
+	    n++;
 	double* mcr = new double[n];
 	int m;
 	bool b;
@@ -1662,6 +1746,24 @@ int init()
 		m++;
 	    }
 	    tmp_p_film = tmp_p_film->prev;
+	}
+	b = 1;
+	for (int i=0;i<m;i++) {
+	    if (mcrlflow==mcr[i])
+		b = 0;
+	}
+	if (b==1) {
+	    mcr[m] = mcrlflow;
+	    m++;
+	}
+	b = 1;
+	for (int i=0;i<m;i++) {
+	    if (mcrrflow==mcr[i])
+		b = 0;
+	}
+	if (b==1) {
+	    mcr[m] = mcrrflow;
+	    m++;
 	}
 	n_ion_populations = m;
 	icmr = new double[m];
@@ -1893,6 +1995,13 @@ int init()
     fout_log<<"xb\n"<<xb/2/PI<<"\n";
     fout_log<<"rb\n"<<rb/2/PI<<"\n";
     fout_log<<"x0b\n"<<x0b/2/PI<<"\n";
+    fout_log<<"mwspeed\n"<<mwspeed<<"\n";
+    fout_log<<"nelflow\n"<<nelflow<<"\n";
+    fout_log<<"vlflow\n"<<vlflow<<"\n";
+    fout_log<<"mcrlflow\n"<<mcrlflow<<"\n";
+    fout_log<<"nerflow\n"<<nerflow<<"\n";
+    fout_log<<"vrflow\n"<<vrflow<<"\n";
+    fout_log<<"mcrrflow\n"<<mcrrflow<<"\n";
     fout_log<<"ions\n"<<ions<<"\n";
     tmp_p_film = p_last_film;
     while (tmp_p_film!=0)

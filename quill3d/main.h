@@ -153,7 +153,7 @@ public:
     void f_init_focused(double,double,double,double,double,double,bool=1,double=0,double=0,double=0,bool=1,double=0);
     void add_beam(double,double,double,double,double,double);
     void film(double,double,double,bool,double,double);
-    void fill_cell_by_particles(double,int_vector3d&,int_vector3d&,double,double=0);
+    void fill_cell_by_particles(double,int_vector3d&,int_vector3d&,double,double=0,double=0);
     void fadvance_ndfx();
     void f_zeroing_on_boundaries();
     void padvance(bool=0);
@@ -168,7 +168,7 @@ public:
     bool is_inside(int,int,int);
     vector3d e_to_particle(double&,double&,double&);
     vector3d b_to_particle(double&,double&,double&);
-    void moving_window(int,int);
+    void moving_window(int,int,double);
     double get_rand();
     plist::particle* bear_particle(double,vector3d&,vector3d&,double,double,double);
     plist::particle* new_particle();

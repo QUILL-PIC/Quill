@@ -301,7 +301,7 @@ void spatial_region::f_init_focused(double a0y, double a0z, double xsigma, doubl
     }
 }
 
-void spatial_region::fill_cell_by_particles(double cmr, int_vector3d& a, int_vector3d& b, double n, double ux0)
+void spatial_region::fill_cell_by_particles(double cmr, int_vector3d& a, int_vector3d& b, double n, double ux0, double dsplmt)
 {
     // a = {i,j,k} - cell position, b = {xnpic,ynpic,znpic}, n - density
     double x0;
@@ -309,7 +309,7 @@ void spatial_region::fill_cell_by_particles(double cmr, int_vector3d& a, int_vec
     double z0;
     double q0;
     spatial_region::plist::particle* tmp_p;
-    x0 = 0.5/b.i;
+    x0 = 0.5/b.i + dsplmt;
     y0 = 0.5/b.j;
     z0 = 0.5/b.k;
     q0 = 1/double(b.i*b.j*b.k)*n;

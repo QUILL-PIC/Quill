@@ -510,11 +510,11 @@ void spatial_region::padvance(bool freezing)
     }
 }
 
-void spatial_region::moving_window(int l, int nmw)
+void spatial_region::moving_window(int l, int nmw, double mwspeed)
 {
     spatial_region::plist::particle* current;
     //
-    if((l+1)*dt>nmw*dx)
+    if((l+1)*dt*mwspeed>nmw*dx)
     {
         for(int j=0;j<ny;j++)
         {
