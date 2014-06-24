@@ -157,6 +157,9 @@ def particles(name='phasespace',s=['x','y','g']):
 	elif s[i]=='vy':
 	    for j in np.arange(0,n,1):
 		a[i][j] = float(data[9*j+5])/float(data[9*j+7])
+	elif s[i]=='vz':
+	    for j in np.arange(0,n,1):
+		a[i][j] = float(data[9*j+6])/float(data[9*j+7])
 	elif s[i]=='phi': # measured in xy plane countercloclwise from x-axis, lies in (-pi,pi]
 	    for j in np.arange(0,n,1):
 		a[i][j] = math.atan2(float(data[9*j+5]),float(data[9*j+4]))

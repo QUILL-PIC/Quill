@@ -3,14 +3,14 @@
 // qwe! в случае вывода не всех компонент поля (yz, e.g.) даёт ошибку
 
 string f1name,f2name,f3name; // possible: ex, ey, ez, bx, by, bz
-f1name = "ex"; // red
-f2name = "ey"; // green
+f1name = "bx"; // red
+f2name = "by"; // green
 f3name = "bz"; // blue
-real flim = 1000;
+real flim = 10;
 
 //----------------------------------------
 
-real file_number = 0;
+real file_number = 16;
 
 //----------------------------------------
 

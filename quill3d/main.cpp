@@ -42,7 +42,7 @@ int n_ion_populations;
 double* icmr;
 int n_tracks;
 double tr_start,xtr1,ytr1,ztr1,xtr2,ytr2,ztr2;
-double mwspeed,nelflow,vlflow,mcrlflow,nerflow,vrflow,mcrrflow;
+double mwspeed,nelflow,vlflow,mcrlflow,Tlflow,nerflow,vrflow,mcrrflow,Trflow;
 std::string e_components_for_output;
 std::string b_components_for_output;
 std::string f_envelope;
@@ -940,9 +940,9 @@ int main()
 			    cell_pos.i = 2;
 			    x0 += 1;
 			}
-			psr[0].fill_cell_by_particles(-1,cell_pos,v_npic,n,vlflow/sqrt(1-vlflow*vlflow),x0-0.5); // 0.5 - for a compensation in fill_cell... for xnpic = 1
+			psr[0].fill_cell_by_particles(-1,cell_pos,v_npic,n,vlflow/sqrt(1-vlflow*vlflow),x0-0.5,Tlflow); // 0.5 - for a compensation in fill_cell... for xnpic = 1
 			if (ions=="on")
-			    psr[0].fill_cell_by_particles(1/(proton_mass*mcrlflow),cell_pos,v_npic,n,vlflow/sqrt(1-vlflow*vlflow),x0-0.5);
+			    psr[0].fill_cell_by_particles(1/(proton_mass*mcrlflow),cell_pos,v_npic,n,vlflow/sqrt(1-vlflow*vlflow),x0-0.5,Tlflow);
 		    }
 		}
 	    }
@@ -970,9 +970,9 @@ int main()
 			    cell_pos.i = nx_sr - 3;
 			    x0 += 1;
 			}
-			psr[n_sr-1].fill_cell_by_particles(-1,cell_pos,v_npic,n,-vrflow/sqrt(1-vrflow*vrflow),(1-x0)-0.5);
+			psr[n_sr-1].fill_cell_by_particles(-1,cell_pos,v_npic,n,-vrflow/sqrt(1-vrflow*vrflow),(1-x0)-0.5,Trflow);
 			if (ions=="on")
-			    psr[n_sr-1].fill_cell_by_particles(1/(proton_mass*mcrrflow),cell_pos,v_npic,n,-vrflow/sqrt(1-vrflow*vrflow),(1-x0)-0.5);
+			    psr[n_sr-1].fill_cell_by_particles(1/(proton_mass*mcrrflow),cell_pos,v_npic,n,-vrflow/sqrt(1-vrflow*vrflow),(1-x0)-0.5,Trflow);
 		    }
 		}
 	    }
@@ -1704,12 +1704,16 @@ int init()
     vlflow = current->value;
     current = find("mcrlflow",first);
     mcrlflow = current->value;
+    current = find("Tlflow",first);
+    Tlflow = current->value;
     current = find("nerflow",first);
     nerflow = current->value*ne/(1.11485e+13/lambda/lambda);
     current = find("vrflow",first);
     vrflow = current->value;
     current = find("mcrrflow",first);
     mcrrflow = current->value;
+    current = find("Trflow",first);
+    Trflow = current->value;
     if (nelflow!=0 || nerflow!=0)
 	mwindow = 0;
     //
@@ -1999,9 +2003,11 @@ int init()
     fout_log<<"nelflow\n"<<nelflow<<"\n";
     fout_log<<"vlflow\n"<<vlflow<<"\n";
     fout_log<<"mcrlflow\n"<<mcrlflow<<"\n";
+    fout_log<<"Tlflow\n"<<Tlflow<<"\n";
     fout_log<<"nerflow\n"<<nerflow<<"\n";
     fout_log<<"vrflow\n"<<vrflow<<"\n";
     fout_log<<"mcrrflow\n"<<mcrrflow<<"\n";
+    fout_log<<"Trflow\n"<<Trflow<<"\n";
     fout_log<<"ions\n"<<ions<<"\n";
     tmp_p_film = p_last_film;
     while (tmp_p_film!=0)

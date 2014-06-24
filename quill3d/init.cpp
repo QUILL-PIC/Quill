@@ -301,7 +301,7 @@ void spatial_region::f_init_focused(double a0y, double a0z, double xsigma, doubl
     }
 }
 
-void spatial_region::fill_cell_by_particles(double cmr, int_vector3d& a, int_vector3d& b, double n, double ux0, double dsplmt)
+void spatial_region::fill_cell_by_particles(double cmr, int_vector3d& a, int_vector3d& b, double n, double ux0, double dsplmt, double T)
 {
     // a = {i,j,k} - cell position, b = {xnpic,ynpic,znpic}, n - density
     double x0;
@@ -327,9 +327,26 @@ void spatial_region::fill_cell_by_particles(double cmr, int_vector3d& a, int_vec
 		tmp_p->x = x0 + double(a.i) + double(ip)/double(b.i);
 		tmp_p->y = y0 + double(a.j) + double(jp)/double(b.j);
 		tmp_p->z = z0 + double(a.k) + double(kp)/double(b.k);
-		tmp_p->ux = ux0;
-		tmp_p->uy = 0;
-		tmp_p->uz = 0;
+		if ( T!=0 && cmr!=0 ){
+		    double v0 = ux0/sqrt( 1 + ux0*ux0 );
+		    double a,b,c;
+		    do {
+			a = T*( 2*get_rand()-1 );
+			b = T*( 2*get_rand()-1 );
+			c = T*( 2*get_rand()-1 );
+		    } while (a*a+b*b+c*c>T*T);
+		    b = b*sqrt( 1 - v0*v0 )/( 1 + a*v0 );
+		    c = c*sqrt( 1 - v0*v0 )/( 1 + a*v0 );
+		    a = ( a + v0 )/( 1 + a*v0 );
+		    double g = 1/sqrt( 1 - a*a - b*b - c*c );
+		    tmp_p->ux = (v0+T*a)*g;
+		    tmp_p->uy = T*b*g;
+		    tmp_p->uz = T*c*g;
+		} else {
+		    tmp_p->ux = ux0;
+		    tmp_p->uy = 0;
+		    tmp_p->uz = 0;
+		}
 		if (cmr!=0)
 		    tmp_p->g = sqrt(1 + (*tmp_p).ux*(*tmp_p).ux + (*tmp_p).uy*(*tmp_p).uy + (*tmp_p).uz*(*tmp_p).uz);
 		else

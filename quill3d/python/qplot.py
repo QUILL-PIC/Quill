@@ -67,7 +67,7 @@ def density(t=0,plane='xy',max_w=0,max_e_density=0,max_p_density=0,max_g_density
     else:
 	plt.savefig(save2)
 
-def particles(t=0,space=['x','y'],particles='geip',colors='bgmrcyk',r=5,alpha=0.1,cmap='jet',gamma=0,data_folder='../results/',axis=[],save2=''):
+def particles(t=0,space=['x','y'],particles='geip',colors='bgmrcyk',r=5,alpha=0.01,cmap='jet',gamma=0,data_folder='../results/',axis=[],save2=''):
     'Plots particles as dots in (phase)*space*.\n\
     \n\
     Examples:\n\
@@ -293,9 +293,11 @@ def rpattern(t=None,particles='geip',colors='bgmrcyk',dphi=0.1,save2='',data_fol
 	plt.savefig(save2)
 
 def spectrum(t=None,particles='geip',colors='bgmrcyk',sptype='simple',axis=[],save2='',data_folder='../results/'):
-    'Examples:\n\
-    spectrum() # plots spectrum for all particles\n\
-    at t_end'
+    'spectrum() # plots spectrum for all particles\n\
+    at t_end\n\
+    Examples:\n\
+    spectrum(10,sptype=\'loglog\') # energy distr.\n\
+    in log-log axes'
     plt.xlabel('kinetic energy, MeV')
     plt.ylabel('dN/deps, a.u.')
     if axis!=[]:
@@ -333,6 +335,14 @@ def spectrum(t=None,particles='geip',colors='bgmrcyk',sptype='simple',axis=[],sa
 	if sptype=='energy':
 	    for j in np.arange(len(sp[:,0])):
 		sp[j,1] = sp[j,0]*sp[j,1]
+	elif sptype=='loglog':
+	    for j in np.arange(len(sp[:,0])):
+		sp[j,1] = sp[j,0]*sp[j,1]
+		if sp[j,1]>0:
+		    sp[j,1] = np.log10( sp[j,1] )
+		else:
+		    sp[j,1] = 0
+		sp[j,0] = np.log10( sp[j,0] )
 	for j in np.arange(len(sp[:,0])):
 	    if sp[j,1]>0:
 		sp[j,1] = np.log(sp[j,1])/np.log(10.)
@@ -438,3 +448,37 @@ def mollweide(t=None,nlongitude=80,nlatitude=40,Nlevels=15,save2='',data_folder=
 	    plt.show()
 	else:
 	    plt.savefig(save2)
+
+def field(t=0,field='ex',plane='xy',fmax=None,data_folder='../results/',axis=[],save2=''):
+    'Plots fields.'
+    resread.t = '%g' % t
+    resread.data_folder = data_folder
+    resread.read_parameters()
+    #
+    plt.title(field)
+    plt.xlabel(plane[0]+' (wavelengths)')
+    plt.ylabel(plane[1]+' (wavelengths)')
+    if plane=='xz':
+	xlength = resread.nx*resread.dx
+	ylength = resread.nz*resread.dz
+    elif plane=='yz':
+	xlength = resread.ny*resread.dy
+	ylength = resread.nz*resread.dz
+    else:
+	xlength = resread.nx*resread.dx
+	ylength = resread.ny*resread.dy
+    if axis!=[]:
+	plt.axis(axis)
+    #
+    f = resread.density(field,plane)
+    if fmax==None:
+	fmax = np.max( [-np.min(f), np.max(f)] )
+	print 'fmax = ', fmax
+    #
+    plt.imshow(f,'bwr',interpolation='none',vmin=-fmax,vmax=fmax,origin='lower',extent=(0,xlength,0,ylength))
+    #
+    if save2=='':
+	plt.show()
+    else:
+	plt.savefig(save2)
+

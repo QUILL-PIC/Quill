@@ -153,7 +153,7 @@ public:
     void f_init_focused(double,double,double,double,double,double,bool=1,double=0,double=0,double=0,bool=1,double=0);
     void add_beam(double,double,double,double,double,double);
     void film(double,double,double,bool,double,double);
-    void fill_cell_by_particles(double,int_vector3d&,int_vector3d&,double,double=0,double=0);
+    void fill_cell_by_particles(double,int_vector3d&,int_vector3d&,double,double=0,double=0,double=0);
     void fadvance_ndfx();
     void f_zeroing_on_boundaries();
     void padvance(bool=0);
