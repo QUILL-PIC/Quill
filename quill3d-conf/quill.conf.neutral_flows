@@ -3,9 +3,9 @@
 # Пробелы и части строк, следующие за '#', игнорируются
 
 # число вычислительных потоков
-#n_sr = 16; # default: 8
+n_sr = 16; # default: 8
 # число NUMA-нодов
-#n_numa_nodes = 4 # default: 2
+n_numa_nodes = 4 # default: 2
 
 # шаги численной сетки; если задан dt, но не задан dx, то dx
 # вычисляется автоматически так, чтобы алгоритм NDFX давал наименьшую
@@ -99,10 +99,11 @@ a0 = 0
 # движущееся окно; выключается при наличии нейтральных потоков (flows)
 mwindow = off # default: on; possible: on, off
 # moving window velocity
-#mwspeed = 0.4 # default: 0
+#mwspeed = 0.4 # default: 1
 # включает или отключает добавление частиц на передней границе области
 # при работе движущегося окна
 mwseed = off # default: on; possible: on, off
+
 # компоненты полей для вывода в файл
 e_components_for_output = xyz # default: none; possible: x, y, z, xy, xz, yz, xyz
 b_components_for_output = xyz # default: none; possible: x, y, z, xy, xz, yz, xyz

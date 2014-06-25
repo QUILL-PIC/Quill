@@ -1563,6 +1563,10 @@ int init()
     current = find("mwindow",first);
     mwindow = 1;
     if (current->units=="off") mwindow = 0;
+    current = find("mwspeed",first);
+    mwspeed = current->value;
+    if (mwindow==1 && mwspeed==0)
+	mwspeed = 1;
     current = find("mwseed",first);
     mwseed = 1;
     if (current->units=="off") mwseed = 0;
@@ -1696,8 +1700,6 @@ int init()
 	} while (tmp_s!="on"&&tmp!=0);
     }
     // neutral flows
-    current = find("mwspeed",first);
-    mwspeed = current->value;
     current = find("nelflow",first);
     nelflow = current->value*ne/(1.11485e+13/lambda/lambda);
     current = find("vlflow",first);

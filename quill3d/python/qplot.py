@@ -482,3 +482,24 @@ def field(t=0,field='ex',plane='xy',fmax=None,data_folder='../results/',axis=[],
     else:
 	plt.savefig(save2)
 
+def energy(data_folder='../results/',save2=''):
+    'Plots energy of electrons, ions, etc. vs time'
+    resread.data_folder = data_folder
+    resread.read_parameters()
+    tmp = resread.t_data('energy')
+    plt.plot(tmp[:,0],tmp[:,1],'k') # em fields
+    plt.plot(tmp[:,0],tmp[:,2],'g') # electrons
+    plt.plot(tmp[:,0],tmp[:,3],'r') # positrons
+    plt.plot(tmp[:,0],tmp[:,4],'b') # hard photons
+    if (resread.n_ion_populations>0):
+	plt.plot(tmp[:,0],tmp[:,5],'m') # ions
+	plt.plot(tmp[:,0],tmp[:,1]+tmp[:,2]+tmp[:,3]+tmp[:,4]+tmp[:,5],'--k') # sum energy
+    else:
+	plt.plot(tmp[:,0],tmp[:,1]+tmp[:,2]+tmp[:,3]+tmp[:,4],'--k') # sum energy
+    plt.xlabel('ct (wavelengths)')
+    plt.ylabel('Energy (arb. units)')
+    if save2!=None:
+	if save2=='':
+	    plt.show()
+	else:
+	    plt.savefig(save2)

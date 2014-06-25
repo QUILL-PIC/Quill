@@ -96,11 +96,14 @@ W = 50 J # default units: cgs; possible: J
 #a0y = 3.2
 #a0z = 1.7
 
-# движущееся окно
+# движущееся окно; выключается при наличии нейтральных потоков (flows)
 mwindow = off # default: on; possible: on, off
+# moving window velocity
+#mwspeed = 0.4 # default: 1
 # включает или отключает добавление частиц на передней границе области
 # при работе движущегося окна
 #mwseed = on # default: on; possible: on, off
+
 # компоненты полей для вывода в файл
 e_components_for_output = xyz # default: none; possible: x, y, z, xy, xz, yz, xyz
 b_components_for_output = xyz # default: none; possible: x, y, z, xy, xz, yz, xyz
@@ -147,6 +150,17 @@ filmwidth = 0.4 # default: lambda, possible: um, fs
 gradwidth = 0 # default: 0; default units: lambda, possible: um, fs
 nfilm = 0.25 ne # default: cm^{-3}; possible: ncr, ne
 mcr = 2 # default: 1
+
+# neutral (elecrons+ions) flows, left and right
+# (neflow!=0 turns off mowing window)
+#nelflow = 1 ne # default units: ne
+vlflow = 0.999 # default: 0
+mcrlflow = 5.4452e-4 # positrons
+Tlflow = 1e-3 # adds random speed; default: 0
+#nerflow = 1 ne # default units: ne
+vrflow = 0.999 # default: 0
+mcrrflow = 5.4452e-4
+Trflow = 1e-3 # default: 0
 
 # число рядов частиц в ячейке по координатам
 xnpic = 1
