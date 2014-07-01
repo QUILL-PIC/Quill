@@ -919,65 +919,67 @@ int main()
 	}
 
 	// добавление частиц для нейтральных потоков (neutral flows)
-	static double xlflow = 1;
-	if ( xlflow >= 1 ) {
-	    xlflow -= 1;
-	    double n=nelflow/xnpic; // in n_{cr}
-	    int_vector3d cell_pos, v_npic;
-	    v_npic.i = 1; // с xnpic приходится обхоиться отдельно, см. ниже
-	    v_npic.j = ynpic;
-	    v_npic.k = znpic;
-	    for (int j=0;j<int(ylength/dy);j++) {
-		for (int k=0;k<int(zlength/dz);k++) {
-		    cell_pos.j=j;
-		    cell_pos.k=k;
-		    for ( int ii=0; ii<xnpic; ii++ ) {
-			double x0;
-			x0 = xlflow - float(ii)/xnpic;
-			if ( x0 >= 0 ) {
-			    cell_pos.i = 3;
-			} else {
-			    cell_pos.i = 2;
-			    x0 += 1;
+	if ( nelflow!=0 || nerflow!=0 ) {
+	    static double xlflow = 1;
+	    if ( xlflow >= 1 ) {
+		xlflow -= 1;
+		double n=nelflow/xnpic; // in n_{cr}
+		int_vector3d cell_pos, v_npic;
+		v_npic.i = 1; // с xnpic приходится обхоиться отдельно, см. ниже
+		v_npic.j = ynpic;
+		v_npic.k = znpic;
+		for (int j=0;j<int(ylength/dy);j++) {
+		    for (int k=0;k<int(zlength/dz);k++) {
+			cell_pos.j=j;
+			cell_pos.k=k;
+			for ( int ii=0; ii<xnpic; ii++ ) {
+			    double x0;
+			    x0 = xlflow - float(ii)/xnpic;
+			    if ( x0 >= 0 ) {
+				cell_pos.i = 3;
+			    } else {
+				cell_pos.i = 2;
+				x0 += 1;
+			    }
+			    psr[0].fill_cell_by_particles(-1,cell_pos,v_npic,n,vlflow/sqrt(1-vlflow*vlflow),x0-0.5,Tlflow); // 0.5 - for a compensation in fill_cell... for xnpic = 1
+			    if (ions=="on")
+				psr[0].fill_cell_by_particles(1/(proton_mass*mcrlflow),cell_pos,v_npic,n,vlflow/sqrt(1-vlflow*vlflow),x0-0.5,Tlflow);
 			}
-			psr[0].fill_cell_by_particles(-1,cell_pos,v_npic,n,vlflow/sqrt(1-vlflow*vlflow),x0-0.5,Tlflow); // 0.5 - for a compensation in fill_cell... for xnpic = 1
-			if (ions=="on")
-			    psr[0].fill_cell_by_particles(1/(proton_mass*mcrlflow),cell_pos,v_npic,n,vlflow/sqrt(1-vlflow*vlflow),x0-0.5,Tlflow);
 		    }
 		}
 	    }
-	}
-	xlflow += dt*vlflow/dx;
-	//
-	static double xrflow = 1;
-	if ( xrflow >= 1 ) {
-	    xrflow -= 1;
-	    double n=nerflow/xnpic; // in n_{cr}
-	    int_vector3d cell_pos, v_npic;
-	    v_npic.i = 1; // с xnpic приходится обхоиться отдельно, см. ниже
-	    v_npic.j = ynpic;
-	    v_npic.k = znpic;
-	    for (int j=0;j<int(ylength/dy);j++) {
-		for (int k=0;k<int(zlength/dz);k++) {
-		    cell_pos.j=j;
-		    cell_pos.k=k;
-		    for ( int ii=0; ii<xnpic; ii++ ) {
-			double x0;
-			x0 = xrflow - float(ii)/xnpic;
-			if ( x0 >= 0 ) {
-			    cell_pos.i = nx_sr - 4;
-			} else {
-			    cell_pos.i = nx_sr - 3;
-			    x0 += 1;
+	    xlflow += dt*vlflow/dx;
+	    //
+	    static double xrflow = 1;
+	    if ( xrflow >= 1 ) {
+		xrflow -= 1;
+		double n=nerflow/xnpic; // in n_{cr}
+		int_vector3d cell_pos, v_npic;
+		v_npic.i = 1; // с xnpic приходится обхоиться отдельно, см. ниже
+		v_npic.j = ynpic;
+		v_npic.k = znpic;
+		for (int j=0;j<int(ylength/dy);j++) {
+		    for (int k=0;k<int(zlength/dz);k++) {
+			cell_pos.j=j;
+			cell_pos.k=k;
+			for ( int ii=0; ii<xnpic; ii++ ) {
+			    double x0;
+			    x0 = xrflow - float(ii)/xnpic;
+			    if ( x0 >= 0 ) {
+				cell_pos.i = nx_sr - 4;
+			    } else {
+				cell_pos.i = nx_sr - 3;
+				x0 += 1;
+			    }
+			    psr[n_sr-1].fill_cell_by_particles(-1,cell_pos,v_npic,n,-vrflow/sqrt(1-vrflow*vrflow),(1-x0)-0.5,Trflow);
+			    if (ions=="on")
+				psr[n_sr-1].fill_cell_by_particles(1/(proton_mass*mcrrflow),cell_pos,v_npic,n,-vrflow/sqrt(1-vrflow*vrflow),(1-x0)-0.5,Trflow);
 			}
-			psr[n_sr-1].fill_cell_by_particles(-1,cell_pos,v_npic,n,-vrflow/sqrt(1-vrflow*vrflow),(1-x0)-0.5,Trflow);
-			if (ions=="on")
-			    psr[n_sr-1].fill_cell_by_particles(1/(proton_mass*mcrrflow),cell_pos,v_npic,n,-vrflow/sqrt(1-vrflow*vrflow),(1-x0)-0.5,Trflow);
 		    }
 		}
 	    }
+	    xrflow += dt*vrflow/dx;
 	}
-	xrflow += dt*vrflow/dx;
         
         // вывод данных в файлы (продолжение)
         if(l*dt>=[](ddi* a) {double b=a->f*a->output_period; if(a->prev!=0) b+=(a->prev)->t_end; return b;} (p_current_ddi))
