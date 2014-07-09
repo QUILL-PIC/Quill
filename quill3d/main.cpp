@@ -53,6 +53,7 @@ std::string particles_for_output;
 std::string pmerging,pmerging_now;
 std::string lp_reflection,f_reflection;
 std::string ions;
+std::string data_folder; // 09.07.14 - specify custom data folder
 int init();
 //------------------------------
 
@@ -191,7 +192,7 @@ int main()
     
     if (init()==1) return 1;
 
-    ofstream fout_log("results/log",ios::app); // ios:app mode - append to the file
+    ofstream fout_log(data_folder+"/log",ios::app); // ios:app mode - append to the file
     fout_log<<"start time: "<<ctime(&inaccurate_time);
 
     ppd = new double[3+n_ion_populations];
@@ -216,7 +217,7 @@ int main()
     {
         node = i*n_numa_nodes/n_sr;
 	//
-	psr[i].init(dx,dy,dz,dt,lambda/2.4263086e-10,xnpic,ynpic,znpic,node,n_ion_populations,icmr);
+	psr[i].init(dx,dy,dz,dt,lambda/2.4263086e-10,xnpic,ynpic,znpic,node,n_ion_populations,icmr,data_folder);
         psr[i].create_arrays(nx_sr,int(ylength/dy),int(zlength/dz),i+times(&tms_struct),node);
 	//
     }
@@ -430,8 +431,8 @@ int main()
     }
 
     l=0;
-    ofstream fout_N("results/N");
-    ofstream fout_energy("results/energy");
+    ofstream fout_N(data_folder+"/N");
+    ofstream fout_energy(data_folder+"/energy");
     while(l<p_last_ddi->t_end/dt)
     {
 	/* вывод плотности, спектра и 'phasespace'-данных для фотонов,
@@ -448,17 +449,17 @@ int main()
 	    int onx0;
 	    int ii;
 	    //
-	    file_name = "results/rho";
+	    file_name = data_folder+"/rho";
 	    sprintf(file_num_pchar,"%g",int([](ddi* a) {double b=a->f*a->output_period; if(a->prev!=0) b+=(a->prev)->t_end; return b;} (p_current_ddi)/2/PI*file_name_accuracy)/file_name_accuracy);
 	    file_name = file_name + file_num_pchar;
 	    ofstream fout_rho(file_name.c_str());
 	    pof = &fout_rho;
 	    //
-	    file_name = "results/rho_p";
+	    file_name = data_folder+"/rho_p";
 	    file_name = file_name + file_num_pchar;
 	    ofstream fout_rho_p(file_name.c_str());
 	    //
-	    file_name = "results/rho_ph";
+	    file_name = data_folder+"/rho_ph";
 	    file_name = file_name + file_num_pchar;
 	    ofstream fout_rho_ph(file_name.c_str());
 	    if (particles_for_output=="ep"||particles_for_output=="epph")
@@ -491,7 +492,7 @@ int main()
 		for (int n=0;n<n_ion_populations;n++)
 		{
 		    sprintf(s_cmr,"%g",icmr[n]);
-		    file_name = "results/irho_";
+		    file_name = data_folder+"/irho_";
 		    file_name += s_cmr;
 		    file_name += "_";
 		    file_name += file_num_pchar;
@@ -515,24 +516,24 @@ int main()
 		}
 	    }
 	    //
-            file_name = "results/spectrum";
+            file_name = data_folder+"/spectrum";
             sprintf(file_num_pchar,"%g",int([](ddi* a) {double b=a->f*a->output_period; if(a->prev!=0) b+=(a->prev)->t_end; return b;} (p_current_ddi)/2/PI*file_name_accuracy)/file_name_accuracy);
             file_name = file_name + file_num_pchar;
             ofstream fout_spectrum(file_name.c_str());
-            file_name = "results/spectrum_p";
+            file_name = data_folder+"/spectrum_p";
             file_name = file_name + file_num_pchar;
             ofstream fout_spectrum_p(file_name.c_str());
-            file_name = "results/spectrum_ph";
+            file_name = data_folder+"/spectrum_ph";
             file_name = file_name + file_num_pchar;
             ofstream fout_spectrum_ph(file_name.c_str());
-            file_name = "results/phasespace";
+            file_name = data_folder+"/phasespace";
             sprintf(file_num_pchar,"%g",int([](ddi* a) {double b=a->f*a->output_period; if(a->prev!=0) b+=(a->prev)->t_end; return b;} (p_current_ddi)/2/PI*file_name_accuracy)/file_name_accuracy);
             file_name = file_name + file_num_pchar;
             ofstream fout_phasespace(file_name.c_str());
-            file_name = "results/phasespace_p";
+            file_name = data_folder+"/phasespace_p";
             file_name = file_name + file_num_pchar;
             ofstream fout_phasespace_p(file_name.c_str());
-            file_name = "results/phasespace_ph";
+            file_name = data_folder+"/phasespace_ph";
             file_name = file_name + file_num_pchar;
             ofstream fout_phasespace_ph(file_name.c_str());
             double* spectrum = new double[neps];
@@ -553,12 +554,12 @@ int main()
 	    {
 		char s_cmr[20];
 		sprintf(s_cmr,"%g",icmr[m]);
-		file_name = "results/spectrum_";
+		file_name = data_folder+"/spectrum_";
 		file_name += s_cmr;
 		file_name += "_";
 		file_name += file_num_pchar;
 		fout_spectrum_i[m].open(file_name.c_str());
-		file_name = "results/phasespace_";
+		file_name = data_folder+"/phasespace_";
 		file_name += s_cmr;
 		file_name += "_";
 		file_name += file_num_pchar;
@@ -995,7 +996,7 @@ int main()
 	    //
 	    if (e_components_for_output=="x"||e_components_for_output=="xy"||e_components_for_output=="xz"||e_components_for_output=="xyz")
 	    {
-		file_name = "results/ex";
+		file_name = data_folder+"/ex";
 		sprintf(file_num_pchar,"%g",int([](ddi* a) {double b=a->f*a->output_period; if(a->prev!=0) b+=(a->prev)->t_end; return b;} (p_current_ddi)/2/PI*file_name_accuracy)/file_name_accuracy);
 		file_name = file_name + file_num_pchar;
 		ofstream fout_ex(file_name.c_str());
@@ -1023,7 +1024,7 @@ int main()
 	    //
 	    if (e_components_for_output=="y"||e_components_for_output=="xy"||e_components_for_output=="yz"||e_components_for_output=="xyz")
 	    {
-		file_name = "results/ey";
+		file_name = data_folder+"/ey";
 		sprintf(file_num_pchar,"%g",int([](ddi* a) {double b=a->f*a->output_period; if(a->prev!=0) b+=(a->prev)->t_end; return b;} (p_current_ddi)/2/PI*file_name_accuracy)/file_name_accuracy);
 		file_name = file_name + file_num_pchar;
 		ofstream fout_ey(file_name.c_str());
@@ -1051,7 +1052,7 @@ int main()
 	    //
 	    if (e_components_for_output=="z"||e_components_for_output=="xz"||e_components_for_output=="yz"||e_components_for_output=="xyz")
 	    {
-		file_name = "results/ez";
+		file_name = data_folder+"/ez";
 		sprintf(file_num_pchar,"%g",int([](ddi* a) {double b=a->f*a->output_period; if(a->prev!=0) b+=(a->prev)->t_end; return b;} (p_current_ddi)/2/PI*file_name_accuracy)/file_name_accuracy);
 		file_name = file_name + file_num_pchar;
 		ofstream fout_ez(file_name.c_str());
@@ -1079,7 +1080,7 @@ int main()
 	    //
 	    if (b_components_for_output=="x"||b_components_for_output=="xy"||b_components_for_output=="xz"||b_components_for_output=="xyz")
 	    {
-		file_name = "results/bx";
+		file_name = data_folder+"/bx";
 		sprintf(file_num_pchar,"%g",int([](ddi* a) {double b=a->f*a->output_period; if(a->prev!=0) b+=(a->prev)->t_end; return b;} (p_current_ddi)/2/PI*file_name_accuracy)/file_name_accuracy);
 		file_name = file_name + file_num_pchar;
 		ofstream fout_bx(file_name.c_str());
@@ -1107,7 +1108,7 @@ int main()
 	    //
 	    if (b_components_for_output=="y"||b_components_for_output=="xy"||b_components_for_output=="yz"||b_components_for_output=="xyz")
 	    {
-		file_name = "results/by";
+		file_name = data_folder+"/by";
 		sprintf(file_num_pchar,"%g",int([](ddi* a) {double b=a->f*a->output_period; if(a->prev!=0) b+=(a->prev)->t_end; return b;} (p_current_ddi)/2/PI*file_name_accuracy)/file_name_accuracy);
 		file_name = file_name + file_num_pchar;
 		ofstream fout_by(file_name.c_str());
@@ -1135,7 +1136,7 @@ int main()
 	    //
 	    if (b_components_for_output=="z"||b_components_for_output=="xz"||b_components_for_output=="yz"||b_components_for_output=="xyz")
 	    {
-		file_name = "results/bz";
+		file_name = data_folder+"/bz";
 		sprintf(file_num_pchar,"%g",int([](ddi* a) {double b=a->f*a->output_period; if(a->prev!=0) b+=(a->prev)->t_end; return b;} (p_current_ddi)/2/PI*file_name_accuracy)/file_name_accuracy);
 		file_name = file_name + file_num_pchar;
 		ofstream fout_bz(file_name.c_str());
@@ -1161,7 +1162,7 @@ int main()
 		fout_bz.close();
 	    }
             //
-            file_name = "results/w";
+            file_name = data_folder+"/w";
             sprintf(file_num_pchar,"%g",int([](ddi* a) {double b=a->f*a->output_period; if(a->prev!=0) b+=(a->prev)->t_end; return b;} (p_current_ddi)/2/PI*file_name_accuracy)/file_name_accuracy);
             file_name = file_name + file_num_pchar;
             ofstream fout_w(file_name.c_str());
@@ -1189,7 +1190,7 @@ int main()
             }
             psr[ii].fout_w_yzplane(pof,int((xlength-x0fout)/dx)-ii*(nx_sr-nx_ich));
             //
-            file_name = "results/inv";
+            file_name = data_folder+"/inv";
             sprintf(file_num_pchar,"%g",int([](ddi* a) {double b=a->f*a->output_period; if(a->prev!=0) b+=(a->prev)->t_end; return b;} (p_current_ddi)/2/PI*file_name_accuracy)/file_name_accuracy);
             file_name = file_name + file_num_pchar;
             ofstream fout_inv(file_name.c_str());
@@ -1940,6 +1941,11 @@ int init()
 	current->units="lambda";
     }
     ztr2 = current->value*2*PI;
+
+    current = find("data_folder",first);
+    data_folder = current->units;
+    if (data_folder == "")
+	data_folder = "results";
     //
     current = first;
     while (current->next!=0)
@@ -1951,7 +1957,7 @@ int init()
     delete current; // удаление последней переменной
     //
     int nx_sr1 = ( xlength/dx + nx_ich*(n_sr-1) )/n_sr; // nx = nx_sr*n_sr - nx_ich*(n_sr-1);
-    ofstream fout_log("results/log");
+    ofstream fout_log(data_folder+"/log");
     fout_log<<"dx\n"<<dx/2/PI<<"\n";
     fout_log<<"dy\n"<<dy/2/PI<<"\n";
     fout_log<<"dz\n"<<dz/2/PI<<"\n";

@@ -527,7 +527,7 @@ void spatial_region::fout_tracks(double a, int nm) {
 		    if (current->trn!=0 && current->x>=nm && current->x<nx-nm) {
 			std::string file_name;
 			char file_num_pchar[20];
-			file_name = "results/track_";
+			file_name = spatial_region::data_folder+"/track_";
 			sprintf(file_num_pchar,"%g",current->cmr);
 			file_name = file_name + file_num_pchar;
 			file_name = file_name + "_";

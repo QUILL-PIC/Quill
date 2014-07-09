@@ -35,6 +35,7 @@ spatial_region::spatial_region()
     p_lapwpo = 0;
     n_ion_populations = 0;
     icmr = 0;
+    data_folder = "results";
 }
 
 spatial_region::plist::particle::particle()
@@ -60,7 +61,7 @@ spatial_region::plist::plist()
     start=0;
 }
 
-void spatial_region::init(double dx0, double dy0, double dz0, double dt0, double e_s0, int xnpic0, int ynpic0, int znpic0, int node_number0, int n_ion_populations0, double* icmr0)
+void spatial_region::init(double dx0, double dy0, double dz0, double dt0, double e_s0, int xnpic0, int ynpic0, int znpic0, int node_number0, int n_ion_populations0, double* icmr0, std::string df)
 {
     dx = dx0;
     dy = dy0;
@@ -73,6 +74,7 @@ void spatial_region::init(double dx0, double dy0, double dz0, double dt0, double
     node_number = node_number0;
     n_ion_populations = n_ion_populations0;
     icmr = icmr0;
+    data_folder = df;
 }
 
 void spatial_region::create_arrays(int nx0, int ny0, int nz0, int seed, int node_number)
