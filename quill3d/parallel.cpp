@@ -14,7 +14,7 @@
 #define N_THREADS_MAX     64
 #define N_TASKS_DEFAULT   80
 
-pthread_t 		threads[N_THREADS_MAX];
+pthread_t threads[N_THREADS_MAX];
 pthread_mutex_t print_mutex;
 pthread_mutex_t task_mutex;
 
@@ -92,7 +92,7 @@ public:
 
 int QuillTask::perform(int tid)
 {
-	string command = "./parse.sh ../quill3d-conf/quill.conf.parallel/" + config_name + " | ./quill";
+	string command = "./parse.sh .parallel/" + config_name + " | ./quill";
 
 	pthread_mutex_lock(&print_mutex);
 	cout << "Begin QuillTask # " << task_id << ", thread id " << tid << ", config_name " << config_name << endl;
@@ -121,6 +121,13 @@ void Parallelizator::init(int argc, char** argv)
 	cout << argc << endl;
 	test_mode = false; 
 	num_threads = -1;  //uninitialized
+	if (argc == 1)
+	{
+	    cout << "usage: parallel [-threads value] [-test] [-help]" << endl;
+	    // the program should stop here, exit() may be not the
+	    // best for it
+	    exit(0);
+	}
 	for (int i=1; i<argc; i++)
 	{
 		cout << argv[i] << endl;
@@ -138,11 +145,19 @@ void Parallelizator::init(int argc, char** argv)
 			else
 				logError("option -threads missing an argument");
 		} 
-		if (strcmp(argv[i], "-test") == 0)
+		else if (strcmp(argv[i], "-test") == 0)
 		{
 			test_mode = true; //don't run Quill at all
 			num_tasks = N_TASKS_DEFAULT;
 		} 
+		else if (strcmp(argv[i], "-help") == 0)
+		{
+		    cout << "usage: parallel [-threads value] [-test] [-help]\n";
+		    cout << "value - the number of threads\n";
+		    cout << "parameter matrix is parallel.ini\n";
+		    cout << "template config is ../quill3d-conf/quill.conf.parallel/config" << endl;
+		    exit(0);
+		}
 	}
 	if (num_threads == -1)
 		num_threads = N_THREADS_DEFAULT;
@@ -185,6 +200,18 @@ void Parallelizator::init(int argc, char** argv)
 				param_y_value.push_back(ss.str());
 			}
 		}
+		else if (buffer.find("filmwidth") == 0)
+		{
+			istringstream iss(buffer);
+			iss >> param_y_name;
+			int value;
+			while (iss >> value)
+			{
+				stringstream ss;
+				ss << value;
+				param_y_value.push_back(ss.str());
+			}
+		}
 	}
 	
 	if (param_x_name.empty() || param_y_name.empty() || param_x_value.empty() || param_y_value.empty())
@@ -212,9 +239,9 @@ void Parallelizator::populateTaskQueue()
 	}
 	else
 	{
-		ifstream config_template("../quill3d-conf/quill.conf.gff-theory/n50-a50.config"); //will be customizeable in the future release
+		ifstream config_template("../quill3d-conf/quill.conf.parallel/config"); //will be customizeable in the future release
 		if (!config_template.is_open())
-			logErrorAndExit("unable to open config template \"../quill3d-conf/quill.conf.gff-theory\"");
+			logErrorAndExit("unable to open config template \"../quill3d-conf/quill.conf.parallel\"");
 			
 		string buffer;
 		vector<string> config_data;

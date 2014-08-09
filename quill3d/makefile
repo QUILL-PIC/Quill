@@ -1,7 +1,7 @@
 CXX := g++
 CXXFLAGS := -O3 -march=native -ffast-math -std=c++0x
 debug: CXXFLAGS := -g -std=c++0x
-CXXLIBS := -lpthread -lnuma
+CXXLIBS := -pthread -lnuma
 OBJECTS := advance.o deposition.o fout.o init.o low-level.o main.o mc.o plist.o
 
 quill: $(OBJECTS)
@@ -18,9 +18,12 @@ plist.o : main.h
 debug: $(OBJECTS)
 	$(CXX) -o quill $(CXXFLAGS) $(OBJECTS) $(CXXLIBS)
 
+parallel: parallel.cpp
+	$(CXX) -o parallel $(CXXFlLAGS) parallel.cpp -pthread
+
 .PHONY : clean
 clean:
-	-rm quill $(OBJECTS) conf
+	-rm quill $(OBJECTS) conf parallel
 
 .PHONY : results_clean
 results_clean:
