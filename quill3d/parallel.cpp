@@ -34,9 +34,13 @@
 // Dmitry Serebryakov
 // v.1.0 - initial version
 
+// 2014-08-09 
+// Eugene Nerush
+// v.1.0.1 - added support for filmwidth parameter, added command line -help option
+
 // 2014-08-11 
 // Dmitry Serebryakov
-// v.1.1 - any parameter can be used in parallel.ini
+// v.1.1 - any parameter from config template can be used in parallel.ini (not only ne and a0)
 
 
 #include <iostream>
@@ -85,10 +89,6 @@ class Parallelizator
 	int num_threads;
 	int num_tasks;
 	bool test_mode;
-	string param_x_name;
-	string param_y_name;
-	vector<string> param_x_value;
-	vector<string> param_y_value;
 	Param param_x, param_y;
 	
 public:
@@ -153,7 +153,11 @@ int QuillTask::perform(int tid)
 	if (TheParallelizator == NULL)
 		Parallelizator::logErrorAndExit("Parallelizator is NULL");
 
-	string command = "./parse.sh " + TheParallelizator->temp_config_folder + config_name + " | ./quill";
+	string command;
+	if (TheParallelizator->temp_config_folder.compare("../quill3d-conf/quill.conf.parallel/") != 0)
+		command = "./parse.sh " + TheParallelizator->temp_config_folder + config_name + " | ./quill";
+	else
+		command = "./parse.sh .parallel/" + config_name + " | ./quill";
 
 	pthread_mutex_lock(&print_mutex);
 	cout << "Begin QuillTask # " << task_id << ", thread id " << tid << ", config_name " << config_name << endl;
@@ -182,6 +186,13 @@ void Parallelizator::init(int argc, char** argv)
 	cout << argc << endl;
 	test_mode = false; 
 	num_threads = -1;  //uninitialized
+	if (argc == 1)
+	{
+	    cout << "usage: parallel [-threads value] [-test] [-help]" << endl;
+	    // the program should stop here, exit() may be not the
+	    // best for it
+	    exit(0);
+	}
 	for (int i=1; i<argc; i++)
 	{
 		if (strcmp(argv[i], "-threads") == 0)
@@ -198,11 +209,19 @@ void Parallelizator::init(int argc, char** argv)
 			else
 				logError("option -threads missing an argument");
 		} 
-		if (strcmp(argv[i], "-test") == 0)
+		else if (strcmp(argv[i], "-test") == 0)
 		{
 			test_mode = true; //don't run Quill at all
 			num_tasks = N_TASKS_DEFAULT;
 		} 
+		else if (strcmp(argv[i], "-help") == 0)
+		{
+		    cout << "usage: parallel [-threads value] [-test] [-help]\n";
+		    cout << "value - the number of threads\n";
+		    cout << "parameter matrix is in parallel.ini\n";
+		    cout << "template config is ../quill3d-conf/quill.conf.parallel/config_template" << endl;
+		    exit(0);
+		}
 	}
 	if (num_threads == -1)
 		num_threads = N_THREADS_DEFAULT;
@@ -439,11 +458,13 @@ void Parallelizator::logErrorAndExit(string message)
 	exit(1);
 }
 
-// Logs error to console
+// Logs error to console (threadsafe)
 
 void Parallelizator::logError(string message)
 {
+	pthread_mutex_lock(&print_mutex);
 	cout << "ERROR: " << message << endl;
+	pthread_mutex_unlock(&print_mutex);
 }
 
 // Staring point of each task executor thread.
