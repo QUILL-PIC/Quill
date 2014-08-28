@@ -143,6 +143,8 @@ nfilm = 0.5 ne # default: cm^{-3}; possible: ncr, ne
 # отношение массы (в массах протона) к заряду (в зарядах протона) для
 # иона плёнки
 mcr = 1 # default: 1
+# "температура" (разброс скоростей) электронов плёнки
+#Tfilm = 0.1 # default: 0
 #
 film = off # default: off; possible: on
 x0film = 11 # default: 0; default units: lambda, possible: um, fs
@@ -208,3 +210,6 @@ crpc = 2.0
 
 # алгоритм «заморозки» частиц в магнитном поле
 freezing = off # default: off; possible: on
+
+# имя папки для результатов; не забудьте создать её вручную!
+data_folder = res_hb # default: results

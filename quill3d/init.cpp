@@ -413,12 +413,14 @@ void spatial_region::add_beam(double cmr, double n0, double ux0, double xb, doub
     }
 }
 
-void spatial_region::film(double x0, double x1, double ne, bool ions, double cmr, double gradwidth)
+void spatial_region::film(double x0, double x1, double ne, bool ions, double cmr, double gradwidth, double T)
 { /* x0 - координата левой границы плёнки, x1 - правой, ne -
      концентрация электронов в плёнке, нормированная на критическую
      концентрацию */
     /* gradwidth - толщина части плёнки с линейным ростом плотности от
      * 0 на левой границе плёнки до ne при x0+gradwidth */
+    /* при gradwidth<0 плотность плёнки линейно спадает от ne до 0 на
+     * участке с градиентом */
 
     int_vector3d a,b;
     b.i = xnpic;
@@ -440,17 +442,32 @@ void spatial_region::film(double x0, double x1, double ne, bool ions, double cmr
 		a.i = i;
 		a.j = j;
 		a.k = k;
-		if (i>=int((x0+gradwidth)/dx))
-		{
-		    fill_cell_by_particles(-1,a,b,ne);
-		    if (ions)
-			fill_cell_by_particles(cmr,a,b,ne);
-		}
-		else
-		{
-		    fill_cell_by_particles(-1,a,b,ne*(i*dx-x0)/gradwidth);
-		    if (ions)
-			fill_cell_by_particles(cmr,a,b,ne*(i*dx-x0)/gradwidth);
+		if (gradwidth>=0) {
+		    if (i>=int((x0+gradwidth)/dx))
+		    {
+			fill_cell_by_particles(-1,a,b,ne,0,0,T);
+			if (ions)
+			    fill_cell_by_particles(cmr,a,b,ne);
+		    }
+		    else
+		    {
+			fill_cell_by_particles(-1,a,b,ne*(i*dx-x0)/gradwidth,0,0,T);
+			if (ions)
+			    fill_cell_by_particles(cmr,a,b,ne*(i*dx-x0)/gradwidth);
+		    }
+		} else {
+		    if (i>=int((x0-gradwidth)/dx))
+		    {
+			fill_cell_by_particles(-1,a,b,ne,0,0,T);
+			if (ions)
+			    fill_cell_by_particles(cmr,a,b,ne);
+		    }
+		    else
+		    {
+			fill_cell_by_particles(-1,a,b,ne*(1 + (i*dx-x0)/gradwidth),0,0,T);
+			if (ions)
+			    fill_cell_by_particles(cmr,a,b,ne*(1 + (i*dx-x0)/gradwidth));
+		    }
 		}
 	    }
 	}

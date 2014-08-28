@@ -53,7 +53,7 @@ std::string particles_for_output;
 std::string pmerging,pmerging_now;
 std::string lp_reflection,f_reflection;
 std::string ions;
-std::string data_folder; // 09.07.14 - specify custom data folder
+std::string data_folder;
 int init();
 //------------------------------
 
@@ -399,7 +399,7 @@ int main()
 	/* x0film - координата левой границы плёнки, filmwidth - её
 	 * толщина, gradwidth - толщина части плёнки с линейным ростом
 	 * плотности */
-	for(int i=0;i<n_sr;i++) psr[i].film(tmp_p_film->x0-dx*i*(nx_sr-nx_ich),tmp_p_film->x0+tmp_p_film->filmwidth-dx*i*(nx_sr-nx_ich),tmp_p_film->ne/(1.11485e+13/lambda/lambda),ions=="on",1/(proton_mass*tmp_p_film->mcr),tmp_p_film->gradwidth);
+	for(int i=0;i<n_sr;i++) psr[i].film(tmp_p_film->x0-dx*i*(nx_sr-nx_ich),tmp_p_film->x0+tmp_p_film->filmwidth-dx*i*(nx_sr-nx_ich),tmp_p_film->ne/(1.11485e+13/lambda/lambda),ions=="on",1/(proton_mass*tmp_p_film->mcr),tmp_p_film->gradwidth,tmp_p_film->T);
 	tmp_p_film = tmp_p_film->prev;
     }
     main_thread_time = times(&tms_struct) - main_thread_time;
@@ -1695,6 +1695,8 @@ int init()
 	if (current->value==0)
 	    current->value = 1;
 	p_last_film->mcr = current->value;
+	current = find("Tfilm",tmp);
+	p_last_film->T = current->value;
 	do
 	{
 	    current = find("film",tmp);
@@ -2028,6 +2030,7 @@ int init()
 	fout_log<<"gradwidth\n"<<tmp_p_film->gradwidth/2/PI<<"\n";
 	fout_log<<"nfilm\n"<<tmp_p_film->ne<<"\n";
 	fout_log<<"mcr\n"<<tmp_p_film->mcr<<"\n";
+	fout_log<<"Tfilm\n"<<tmp_p_film->T<<"\n";
 	tmp_p_film = tmp_p_film->prev;
     }
     fout_log<<"n_ion_populations\n"<<n_ion_populations<<"\n";
