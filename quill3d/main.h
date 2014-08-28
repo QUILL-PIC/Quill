@@ -50,6 +50,7 @@ public:
     double energy_f,energy_e,energy_p,energy_ph;
     double* ienergy; // energies of ion populations
     double N_freezed;
+    std::string data_folder;
     //
     class plist
     {
@@ -125,7 +126,7 @@ public:
     cellbe*** cbe;
     cellp*** cp;
     spatial_region();
-    void init(double,double,double,double,double,int,int,int,int,int,double*);
+    void init(double,double,double,double,double,int,int,int,int,int,double*,std::string);
     void create_arrays(int,int,int,int,int);
     ~spatial_region();
     void fout_ex(ofstream*,int,int);
