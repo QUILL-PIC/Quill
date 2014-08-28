@@ -329,19 +329,30 @@ void spatial_region::fill_cell_by_particles(double cmr, int_vector3d& a, int_vec
 		tmp_p->z = z0 + double(a.k) + double(kp)/double(b.k);
 		if ( T!=0 && cmr!=0 ){
 		    double v0 = ux0/sqrt( 1 + ux0*ux0 );
-		    double a,b,c;
+		    double a,b,c,r,v;
+		    /* gives r with approximately gaussian
+		     * distribution */
 		    do {
-			a = T*( 2*get_rand()-1 );
-			b = T*( 2*get_rand()-1 );
-			c = T*( 2*get_rand()-1 );
-		    } while (a*a+b*b+c*c>T*T);
+			v = get_rand();
+		    } while ( get_rand() > pow( cos(0.5*PI*v), 4 ) );
+		    // gives random direction
+		    do {
+			a = 2*get_rand()-1;
+			b = 2*get_rand()-1;
+			c = 2*get_rand()-1;
+			r = sqrt( a*a + b*b + c*c );
+		    } while ( r > 1 );
+		    a = T*v*a/r;
+		    b = T*v*b/r;
+		    c = T*v*c/r;
+		    // Lorentz transformation to lab reference frame
 		    b = b*sqrt( 1 - v0*v0 )/( 1 + a*v0 );
 		    c = c*sqrt( 1 - v0*v0 )/( 1 + a*v0 );
 		    a = ( a + v0 )/( 1 + a*v0 );
 		    double g = 1/sqrt( 1 - a*a - b*b - c*c );
-		    tmp_p->ux = (v0+T*a)*g;
-		    tmp_p->uy = T*b*g;
-		    tmp_p->uz = T*c*g;
+		    tmp_p->ux = a*g;
+		    tmp_p->uy = b*g;
+		    tmp_p->uz = c*g;
 		} else {
 		    tmp_p->ux = ux0;
 		    tmp_p->uy = 0;

@@ -110,7 +110,7 @@ def particles(t=0,space=['x','y'],particles='geip',colors='bgmrcyk',r=5,alpha=0.
     elif save2!=None:
 	plt.savefig(save2)
 
-def tracks(space=['x','y'],particles='geip',t0=0,t1=0,colors='bgmrcyk',cmaps=['jet'],clims2all=0,axis=[],save2='',r=2,data_folder='../results/'):
+def tracks(space=['x','y'],particles='geip',t0=0,t1=0,colors='bgmrcyk',cmaps=['jet'],clims2all=1,axis=[],save2='',r=2,data_folder='../results/'):
     'Plots particle tracks as lines in 2D or dots in 3D (phase)*space*\n\
     at [tr_start+*t0*,tr_start+*t1*]\n\
     Examples:\n\
