@@ -41,6 +41,7 @@ bool b_sign; // b_sign = 1 соответствует знаку '+', 0 - зна
 int n_ion_populations;
 double* icmr;
 int n_tracks;
+bool tr_init;
 double tr_start,xtr1,ytr1,ztr1,xtr2,ytr2,ztr2;
 double mwspeed,nelflow,vlflow,mcrlflow,Tlflow,nerflow,vrflow,mcrrflow,Trflow;
 std::string e_components_for_output;
@@ -97,7 +98,7 @@ void* thread_function(void* arg)
         psr[i].padvance(freezing);
 	psr[i].compute_N(nm*(i!=0),nm*(i!=n_sr-1),dx*dy*dz*1.11485e13*lambda/(8*PI*PI*PI));
 	psr[i].compute_energy(nm*(i!=0),nm*(i!=n_sr-1),0.5*dx*dy*dz*3.691e4*lambda/1e7,8.2e-14*dx*dy*dz*1.11485e13*lambda/(8*PI*PI*PI)); // энергия в Джоулях
-	psr[i].fout_tracks(i*(nx_sr-nx_ich)*dx/2/PI,nm);
+	psr[i].fout_tracks((i*(nx_sr-nx_ich)+nmw)*dx/2/PI,nm);
         psr[i].fadvance_ndfx();
 	if (mwindow==1) psr[i].moving_window(l,nmw,mwspeed);
     
@@ -593,7 +594,9 @@ int main()
 					/* координаты выводятся
 					 * нормированными на лазерную
 					 * длину волны */
-					fout_phasespace<<current->q<<"\n"<<dx*(current->x+n*(nx_sr-nx_ich))/(2*PI)<<"\n"<<dy*(current->y)/(2*PI)<<"\n"<<dz*(current->z)/(2*PI)<<"\n";
+					fout_phasespace<<current->q<<"\n";
+					fout_phasespace<<dx*(current->x+n*(nx_sr-nx_ich))/(2*PI)<<"\n";
+					fout_phasespace<<dy*(current->y)/(2*PI)<<"\n"<<dz*(current->z)/(2*PI)<<"\n";
 					fout_phasespace<<current->ux<<"\n"<<current->uy<<"\n"<<current->uz<<"\n";
 					fout_phasespace<<current->g<<"\n";
 					fout_phasespace<<current->chi<<"\n";
@@ -608,7 +611,9 @@ int main()
 				    if(i_particle_p>enthp_p)
 				    {
 					i_particle_p = 0;
-					fout_phasespace_p<<current->q<<"\n"<<dx*(current->x+n*(nx_sr-nx_ich))/(2*PI)<<"\n"<<dy*(current->y)/(2*PI)<<"\n"<<dz*(current->z)/(2*PI)<<"\n";
+					fout_phasespace_p<<current->q<<"\n";
+					fout_phasespace_p<<dx*(current->x+n*(nx_sr-nx_ich))/(2*PI)<<"\n";
+					fout_phasespace_p<<dy*(current->y)/(2*PI)<<"\n"<<dz*(current->z)/(2*PI)<<"\n";
 					fout_phasespace_p<<current->ux<<"\n"<<current->uy<<"\n"<<current->uz<<"\n";
 					fout_phasespace_p<<current->g<<"\n";
 					fout_phasespace_p<<current->chi<<"\n";
@@ -623,7 +628,9 @@ int main()
 				    if(i_particle_ph>enthp_ph)
 				    {
 					i_particle_ph = 0;
-					fout_phasespace_ph<<current->q<<"\n"<<dx*(current->x+n*(nx_sr-nx_ich))/(2*PI)<<"\n"<<dy*(current->y)/(2*PI)<<"\n"<<dz*(current->z)/(2*PI)<<"\n";
+					fout_phasespace_ph<<current->q<<"\n";
+					fout_phasespace_ph<<dx*(current->x+n*(nx_sr-nx_ich))/(2*PI)<<"\n";
+					fout_phasespace_ph<<dy*(current->y)/(2*PI)<<"\n"<<dz*(current->z)/(2*PI)<<"\n";
 					fout_phasespace_ph<<current->ux<<"\n"<<current->uy<<"\n"<<current->uz<<"\n";
 					fout_phasespace_ph<<current->g<<"\n";
 					fout_phasespace_ph<<current->chi<<"\n";
@@ -644,7 +651,9 @@ int main()
 					    if(i_particle_i>enthp_i)
 					    {
 						i_particle_i = 0;
-						fout_phasespace_i[m]<<current->q<<"\n"<<dx*(current->x+n*(nx_sr-nx_ich))/(2*PI)<<"\n"<<dy*(current->y)/(2*PI)<<"\n"<<dz*(current->z)/(2*PI)<<"\n";
+						fout_phasespace_i[m]<<current->q<<"\n";
+						fout_phasespace_i[m]<<dx*(current->x+n*(nx_sr-nx_ich))/(2*PI)<<"\n";
+						fout_phasespace_i[m]<<dy*(current->y)/(2*PI)<<"\n"<<dz*(current->z)/(2*PI)<<"\n";
 						fout_phasespace_i[m]<<current->ux<<"\n"<<current->uy<<"\n"<<current->uz<<"\n";
 						fout_phasespace_i[m]<<current->g<<"\n";
 						fout_phasespace_i[m]<<current->chi<<"\n";
@@ -729,31 +738,92 @@ int main()
 	// start tracking
 	if (l==int(tr_start/dt)) {
 	    cout<<"Tracking started"<<endl;
-	    int x1,y1,z1,x2,y2,z2;
-	    x1 = -1;
-	    y1 = 0;
-	    z1 = 0;
-	    for (int i=0;i<n_tracks;i++) {
-		x2 = (xtr1 + (xtr2-xtr1)*i/n_tracks)/dx;
-		y2 = (ytr1 + (ytr2-ytr1)*i/n_tracks)/dy;
-		z2 = (ztr1 + (ztr2-ztr1)*i/n_tracks)/dz;
-		if (x2!=x1 || y2!=y1 || z2!=z1) {
-		    x1 = x2;
-		    y1 = y2;
-		    z1 = z2;
+	    int trn = 1; // trn = 0 for untracked particles
+	    if (tr_init==0) {
+		int x1,y1,z1,x2,y2,z2;
+		x1 = -1;
+		y1 = 0;
+		z1 = 0;
+		for (int i=0;i<n_tracks;i++) {
+		    x2 = (xtr1 + (xtr2-xtr1)*i/n_tracks)/dx;
+		    y2 = (ytr1 + (ytr2-ytr1)*i/n_tracks)/dy;
+		    z2 = (ztr1 + (ztr2-ztr1)*i/n_tracks)/dz;
+		    if (x2!=x1 || y2!=y1 || z2!=z1) {
+			x1 = x2;
+			y1 = y2;
+			z1 = z2;
+			int n,x;
+			n = x2/(nx_sr-nx_ich);
+			x = x2%(nx_sr-nx_ich);
+			if (i!=0 && x<nm) {
+			    n = n - 1;
+			    x = x + nx_sr - nx_ich;
+			}
+			spatial_region::plist::particle* h = psr[n].cp[x][y2][z2].pl.head;
+			spatial_region::plist::particle* p = h;
+			bool b = 1;
+			while (p!=0 && b) {
+			    if (p->cmr==-1) {
+				p->trn = trn;
+				trn++;
+				b = 0;
+			    }
+			    p = p->next;
+			}
+			p = h;
+			b = 1;
+			while (p!=0 && b) {
+			    if (p->cmr==1) {
+				p->trn = trn;
+				trn++;
+				b = 0;
+			    }
+			    p = p->next;
+			}
+			p = h;
+			b = 1;
+			while (p!=0 && b) {
+			    if (p->cmr==0) {
+				p->trn = trn;
+				trn++;
+				b = 0;
+			    }
+			    p = p->next;
+			}
+			for (int m=0;m<n_ion_populations;m++) {
+			    p = h;
+			    b = 1;
+			    while (p!=0 && b) {
+				if (p->cmr==icmr[m]) {
+				    p->trn = trn;
+				    trn++;
+				    b = 0;
+				}
+				p = p->next;
+			    }
+			}
+		    }
+		}
+	    } else {
+		for (int i=0;i<n_tracks;i++) {
+		    int x1,y1,z1;
+		    x1 = ( xtr1 + ( xtr2 - xtr1 ) * rand( ) / RAND_MAX ) / dx;
+		    y1 = ( ytr1 + ( ytr2 - ytr1 ) * rand( ) / RAND_MAX ) / dy;
+		    z1 = ( ztr1 + ( ztr2 - ztr1 ) * rand( ) / RAND_MAX ) / dz;
 		    int n,x;
-		    n = x2/(nx_sr-nx_ich);
-		    x = x2%(nx_sr-nx_ich);
+		    n = x1/(nx_sr-nx_ich);
+		    x = x1%(nx_sr-nx_ich);
 		    if (i!=0 && x<nm) {
 			n = n - 1;
 			x = x + nx_sr - nx_ich;
 		    }
-		    spatial_region::plist::particle* h = psr[n].cp[x][y2][z2].pl.head;
+		    spatial_region::plist::particle* h = psr[n].cp[x][y1][z1].pl.head;
 		    spatial_region::plist::particle* p = h;
 		    bool b = 1;
 		    while (p!=0 && b) {
 			if (p->cmr==-1) {
-			    p->trn = rand();
+			    p->trn = trn;
+			    trn++;
 			    b = 0;
 			}
 			p = p->next;
@@ -762,7 +832,8 @@ int main()
 		    b = 1;
 		    while (p!=0 && b) {
 			if (p->cmr==1) {
-			    p->trn = rand();
+			    p->trn = trn;
+			    trn++;
 			    b = 0;
 			}
 			p = p->next;
@@ -771,7 +842,8 @@ int main()
 		    b = 1;
 		    while (p!=0 && b) {
 			if (p->cmr==0) {
-			    p->trn = rand();
+			    p->trn = trn;
+			    trn++;
 			    b = 0;
 			}
 			p = p->next;
@@ -781,7 +853,8 @@ int main()
 			b = 1;
 			while (p!=0 && b) {
 			    if (p->cmr==icmr[m]) {
-				p->trn = rand();
+				p->trn = trn;
+				trn++;
 				b = 0;
 			    }
 			    p = p->next;
@@ -1867,6 +1940,11 @@ int init()
 	freezing = 0;
     current = find("n_tracks",first);
     n_tracks = current->value;
+    current = find("tr_init",first);
+    if (current->units=="volume")
+	tr_init = 1;
+    else
+	tr_init = 0;
     current = find("tr_start",first);
     if (current->units=="um")
     {
@@ -2056,6 +2134,7 @@ int init()
     fout_log<<"n_numa_nodes\n"<<n_numa_nodes<<"\n";
     fout_log<<"n_tracks\n"<<n_tracks<<"\n";
     fout_log<<"tr_start\n"<<tr_start<<"\n";
+    fout_log<<"tr_init\n"<<tr_init<<"\n";
     fout_log<<"xtr1\n"<<xtr1<<"\n";
     fout_log<<"ytr1\n"<<ytr1<<"\n";
     fout_log<<"ztr1\n"<<ztr1<<"\n";

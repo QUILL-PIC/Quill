@@ -193,8 +193,11 @@ deps_i = 0.5
 n_tracks = 100 # default = 0
 # момент включения алгоритма вывода траекторий частиц
 tr_start = 7 # default value = 0; default units: lambda; possible: um, mm, cm
-# координаты концов прямого отрезка, с которого в момент времени
-# tr_start берутся частицы для отслеживания траекторий; default value = 0
+#tr_init = volume # default: line; possible: volume
+# координаты концов прямого отрезка (tr_init = line) или диагональ
+# прямоугольного параллелепипеда (tr_init = volume), с которого в
+# момент времени tr_start берутся частицы для отслеживания траекторий;
+# default value = 0
 xtr1 = 8.5 # default: lambda; possible: um, fs
 ytr1 = 9.25 # default: lambda; possible: um
 ztr1 = 9.25 # default: lambda; possible: um
