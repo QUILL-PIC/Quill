@@ -1831,23 +1831,27 @@ int init()
 	    }
 	    tmp_p_film = tmp_p_film->prev;
 	}
-	b = 1;
-	for (int i=0;i<m;i++) {
-	    if (mcrlflow==mcr[i])
-		b = 0;
+	if (nelflow!=0) {
+	    b = 1;
+	    for (int i=0;i<m;i++) {
+		if (mcrlflow==mcr[i])
+		    b = 0;
+	    }
+	    if (b==1) {
+		mcr[m] = mcrlflow;
+		m++;
+	    }
 	}
-	if (b==1) {
-	    mcr[m] = mcrlflow;
-	    m++;
-	}
-	b = 1;
-	for (int i=0;i<m;i++) {
-	    if (mcrrflow==mcr[i])
-		b = 0;
-	}
-	if (b==1) {
-	    mcr[m] = mcrrflow;
-	    m++;
+	if (nerflow!=0) {
+	    b = 1;
+	    for (int i=0;i<m;i++) {
+		if (mcrrflow==mcr[i])
+		    b = 0;
+	    }
+	    if (b==1) {
+		mcr[m] = mcrrflow;
+		m++;
+	    }
 	}
 	n_ion_populations = m;
 	icmr = new double[m];
@@ -2133,7 +2137,7 @@ int init()
     fout_log<<"n_sr\n"<<n_sr<<"\n";
     fout_log<<"n_numa_nodes\n"<<n_numa_nodes<<"\n";
     fout_log<<"n_tracks\n"<<n_tracks<<"\n";
-    fout_log<<"tr_start\n"<<tr_start<<"\n";
+    fout_log<<"tr_start\n"<<tr_start/2/PI<<"\n";
     fout_log<<"tr_init\n"<<tr_init<<"\n";
     fout_log<<"xtr1\n"<<xtr1<<"\n";
     fout_log<<"ytr1\n"<<ytr1<<"\n";
