@@ -2133,7 +2133,7 @@ int init()
     fout_log<<"n_sr\n"<<n_sr<<"\n";
     fout_log<<"n_numa_nodes\n"<<n_numa_nodes<<"\n";
     fout_log<<"n_tracks\n"<<n_tracks<<"\n";
-    fout_log<<"tr_start\n"<<tr_start<<"\n";
+    fout_log<<"tr_start\n"<<tr_start/2/PI<<"\n";
     fout_log<<"tr_init\n"<<tr_init<<"\n";
     fout_log<<"xtr1\n"<<xtr1<<"\n";
     fout_log<<"ytr1\n"<<ytr1<<"\n";

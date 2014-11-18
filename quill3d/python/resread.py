@@ -151,6 +151,9 @@ def particles(name='phasespace',s=['x','y','g']):
 	elif s[i]=='t': # for qplot.tracks()
 		for j in np.arange(n):
 		    a[i][j] = tr_start + j*dt
+	elif s[i]=='x-vt': # for qplot.tracks()
+		for j in np.arange(n):
+		    a[i][j] = float(data[9*j+1]) - 0.5*( tr_start + j*dt)
 	elif s[i]=='vx':
 	    for j in np.arange(0,n,1):
 		a[i][j] = float(data[9*j+4])/float(data[9*j+7])
