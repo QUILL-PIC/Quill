@@ -62,7 +62,7 @@ b_sign = 1 # default: 1, possible: -1
 # необходимо задать значение - отношение a0z к a0y=a0; эллиптическая
 # поляризация будет задана корректно только в том случае, если задано
 # a_0, а не P, I, W и т. п.
-polarization = circular # default: linear; possible: circular
+polarization = linear # default: linear; possible: circular
 # размеры лазерного импульса
 xsigma = 16.5 # default: lambda; possible: um, fs
 ysigma = 8 # default: lambda; possible: um
@@ -92,7 +92,7 @@ f_reflection = off # default: off; possible: y, z, off&z, etc.
 #P = 70 TW # peak power; default: cgs; possible: PW, TW
 #I = 4e20 W/cm^2 # peak intensity; default: cgs; possible: W/cm^2
 #W = 36 J # default units: cgs; possible: J
-a0 = 400
+a0 = 566
 # если a0y=a0z=0, то используются значения, вычисленные по
 # polarization, P, I, W или a0
 #a0y = 3.2
@@ -213,3 +213,6 @@ crpc = 1.1
 
 # алгоритм «заморозки» частиц в магнитном поле
 freezing = off # default: off; possible: on
+
+# имя папки для результатов; не забудьте создать её вручную!
+data_folder = results_lp # default: results
