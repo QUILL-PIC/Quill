@@ -1831,23 +1831,27 @@ int init()
 	    }
 	    tmp_p_film = tmp_p_film->prev;
 	}
-	b = 1;
-	for (int i=0;i<m;i++) {
-	    if (mcrlflow==mcr[i])
-		b = 0;
+	if (nelflow!=0) {
+	    b = 1;
+	    for (int i=0;i<m;i++) {
+		if (mcrlflow==mcr[i])
+		    b = 0;
+	    }
+	    if (b==1) {
+		mcr[m] = mcrlflow;
+		m++;
+	    }
 	}
-	if (b==1) {
-	    mcr[m] = mcrlflow;
-	    m++;
-	}
-	b = 1;
-	for (int i=0;i<m;i++) {
-	    if (mcrrflow==mcr[i])
-		b = 0;
-	}
-	if (b==1) {
-	    mcr[m] = mcrrflow;
-	    m++;
+	if (nerflow!=0) {
+	    b = 1;
+	    for (int i=0;i<m;i++) {
+		if (mcrrflow==mcr[i])
+		    b = 0;
+	    }
+	    if (b==1) {
+		mcr[m] = mcrrflow;
+		m++;
+	    }
 	}
 	n_ion_populations = m;
 	icmr = new double[m];
