@@ -119,3 +119,30 @@ def purple(N=256,gamma=0.4):
     m = vary(m,gamma=gamma)
     cm.register_cmap(cmap=m)
     return m
+
+def copper():
+    #'Returns \'tcmap_copper\' colormap.'
+    m = cm.get_cmap('jet',256)
+    m._init()
+    c0 = np.array([221,0,0]) #dd0000
+    c0 = c0/255.
+    c1 = np.array([0,0,0])
+    c1 = c1/255.
+    alpha = 0.15
+    m._lut[:-3,0] = np.linspace(c0[0],c1[0],256)
+    m._lut[:-3,1] = np.linspace(c0[1],c1[1],256)
+    m._lut[:-3,2] = np.linspace(c0[2],c1[2],256)
+    m._lut[:-3,3] = np.linspace(alpha,1,256)
+    m._lut[-3,3] = alpha
+    m._lut[-3,0] = c0[0]
+    m._lut[-3,1] = c0[1]
+    m._lut[-3,2] = c0[2]
+    m._lut[-2,3] = 1
+    m._lut[-2,0] = c1[0]
+    m._lut[-2,1] = c1[1]
+    m._lut[-2,2] = c1[2]
+    m._lut[-1,3] = 1
+    m._lut[-1,0] = c1[0]
+    m._lut[-1,1] = c1[1]
+    m._lut[-1,2] = c1[2]
+    return m

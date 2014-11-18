@@ -26,5 +26,6 @@ for i in np.arange( (t1-t0)/qplot.resread.output_period ):
     #
     plt.clf()
 
+
 os.system('convert -density 100 -delay 15 -loop 0 frame*.png movie.gif')
 os.system('rm frame*.png')
