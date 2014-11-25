@@ -134,7 +134,7 @@ def tracks(space=['x','y'],particles='geip',t0=0,t1=0,colors='bgmrcyk',cmaps=['j
 	if t1!=0 and np.floor(t1/resread.dt)<len(tmp[0,:]):
 	    tracks.append(tmp[:,np.floor(t0/resread.dt):np.floor(t1/resread.dt)])
 	else:
-	    tracks.append(tmp[:,9*np.floor(t0/resread.dt):])
+	    tracks.append(tmp[:,np.floor(t0/resread.dt):])
 	cmr.append(float( trackname[ trackname.find('_')+1 : trackname.find('_',trackname.find('_')+1) ] ))
     def cmr2int(a):
 	'Converts cmr *a* to the int index of *colors* or *cmaps*'

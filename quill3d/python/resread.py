@@ -33,6 +33,9 @@ filmwidth = 0
 data_folder = '../results/'
 t = '0'
 
+def h( x, t ):
+    return x - t
+
 def read_parameters(log=None):
     'Reads nx, ny, etc. from *log*.'
     global dx,dy,dz,dt,nx,ny,nz,output_period,n_ion_populations,icmr,t_end,tr_start,\
@@ -151,9 +154,9 @@ def particles(name='phasespace',s=['x','y','g']):
 	elif s[i]=='t': # for qplot.tracks()
 		for j in np.arange(n):
 		    a[i][j] = tr_start + j*dt
-	elif s[i]=='x-vt': # for qplot.tracks()
+	elif s[i]=='h': # for qplot.tracks()
 		for j in np.arange(n):
-		    a[i][j] = float(data[9*j+1]) - 0.5*( tr_start + j*dt)
+		    a[i][j] = h( float(data[9*j+1]), ( tr_start + j*dt) )
 	elif s[i]=='vx':
 	    for j in np.arange(0,n,1):
 		a[i][j] = float(data[9*j+4])/float(data[9*j+7])
