@@ -69,6 +69,8 @@ Parallelizator* TheParallelizator;
 void* threadFun(void*);
 class TaskBase;
 
+bool option_1d = 0;
+
 using namespace std;
 typedef queue<TaskBase*> queueBase;
 
@@ -188,7 +190,7 @@ void Parallelizator::init(int argc, char** argv)
 	num_threads = -1;  //uninitialized
 	if (argc == 1)
 	{
-	    cout << "usage: parallel [-threads value] [-test] [-help]" << endl;
+	    cout << "usage: parallel [-1d] [-threads value] [-test] [-help]" << endl;
 	    // the program should stop here, exit() may be not the
 	    // best for it
 	    exit(0);
@@ -214,19 +216,23 @@ void Parallelizator::init(int argc, char** argv)
 			test_mode = true; //don't run Quill at all
 			num_tasks = N_TASKS_DEFAULT;
 		} 
+		else if (strcmp(argv[i], "-1d") == 0) {
+		    option_1d = 1;
+		}
 		else if (strcmp(argv[i], "-help") == 0)
 		{
-		    cout << "usage: parallel [-threads value] [-test] [-help]\n";
+		    cout << "usage: parallel [-1d] [-threads value] [-test] [-help]\n";
 		    cout << "value - the number of threads\n";
 		    cout << "parameter matrix is in parallel.ini\n";
 		    cout << "template config is ../quill3d-conf/quill.conf.parallel/config_template" << endl;
+		    cout << "if option -1d is set then parallel.ini is treated as vector of pairs of parameters, not as matrix" << endl;
 		    exit(0);
 		}
 	}
 	if (num_threads == -1)
 		num_threads = N_THREADS_DEFAULT;
 		
-	cout << "Welcome to Parallelizator v.1.0. Running on " << num_threads << " threads" << endl;
+	cout << "Welcome to Parallelizator running on " << num_threads << " threads" << endl;
 	
 	ifstream settings_file("parallel.ini");
 	if (!settings_file.is_open() && !test_mode)
@@ -365,42 +371,52 @@ void Parallelizator::populateTaskQueue()
 		
 		int temp_task_id = 0;
 			
+		vector<string>::iterator yit = param_y.value.begin( );
 		for (vector<string>::iterator it_x = param_x.value.begin(); it_x != param_x.value.end(); ++it_x)
 		{
-			for (vector<string>::iterator it_y = param_y.value.begin(); it_y != param_y.value.end(); ++it_y)
-			{
-				stringstream file_name;
-				file_name << temp_config_folder << param_x.name << *it_x << "-" << param_y.name << *it_y;
-				ofstream my_config(file_name.str().c_str());
-				if (!my_config.is_open())
-					logErrorAndExit("Failed to create config file");
-				
-				for (vector<string>::iterator it_data = config_data.begin(); it_data != config_data.end(); it_data++)
-				{
-					if ((*it_data).compare("$PARAM_X$") == 0)
-					{
-						//in this code, ne is always param_y; check anyway param_x because this can be changed in the future
-						my_config << param_x.name << " = " << *it_x << " " << param_x.dimension << " " << param_x.comment << endl;
-					}
-					else if ((*it_data).compare("$PARAM_Y$") == 0)
-					{
-						my_config << param_y.name << " = " << *it_y << " " << param_y.dimension << " " << param_y.comment << endl;
-					}
-					else if ((*it_data).find("data_folder = ") != string::npos)
-						//data folder will be added anyway, ignore this
-						continue;
-					else
-						my_config << *it_data << endl;
-				}
+		    vector<string> yvalues;
+		    if ( option_1d == 1 ) {
+			vector<string> tmp(1);
+			tmp[0] = *yit;
+			yvalues = tmp;
+			yit++;
+		    }
+		    else
+			yvalues = param_y.value;
+		    for ( vector<string>::iterator it_y = yvalues.begin( ); it_y != yvalues.end ( ); ++it_y )
+		    {
+			    stringstream file_name;
+			    file_name << temp_config_folder << param_x.name << *it_x << "-" << param_y.name << *it_y;
+			    ofstream my_config(file_name.str().c_str());
+			    if (!my_config.is_open())
+				    logErrorAndExit("Failed to create config file");
+			    
+			    for (vector<string>::iterator it_data = config_data.begin(); it_data != config_data.end(); it_data++)
+			    {
+				    if ((*it_data).compare("$PARAM_X$") == 0)
+				    {
+					    //in this code, ne is always param_y; check anyway param_x because this can be changed in the future
+					    my_config << param_x.name << " = " << *it_x << " " << param_x.dimension << " " << param_x.comment << endl;
+				    }
+				    else if ((*it_data).compare("$PARAM_Y$") == 0)
+				    {
+					    my_config << param_y.name << " = " << *it_y << " " << param_y.dimension << " " << param_y.comment << endl;
+				    }
+				    else if ((*it_data).find("data_folder = ") != string::npos)
+					    //data folder will be added anyway, ignore this
+					    continue;
+				    else
+					    my_config << *it_data << endl;
+			    }
 
-				stringstream config_name;
-				config_name << param_x.name << *it_x << "-" << param_y.name << *it_y;
-				my_config << "data_folder = results_" << config_name.str();
-				my_config.close();
+			    stringstream config_name;
+			    config_name << param_x.name << *it_x << "-" << param_y.name << *it_y;
+			    my_config << "data_folder = results_" << config_name.str();
+			    my_config.close();
 
-				QuillTask* pTask = new QuillTask(++temp_task_id, config_name.str());
-				task_queue->push(pTask);
-			}
+			    QuillTask* pTask = new QuillTask(++temp_task_id, config_name.str());
+			    task_queue->push(pTask);
+		    }
 		}
 	}
 	

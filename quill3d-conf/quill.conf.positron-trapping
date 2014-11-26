@@ -35,13 +35,13 @@ zlength = 17 # default: lambda; possible: um
 # Можно задать несколько пар t_end, output_period, при этом на отрезке
 # [0,t_end_1] будет использоваться output_period_1 и т. д.
 # время моделирования
-t_end = 19 # default: lambda; possible: um, mm, cm
+#t_end = 19 # default: lambda; possible: um, mm, cm
 # период вывода данных в файл
-output_period = 1 # default: lambda; possible: um, mm, cm, t_end
+#output_period = 1 # default: lambda; possible: um, mm, cm, t_end
 #
-t_end = 20
-output_period = 0.1
-t_end = 80
+#t_end = 20
+#output_period = 0.1
+t_end = 60
 output_period = 1
 
 # По умолчанию лазерные импульсы распространяются к центру области;
