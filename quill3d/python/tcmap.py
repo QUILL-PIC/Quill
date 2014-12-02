@@ -128,7 +128,7 @@ def copper():
     c0 = c0/255.
     c1 = np.array([0,0,0])
     c1 = c1/255.
-    alpha = 0.15
+    alpha = 0.1
     m._lut[:-3,0] = np.linspace(c0[0],c1[0],256)
     m._lut[:-3,1] = np.linspace(c0[1],c1[1],256)
     m._lut[:-3,2] = np.linspace(c0[2],c1[2],256)

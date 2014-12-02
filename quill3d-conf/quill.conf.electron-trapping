@@ -1,4 +1,4 @@
-# DT мишень
+# DT мишень, hole boring
 
 # Общий вид строк: имя_переменной = [значение] [размерность]
 # значение (double) или размерность (string) можно не указывать
@@ -16,8 +16,8 @@ n_numa_nodes = 4 # default: 2
 # вычисляется автоматически по dt и ne, как написано выше
 #dt = 0.014 # lambda
 #dx = 0.0164 # lambda
-dy = 0.2 # lambda
-dz = 0.2 # lambda
+dy = 0.17 # lambda
+dz = 0.17 # lambda
 
 # длина волны лазерного импульса
 lambda = 0.405 um # default: cm; possible: um; lambda_p
@@ -29,8 +29,8 @@ ne = 100 ncr # default: cm^{-3}; possible: ncr
 
 # размеры области моделирования
 xlength = 80 # default: lambda; possible: um, fs
-ylength = 17 # default: lambda; possible: um
-zlength = 17 # default: lambda; possible: um
+ylength = 14 # default: lambda; possible: um
+zlength = 14 # default: lambda; possible: um
 
 # Можно задать несколько пар t_end, output_period, при этом на отрезке
 # [0,t_end_1] будет использоваться output_period_1 и т. д.
@@ -52,7 +52,7 @@ output_period = 1
 # (исключение: в случае, если x' параллелен z, то y' совпадает с y и
 # z' лежит в плоскости xy).
 # тип огибающей лазерного импульса
-f_envelope = sscos # default: cos, possible: focused, sscos
+f_envelope = focussedSSC # default: cos, possible: focused, sscos, focussedSSC
 # по умолчанию лазерные импульсы распространяются к центру области
 # моделирования; b_sign = -1 меняет направление магнитного поля
 # импульсов и, следовательно, их направление распространения на
@@ -64,9 +64,9 @@ b_sign = 1 # default: 1, possible: -1
 # a_0, а не P, I, W и т. п.
 polarization = circular # default: linear; possible: circular
 # размеры лазерного импульса
-xsigma = 22 # default: lambda; possible: um, fs
-ysigma = 8 # default: lambda; possible: um
-zsigma = 8 # default: lambda; possible: um
+xsigma = 14 # default: lambda; possible: um, fs
+ysigma = 3.5 # default: lambda; possible: um
+zsigma = 3.5 # default: lambda; possible: um
 # расстояние от центра лазерного импульса до правой границы области
 x0 = 60 # default: lambda; possible: um, fs
 # координаты центра лазерного импульса относительно центра области
@@ -197,18 +197,18 @@ enthp_p = 20 # default = enthp
 # число частиц каждого сорта для вывода их траекторий в файл
 n_tracks = 100 # default = 0
 # момент включения алгоритма вывода траекторий частиц
-tr_start = 10 # default value = 0; default units: lambda; possible: um, mm, cm
-tr_init = volume # default: line; possible: volume
+tr_start = 0 # default value = 0; default units: lambda; possible: um, mm, cm
+tr_init = line # default: line; possible: volume
 # координаты концов прямого отрезка (tr_init = line) или диагональ
 # прямоугольного параллелепипеда (tr_init = volume), с которого в
 # момент времени tr_start берутся частицы для отслеживания траекторий;
 # default value = 0
 xtr1 = 45 # default: lambda; possible: um, fs
-ytr1 = 6 # default: lambda; possible: um
-ztr1 = 6 # default: lambda; possible: um
-xtr2 = 45.1 # default: lambda; possible: um, fs
-ytr2 = 11 # default: lambda; possible: um
-ztr2 = 11 # default: lambda; possible: um
+ytr1 = 5 # default: lambda; possible: um
+ztr1 = 7 # default: lambda; possible: um
+xtr2 = 50 # default: lambda; possible: um, fs
+ytr2 = 9 # default: lambda; possible: um
+ztr2 = 7 # default: lambda; possible: um
 
 # алгоритм слияния квазичастиц; nl - nonlinear(q), ti -
 # type-independently

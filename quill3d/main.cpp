@@ -265,7 +265,7 @@ int main()
 		f_reflection3 += tmpf[jj];
 	    }
 	}
-	for (int i=0;i<n_sr;i++) psr[i].f_init_focused(a0y,a0z,xsigma,sigma0,xlength-x0-dx*i*(nx_sr - nx_ich),xlength/2-x0,b_sign,phase,y00,z00);
+	for (int i=0;i<n_sr;i++) psr[i].f_init_focused(a0y,a0z,xsigma,sigma0,xlength-x0-dx*i*(nx_sr - nx_ich),xlength/2-x0,b_sign,phase,y00,z00,0,0,sscos);
 	if (phi!=0) {
 	    for (int i=0;i<n_sr;i++) psr[i].f_init_focused(a0y,a0z,xsigma,sigma0,x0-dx*i*(nx_sr - nx_ich),-xlength/2+x0,b_sign,phase,-y00,-z00,1,phi);
 	}
@@ -738,7 +738,7 @@ int main()
 	// start tracking
 	if (l==int(tr_start/dt)) {
 	    cout<<"Tracking started"<<endl;
-	    int trn = 1; // trn = 0 for untracked particles
+	    long trn = 1; // trn = 0 for untracked particles
 	    if (tr_init==0) {
 		int x1,y1,z1,x2,y2,z2;
 		x1 = -1;
@@ -1624,17 +1624,25 @@ int init()
 	current->units="lambda";
     }
     z00 = current->value*2*PI;
-    if (f_envelope=="focused")
+    if ( f_envelope == "focussedSSC" ) {
+	f_envelope = "focused";
+	sscos = 1;
+    }
+    if ( f_envelope == "focused" )
     {
 	x00 = sqrt((x0-xlength/2)*(x0-xlength/2)+y00*y00+z00*z00);
-	sigma = 0.5*(ysigma+zsigma);
+	/*sigma = 0.5*(ysigma+zsigma);
 	sigma0 = sigma*sigma*sigma*sigma/4 - 4*x00*x00;
 	if (sigma0<0)
 	{
 	    cout<<"\n\033[31m"<<"main: improper focused pulse, aborting..."<<"\033[0m"<<endl;
 	    return 1;
 	}
-	sigma0 = sqrt( sigma*sigma/2 - sqrt(sigma0) );
+	sigma0 = sqrt( sigma*sigma/2 - sqrt(sigma0) );*/
+	sigma0 = 0.5*(ysigma+zsigma);
+	sigma = sqrt( sigma0 * sigma0 + 4 * x00 * x00 / ( sigma0 * sigma0 ) );
+	a0y = a0y*sigma0/sigma;
+	a0z = a0z*sigma0/sigma;
     }
     current = find("mwindow",first);
     mwindow = 1;
@@ -2158,7 +2166,7 @@ int init()
     fout_log<<"W = "<<(a0y*a0y+a0z*a0z)*xsigma*ysigma*zsigma*PI*sqrt(PI/2)/4*lambda*3.691e4/1e7<<" J\n";
     if (f_envelope=="focused")
     {
-	fout_log<<"a0 in focal plane = "<<(a0y*(a0y>a0z)+a0z*(a0z>=a0y))*sigma/sigma0<<"\n";
+	//fout_log<<"a0 in focal plane = "<<(a0y*(a0y>a0z)+a0z*(a0z>=a0y))*sigma/sigma0<<"\n";
 	fout_log<<"aperture: F/"<<sigma0/2<<"\n";
     }
     fout_log<<"lambda = "<<lambda*1e4<<" um\n";

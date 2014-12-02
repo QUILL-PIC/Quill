@@ -16,7 +16,7 @@ qplot.resread.read_parameters()
 
 t0 = 0
 t1 = qplot.resread.t_end + 0.5*qplot.resread.dt
-dt = qplot.resread.dt
+dt = qplot.resread.output_period
 
 for i in np.arange( (t1-t0)/qplot.resread.output_period ):
     t = 1e-2*np.floor(1e2*(t0+i*qplot.resread.output_period))
