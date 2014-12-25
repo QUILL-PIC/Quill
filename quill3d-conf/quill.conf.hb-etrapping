@@ -20,12 +20,12 @@ dy = 0.17 # lambda
 dz = 0.17 # lambda
 
 # длина волны лазерного импульса
-lambda = 0.405 um # default: cm; possible: um; lambda_p
+lambda = 0.8 um # 0.405 um # default: cm; possible: um; lambda_p
 
 # концентрация электронов; используется при добавлении частиц при
 # включенном движущемся окне, а также при расчёте шага по x, если он
 # не задан явно
-ne = 100 ncr # default: cm^{-3}; possible: ncr
+ne = 140 ncr # default: cm^{-3}; possible: ncr
 
 # размеры области моделирования
 xlength = 80 # default: lambda; possible: um, fs
@@ -64,9 +64,9 @@ b_sign = 1 # default: 1, possible: -1
 # a_0, а не P, I, W и т. п.
 polarization = circular # default: linear; possible: circular
 # размеры лазерного импульса
-xsigma = 14 # default: lambda; possible: um, fs
-ysigma = 3.5 # default: lambda; possible: um
-zsigma = 3.5 # default: lambda; possible: um
+xsigma = 25 # default: lambda; possible: um, fs
+ysigma = 4 # default: lambda; possible: um
+zsigma = 4 # default: lambda; possible: um
 # расстояние от центра лазерного импульса до правой границы области
 x0 = 60 # default: lambda; possible: um, fs
 # координаты центра лазерного импульса относительно центра области
@@ -92,7 +92,7 @@ f_reflection = off # default: off; possible: y, z, off&z, etc.
 #P = 70 TW # peak power; default: cgs; possible: PW, TW
 #I = 4e20 W/cm^2 # peak intensity; default: cgs; possible: W/cm^2
 #W = 36 J # default units: cgs; possible: J
-a0 = 300
+a0 = 150
 # если a0y=a0z=0, то используются значения, вычисленные по
 # polarization, P, I, W или a0
 #a0y = 3.2
@@ -195,20 +195,20 @@ enthp_p = 20 # default = enthp
 #enthp_i = 10 # default = enthp
 
 # число частиц каждого сорта для вывода их траекторий в файл
-n_tracks = 100 # default = 0
+n_tracks = 400 # default = 0
 # момент включения алгоритма вывода траекторий частиц
 tr_start = 0 # default value = 0; default units: lambda; possible: um, mm, cm
-tr_init = line # default: line; possible: volume
+tr_init = volume # default: line; possible: volume
 # координаты концов прямого отрезка (tr_init = line) или диагональ
 # прямоугольного параллелепипеда (tr_init = volume), с которого в
 # момент времени tr_start берутся частицы для отслеживания траекторий;
 # default value = 0
 xtr1 = 45 # default: lambda; possible: um, fs
 ytr1 = 5 # default: lambda; possible: um
-ztr1 = 7 # default: lambda; possible: um
-xtr2 = 50 # default: lambda; possible: um, fs
+ztr1 = 5 # default: lambda; possible: um
+xtr2 = 45.1 # default: lambda; possible: um, fs
 ytr2 = 9 # default: lambda; possible: um
-ztr2 = 7 # default: lambda; possible: um
+ztr2 = 9 # default: lambda; possible: um
 
 # алгоритм слияния квазичастиц; nl - nonlinear(q), ti -
 # type-independently

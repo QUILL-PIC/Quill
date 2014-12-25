@@ -454,7 +454,7 @@ def mollweide(t=None,nlongitude=80,nlatitude=40,Nlevels=15,save2='',data_folder=
 	else:
 	    plt.savefig(save2)
 
-def field(t=0,field='ex',plane='xy',fmax=None,data_folder='../results/',axis=[],save2=''):
+def field(t=0,field='ex',plane='xy',fmax=None,data_folder='../results/',extent=None,axis=[],save2=''):
     'Plots fields.'
     resread.t = '%g' % t
     resread.data_folder = data_folder
@@ -480,7 +480,11 @@ def field(t=0,field='ex',plane='xy',fmax=None,data_folder='../results/',axis=[],
 	fmax = np.max( [-np.min(f), np.max(f)] )
 	print 'fmax = ', fmax
     #
-    plt.imshow(f,'bwr',interpolation='none',vmin=-fmax,vmax=fmax,origin='lower',extent=(0,xlength,0,ylength))
+    if extent == None:
+	extent = (0,xlength,0,ylength)
+    elif extent == 'xi':
+	extent = ( resread.xi( 0, t ), resread.xi( xlength, t ), 0, ylength )
+    plt.imshow(f,'bwr',interpolation='none',vmin=-fmax,vmax=fmax,origin='lower',extent=extent)
     #
     if save2=='':
 	plt.show()
