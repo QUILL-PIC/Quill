@@ -2,6 +2,7 @@
 
 import numpy as np
 import math
+import os
 
 __name__ = 'resread - provides functions for extractind data arrays\n\
 from quill output files'
