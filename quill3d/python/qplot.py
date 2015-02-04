@@ -512,3 +512,19 @@ def energy(data_folder='../results/',save2=''):
 	    plt.show()
 	else:
 	    plt.savefig(save2)
+
+def tracks2(space=['x', 'y'], tracks=None, save2=''):
+    'Plots 2d tracks in the specified *space*'
+    if not tracks:
+        tracks = resread.tracks()
+    if len(space) == 2:
+        x = space[0]
+        y = space[1]
+        plt.xlabel(x)
+        plt.ylabel(y)
+	for track in tracks:
+	    plt.plot(track[x], track[y])
+    if not save2:
+        plt.show()
+    else:
+        plt.savefig(save2)

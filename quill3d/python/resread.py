@@ -197,3 +197,30 @@ def t_data(name='energy',step=None):
 	    data.append(float(b))
     data = np.reshape(data,(i,len(data)/i))
     return data
+
+def tracks():
+    'Returns a list of tracks from the data_folder. Each track is a dictionary with keys: t, x, y, z, ux, uy, uz, q, g, file'
+    read_parameters()
+    track_names = [x for x in os.listdir(data_folder) if x.startswith('track')]
+    tracks = [read_track(x) for x in track_names]
+    return tracks
+
+def read_track(track_name):
+    'Reads track from the specified track file. The returned track is a dictionary with keys: t, x, y, z, ux, uy, uz, q, g, file'
+    raw_data = np.loadtxt(data_folder + track_name)
+    raw_track = raw_data.reshape(9, -1, order='F')
+    track_size = raw_track[0].size
+    track = {'x' : raw_track[1],
+             'y' : raw_track[2],
+	     'z' : raw_track[3],
+	     'ux' : raw_track[4],
+	     'uy' : raw_track[5],
+	     'uz' : raw_track[6],
+	     'file' : data_folder + track_name,
+	     'q' : raw_track[0],
+	     'g' : raw_track[7],
+	     't' : np.linspace(0, dt * track_size, track_size)}
+    track['vx'] = track['ux'] / track['g']
+    track['vy'] = track['uy'] / track['g']
+    track['vz'] = track['uz'] / track['g']
+    return track
