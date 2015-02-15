@@ -1624,6 +1624,28 @@ int init()
 	current->units="lambda";
     }
     z00 = current->value*2*PI;
+    
+    // positioning the pulse with coordinates (r0, theta, z0) instead of (x0, y0, z0)
+    current = find("r0",first);  
+    if (current->units != "off" && current->value != 0)  // means that r0 is found (r0 is not zero!)
+    {
+        if (current->units=="um")
+        {
+	    current->value = current->value*1e-4/lambda;
+	    current->units="lambda";
+        }
+        double r0 = current->value*2*PI;
+        current = find("theta",first);
+        if (current->units=="deg")
+        {
+	    current->value = current->value*PI/180;
+	    current->units="rad";
+        }
+        double theta = current->value;
+        x0 = xlength/2 + r0*cos(theta) + 0.00001;  // Bug: Quill cannot create laser pulse exactly at xlength/2
+        y00 = r0*sin(theta);
+    }
+   
     if ( f_envelope == "focussedSSC" ) {
 	f_envelope = "focused";
 	sscos = 1;
