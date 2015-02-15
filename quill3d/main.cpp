@@ -1086,11 +1086,8 @@ int main()
 			onx0 = nx_ich/2;
 		    psr[i].fout_ex(pof,onx0,onx);
 		}
-		ii = 0;
-		while((ii+1)*(nx_sr-nx_ich)+nx_ich<int((xlength-x0fout)/dx))
-		{
-		    ii = ii + 1;
-		}
+		ii = int(((xlength-x0fout)/dx - nx_ich)/(nx_sr - nx_ich));
+		if(ii<0) ii = 0;
 		psr[ii].fout_ex_yzplane(pof,int((xlength-x0fout)/dx)-ii*(nx_sr-nx_ich));
 		fout_ex.close();
 	    }
@@ -1114,11 +1111,8 @@ int main()
 			onx0 = nx_ich/2;
 		    psr[i].fout_ey(pof,onx0,onx);
 		}
-		ii = 0;
-		while((ii+1)*(nx_sr-nx_ich)+nx_ich<int((xlength-x0fout)/dx))
-		{
-		    ii = ii + 1;
-		}
+		ii = int(((xlength-x0fout)/dx - nx_ich)/(nx_sr - nx_ich));
+		if(ii<0) ii = 0;
 		psr[ii].fout_ey_yzplane(pof,int((xlength-x0fout)/dx)-ii*(nx_sr-nx_ich));
 		fout_ey.close();
 	    }
@@ -1142,11 +1136,8 @@ int main()
 			onx0 = nx_ich/2;
 		    psr[i].fout_ez(pof,onx0,onx);
 		}
-		ii = 0;
-		while((ii+1)*(nx_sr-nx_ich)+nx_ich<int((xlength-x0fout)/dx))
-		{
-		    ii = ii + 1;
-		}
+		ii = int(((xlength-x0fout)/dx - nx_ich)/(nx_sr - nx_ich));
+		if(ii<0) ii = 0;
 		psr[ii].fout_ez_yzplane(pof,int((xlength-x0fout)/dx)-ii*(nx_sr-nx_ich));
 		fout_ez.close();
 	    }
@@ -1170,11 +1161,8 @@ int main()
 			onx0 = nx_ich/2;
 		    psr[i].fout_bx(pof,onx0,onx);
 		}
-		ii = 0;
-		while((ii+1)*(nx_sr-nx_ich)+nx_ich<int((xlength-x0fout)/dx))
-		{
-		    ii = ii + 1;
-		}
+		ii = int(((xlength-x0fout)/dx - nx_ich)/(nx_sr - nx_ich));
+		if(ii<0) ii = 0;
 		psr[ii].fout_bx_yzplane(pof,int((xlength-x0fout)/dx)-ii*(nx_sr-nx_ich));
 		fout_bx.close();
 	    }
@@ -1198,11 +1186,8 @@ int main()
 			onx0 = nx_ich/2;
 		    psr[i].fout_by(pof,onx0,onx);
 		}
-		ii = 0;
-		while((ii+1)*(nx_sr-nx_ich)+nx_ich<int((xlength-x0fout)/dx))
-		{
-		    ii = ii + 1;
-		}
+		ii = int(((xlength-x0fout)/dx - nx_ich)/(nx_sr - nx_ich));
+		if(ii<0) ii = 0;
 		psr[ii].fout_by_yzplane(pof,int((xlength-x0fout)/dx)-ii*(nx_sr-nx_ich));
 		fout_by.close();
 	    }
@@ -1226,11 +1211,8 @@ int main()
 			onx0 = nx_ich/2;
 		    psr[i].fout_bz(pof,onx0,onx);
 		}
-		ii = 0;
-		while((ii+1)*(nx_sr-nx_ich)+nx_ich<int((xlength-x0fout)/dx))
-		{
-		    ii = ii + 1;
-		}
+		ii = int(((xlength-x0fout)/dx - nx_ich)/(nx_sr - nx_ich));
+		if(ii<0) ii = 0;
 		psr[ii].fout_bz_yzplane(pof,int((xlength-x0fout)/dx)-ii*(nx_sr-nx_ich));
 		fout_bz.close();
 	    }
@@ -1256,11 +1238,8 @@ int main()
 		    is_last_sr = 0;
                 psr[i].fout_w(pof,onx0,onx,is_last_sr);
             }
-            ii = 0;
-            while((ii+1)*(nx_sr-nx_ich)+nx_ich<int((xlength-x0fout)/dx))
-            {
-                ii = ii + 1;
-            }
+	    ii = int(((xlength-x0fout)/dx - nx_ich)/(nx_sr - nx_ich));
+	    if(ii<0) ii = 0;
             psr[ii].fout_w_yzplane(pof,int((xlength-x0fout)/dx)-ii*(nx_sr-nx_ich));
             //
             file_name = data_folder+"/inv";
@@ -1284,11 +1263,8 @@ int main()
 		    is_last_sr = 0;
                 psr[i].fout_inv(pof,onx0,onx,is_last_sr);
             }
-            ii = 0;
-            while((ii+1)*(nx_sr-nx_ich)+nx_ich<int((xlength-x0fout)/dx))
-            {
-                ii = ii + 1;
-            }
+	    ii = int(((xlength-x0fout)/dx - nx_ich)/(nx_sr - nx_ich));
+	    if(ii<0) ii = 0;
             psr[ii].fout_inv_yzplane(pof,int((xlength-x0fout)/dx)-ii*(nx_sr-nx_ich));
 	    fout_w.close();
 	    fout_inv.close();
