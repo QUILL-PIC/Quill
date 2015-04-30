@@ -8,3 +8,4 @@ conf
 *.swp
 *.pyc
 results*/
+quill3d/file*.conf

@@ -755,7 +755,7 @@ int main()
 			int n,x;
 			n = x2/(nx_sr-nx_ich);
 			x = x2%(nx_sr-nx_ich);
-			if (i!=0 && x<nm) {
+			if (n>0 && x<nm) {
 			    n = n - 1;
 			    x = x + nx_sr - nx_ich;
 			}
