@@ -324,6 +324,21 @@ void spatial_region::f_init_focused(double a0y, double a0z, double xsigma, doubl
     }
 }
 
+void spatial_region::f_init_uniformB(double a0y, double a0z) {
+  for(int i = 0; i < nx; ++i) {
+    for(int j = 0; j < ny; ++j) {
+      for(int k = 0; k < nz; ++k) {
+        ce[i][j][k].ex = 0;
+        ce[i][j][k].ey = 0;
+        ce[i][j][k].ez = 0;
+        cb[i][j][k].bx = 0;
+        cb[i][j][k].by = a0y;
+        cb[i][j][k].bz = a0z;
+      }
+    }
+  }
+}
+
 void spatial_region::fill_cell_by_particles(double cmr, int_vector3d& a, int_vector3d& b, double n, double ux0, double dsplmt, double T)
 {
     // a = {i,j,k} - cell position, b = {xnpic,ynpic,znpic}, n - density
