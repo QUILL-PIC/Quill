@@ -400,7 +400,7 @@ int main()
 	/* x0film - координата левой границы плёнки, filmwidth - её
 	 * толщина, gradwidth - толщина части плёнки с линейным ростом
 	 * плотности */
-	for(int i=0;i<n_sr;i++) psr[i].film(tmp_p_film->x0-dx*i*(nx_sr-nx_ich),tmp_p_film->x0+tmp_p_film->filmwidth-dx*i*(nx_sr-nx_ich),tmp_p_film->ne/(1.11485e+13/lambda/lambda),ions=="on",1/(proton_mass*tmp_p_film->mcr),tmp_p_film->gradwidth,tmp_p_film->T);
+	for(int i=0;i<n_sr;i++) psr[i].film(tmp_p_film->x0-dx*i*(nx_sr-nx_ich),tmp_p_film->x0+tmp_p_film->filmwidth-dx*i*(nx_sr-nx_ich),tmp_p_film->ne/(1.11485e+13/lambda/lambda),ions=="on",1/(proton_mass*tmp_p_film->mcr),tmp_p_film->gradwidth,tmp_p_film->y0,tmp_p_film->y1,tmp_p_film->z0,tmp_p_film->z1,tmp_p_film->T);
 	tmp_p_film = tmp_p_film->prev;
     }
     main_thread_time = times(&tms_struct) - main_thread_time;
@@ -1758,6 +1758,60 @@ int init()
 	    current->units="lambda";
 	}
 	p_last_film->gradwidth = current->value*2*PI;
+	current = find("y0film",tmp);
+	if (current->units=="um")
+	{
+	    current->value = current->value*1e-4/lambda;
+	    current->units="lambda";
+	}
+	if (current->units=="fs")
+	{
+	    current->value = current->value*1e-15*2.99792458e10/lambda;
+	    current->units="lambda";
+	}
+	p_last_film->y0 = current->value*2*PI;
+	current = find("y1film",tmp);
+	if (current->units=="um")
+	{
+	    current->value = current->value*1e-4/lambda;
+	    current->units="lambda";
+	}
+	if (current->units=="fs")
+	{
+	    current->value = current->value*1e-15*2.99792458e10/lambda;
+	    current->units="lambda";
+	}
+  if (current->value == 0)
+    p_last_film->y1 = ylength;
+  else
+    p_last_film->y1 = current->value*2*PI;
+	current = find("z0film",tmp);
+	if (current->units=="um")
+	{
+	    current->value = current->value*1e-4/lambda;
+	    current->units="lambda";
+	}
+	if (current->units=="fs")
+	{
+	    current->value = current->value*1e-15*2.99792458e10/lambda;
+	    current->units="lambda";
+	}
+	p_last_film->z0 = current->value*2*PI;
+	current = find("z1film",tmp);
+	if (current->units=="um")
+	{
+	    current->value = current->value*1e-4/lambda;
+	    current->units="lambda";
+	}
+	if (current->units=="fs")
+	{
+	    current->value = current->value*1e-15*2.99792458e10/lambda;
+	    current->units="lambda";
+	}
+  if (current->value == 0)
+    p_last_film->z1 = zlength;
+  else
+    p_last_film->z1 = current->value*2*PI;
 	current = find("nfilm",tmp);
 	if (current->units=="ncr")
 	{
@@ -2116,6 +2170,10 @@ int init()
 	fout_log<<"x0film\n"<<tmp_p_film->x0/2/PI<<"\n";
 	fout_log<<"filmwidth\n"<<tmp_p_film->filmwidth/2/PI<<"\n";
 	fout_log<<"gradwidth\n"<<tmp_p_film->gradwidth/2/PI<<"\n";
+	fout_log<<"y0film\n"<<tmp_p_film->y0/2/PI<<"\n";
+	fout_log<<"y1film\n"<<tmp_p_film->y1/2/PI<<"\n";
+	fout_log<<"z0film\n"<<tmp_p_film->z0/2/PI<<"\n";
+	fout_log<<"z1film\n"<<tmp_p_film->z1/2/PI<<"\n";
 	fout_log<<"nfilm\n"<<tmp_p_film->ne<<"\n";
 	fout_log<<"mcr\n"<<tmp_p_film->mcr<<"\n";
 	fout_log<<"Tfilm\n"<<tmp_p_film->T<<"\n";

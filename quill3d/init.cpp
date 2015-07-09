@@ -263,7 +263,7 @@ void spatial_region::f_init_focused(double a0y, double a0z, double xsigma, doubl
 			    bx = alocal*a0y*( cosr*sinr*PI/slocal*((i*dx-x0)*z0x+(j*dy-y12-y0)*z0y+(k*dz-z12-z0)*z0z)/r*(sin(xi)*cosx*cosx+4*PI*xi*xi*xi/(xs*xs*xs*xs)*cos(xi)*cosx*sinx) + ((i*dx-x0)*z0x+(j*dy-y12-y0)*z0y+(k*dz-z12-z0)*z0z)*(x-x1)/((x-x1)*(x-x1)+xR*xR)*cosr*cosr*(cosx*cosx*(-cos(xi))+4*PI*xi*xi*xi/(xs*xs*xs*xs)*cosx*sinx*sin(xi)) ) + alocal*a0z*( cosr*sinr*PI/slocal*((i*dx-x0)*y0x+(j*dy-y12-y0)*y0y+(k*dz-z12-z0)*y0z)/r*((-cos(xi))*cosx*cosx-4*PI*xi*xi*xi/(xs*xs*xs*xs)*sin(xi)*cosx*sinx) + ((i*dx-x0)*y0x+(j*dy-y12-y0)*y0y+(k*dz-z12-z0)*y0z)*(x-x1)/((x-x1)*(x-x1)+xR*xR)*cosr*cosr*(cosx*cosx*(-sin(xi))-4*PI*xi*xi*xi/(xs*xs*xs*xs)*cosx*sinx*cos(xi)) );
 			else
 			    bx = 0;
-		    } else {
+		    } else if (-2 * s0 * (x1 - x) / xR <= r && r <= 2 * s0 * (x1 - x) / xR) { // otherwise unphysical wings arise
 			cosx = cos(PI*xi/2/xs);
 			cosr = cos(PI*r/2/slocal);
 			sinx = sin(PI*xi/2/xs);
@@ -282,7 +282,14 @@ void spatial_region::f_init_focused(double a0y, double a0z, double xsigma, doubl
 			    bx = alocal*a0y*( cosr*sinr*PI/slocal*((i*dx-x0)*z0x+(j*dy-y12-y0)*z0y+(k*dz-z12-z0)*z0z)/r*(sin(xi)*cosx*cosx+PI/xs*cos(xi)*cosx*sinx) + ((i*dx-x0)*z0x+(j*dy-y12-y0)*z0y+(k*dz-z12-z0)*z0z)*(x-x1)/((x-x1)*(x-x1)+xR*xR)*cosr*cosr*(cosx*cosx*(-cos(xi))+PI/xs*cosx*sinx*sin(xi)) ) + alocal*a0z*( cosr*sinr*PI/slocal*((i*dx-x0)*y0x+(j*dy-y12-y0)*y0y+(k*dz-z12-z0)*y0z)/r*((-cos(xi))*cosx*cosx-PI/xs*sin(xi)*cosx*sinx) + ((i*dx-x0)*y0x+(j*dy-y12-y0)*y0y+(k*dz-z12-z0)*y0z)*(x-x1)/((x-x1)*(x-x1)+xR*xR)*cosr*cosr*(cosx*cosx*(-sin(xi))-PI/xs*cosx*sinx*cos(xi)) );
 			else
 			    bx = 0;
-		    }
+		    } else {
+          ex = 0;
+          ey = 0;
+          ez = 0;
+          bx = 0;
+          by = 0;
+          bz = 0;
+        }
 		    if (b_sign==0)
 		    {
 			bx = -bx;
@@ -447,7 +454,7 @@ void spatial_region::add_beam(double cmr, double n0, double ux0, double xb, doub
     }
 }
 
-void spatial_region::film(double x0, double x1, double ne, bool ions, double cmr, double gradwidth, double T)
+void spatial_region::film(double x0, double x1, double ne, bool ions, double cmr, double gradwidth, double y0, double y1, double z0, double z1, double T)
 { /* x0 - координата левой границы плёнки, x1 - правой, ne -
      концентрация электронов в плёнке, нормированная на критическую
      концентрацию */
@@ -469,9 +476,9 @@ void spatial_region::film(double x0, double x1, double ne, bool ions, double cmr
     if (i1>nx) i1 = nx;
     for(int i=i0;i<i1;i++)
     {
-	for(int j=0;j<ny;j++)
+	for(int j=int(y0/dy)+1;j<int(y1/dy)-1;j++)
 	{
-	    for(int k=0;k<nz;k++)
+	    for(int k=int(z0/dz)+1;k<int(z1/dz)-1;k++)
 	    {
 		a.i = i;
 		a.j = j;
