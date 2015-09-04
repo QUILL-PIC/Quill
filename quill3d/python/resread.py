@@ -2,6 +2,7 @@
 
 import numpy as np
 import math
+import os
 
 __name__ = 'resread - provides functions for extractind data arrays\n\
 from quill output files'
@@ -32,6 +33,11 @@ filmwidth = 0
 
 data_folder = '../results/'
 t = '0'
+
+v = 1
+
+def xi( x, t ):
+    return x - v * t
 
 def read_parameters(log=None):
     'Reads nx, ny, etc. from *log*.'
@@ -151,6 +157,9 @@ def particles(name='phasespace',s=['x','y','g']):
 	elif s[i]=='t': # for qplot.tracks()
 		for j in np.arange(n):
 		    a[i][j] = tr_start + j*dt
+	elif s[i]=='xi': # for qplot.tracks()
+		for j in np.arange(n):
+		    a[i][j] = xi( float(data[9*j+1]), ( tr_start + j*dt) )
 	elif s[i]=='vx':
 	    for j in np.arange(0,n,1):
 		a[i][j] = float(data[9*j+4])/float(data[9*j+7])
@@ -189,3 +198,30 @@ def t_data(name='energy',step=None):
 	    data.append(float(b))
     data = np.reshape(data,(i,len(data)/i))
     return data
+
+def tracks():
+    'Returns a list of tracks from the data_folder. Each track is a dictionary with keys: t, x, y, z, ux, uy, uz, q, g, file'
+    read_parameters()
+    track_names = [x for x in os.listdir(data_folder) if x.startswith('track')]
+    tracks = [read_track(x) for x in track_names]
+    return tracks
+
+def read_track(track_name):
+    'Reads track from the specified track file. The returned track is a dictionary with keys: t, x, y, z, ux, uy, uz, q, g, file'
+    raw_data = np.loadtxt(data_folder + track_name)
+    raw_track = raw_data.reshape(9, -1, order='F')
+    track_size = raw_track[0].size
+    track = {'x' : raw_track[1],
+             'y' : raw_track[2],
+	     'z' : raw_track[3],
+	     'ux' : raw_track[4],
+	     'uy' : raw_track[5],
+	     'uz' : raw_track[6],
+	     'file' : data_folder + track_name,
+	     'q' : raw_track[0],
+	     'g' : raw_track[7],
+	     't' : np.linspace(0, dt * track_size, track_size)}
+    track['vx'] = track['ux'] / track['g']
+    track['vy'] = track['uy'] / track['g']
+    track['vz'] = track['uz'] / track['g']
+    return track

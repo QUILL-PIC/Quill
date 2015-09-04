@@ -41,6 +41,7 @@ bool b_sign; // b_sign = 1 соответствует знаку '+', 0 - зна
 int n_ion_populations;
 double* icmr;
 int n_tracks;
+bool tr_init;
 double tr_start,xtr1,ytr1,ztr1,xtr2,ytr2,ztr2;
 double mwspeed,nelflow,vlflow,mcrlflow,Tlflow,nerflow,vrflow,mcrrflow,Trflow;
 std::string e_components_for_output;
@@ -53,7 +54,7 @@ std::string particles_for_output;
 std::string pmerging,pmerging_now;
 std::string lp_reflection,f_reflection;
 std::string ions;
-std::string data_folder; // 09.07.14 - specify custom data folder
+std::string data_folder;
 int init();
 //------------------------------
 
@@ -97,7 +98,7 @@ void* thread_function(void* arg)
         psr[i].padvance(freezing);
 	psr[i].compute_N(nm*(i!=0),nm*(i!=n_sr-1),dx*dy*dz*1.11485e13*lambda/(8*PI*PI*PI));
 	psr[i].compute_energy(nm*(i!=0),nm*(i!=n_sr-1),0.5*dx*dy*dz*3.691e4*lambda/1e7,8.2e-14*dx*dy*dz*1.11485e13*lambda/(8*PI*PI*PI)); // энергия в Джоулях
-	psr[i].fout_tracks(i*(nx_sr-nx_ich)*dx/2/PI,nm);
+	psr[i].fout_tracks((i*(nx_sr-nx_ich)+nmw)*dx/2/PI,nm);
         psr[i].fadvance_ndfx();
 	if (mwindow==1) psr[i].moving_window(l,nmw,mwspeed);
     
@@ -264,7 +265,7 @@ int main()
 		f_reflection3 += tmpf[jj];
 	    }
 	}
-	for (int i=0;i<n_sr;i++) psr[i].f_init_focused(a0y,a0z,xsigma,sigma0,xlength-x0-dx*i*(nx_sr - nx_ich),xlength/2-x0,b_sign,phase,y00,z00);
+	for (int i=0;i<n_sr;i++) psr[i].f_init_focused(a0y,a0z,xsigma,sigma0,xlength-x0-dx*i*(nx_sr - nx_ich),xlength/2-x0,b_sign,phase,y00,z00,0,0,sscos);
 	if (phi!=0) {
 	    for (int i=0;i<n_sr;i++) psr[i].f_init_focused(a0y,a0z,xsigma,sigma0,x0-dx*i*(nx_sr - nx_ich),-xlength/2+x0,b_sign,phase,-y00,-z00,1,phi);
 	}
@@ -301,6 +302,9 @@ int main()
 	else if (lp_reflection1=="yz") {
 	    for (int i=0;i<n_sr;i++) psr[i].f_init_focused((1-2*(f_reflection1=="y"))*a0y,(1-2*(f_reflection1=="z"))*a0z,xsigma,sigma0,x0-dx*i*(nx_sr - nx_ich),-xlength/2+x0,b_sign,phase,y00,z00,1);
 	}
+    } else if (f_envelope == "uniformB") {
+      for (int i = 0; i < n_sr; ++i)
+        psr[i].f_init_uniformB(a0y, a0z);
     }
     else
     {
@@ -399,7 +403,7 @@ int main()
 	/* x0film - координата левой границы плёнки, filmwidth - её
 	 * толщина, gradwidth - толщина части плёнки с линейным ростом
 	 * плотности */
-	for(int i=0;i<n_sr;i++) psr[i].film(tmp_p_film->x0-dx*i*(nx_sr-nx_ich),tmp_p_film->x0+tmp_p_film->filmwidth-dx*i*(nx_sr-nx_ich),tmp_p_film->ne/(1.11485e+13/lambda/lambda),ions=="on",1/(proton_mass*tmp_p_film->mcr),tmp_p_film->gradwidth);
+	for(int i=0;i<n_sr;i++) psr[i].film(tmp_p_film->x0-dx*i*(nx_sr-nx_ich),tmp_p_film->x0+tmp_p_film->filmwidth-dx*i*(nx_sr-nx_ich),tmp_p_film->ne/(1.11485e+13/lambda/lambda),ions=="on",1/(proton_mass*tmp_p_film->mcr),tmp_p_film->gradwidth,tmp_p_film->y0,tmp_p_film->y1,tmp_p_film->z0,tmp_p_film->z1,tmp_p_film->T);
 	tmp_p_film = tmp_p_film->prev;
     }
     main_thread_time = times(&tms_struct) - main_thread_time;
@@ -593,7 +597,9 @@ int main()
 					/* координаты выводятся
 					 * нормированными на лазерную
 					 * длину волны */
-					fout_phasespace<<current->q<<"\n"<<dx*(current->x+n*(nx_sr-nx_ich))/(2*PI)<<"\n"<<dy*(current->y)/(2*PI)<<"\n"<<dz*(current->z)/(2*PI)<<"\n";
+					fout_phasespace<<current->q<<"\n";
+					fout_phasespace<<dx*(current->x+n*(nx_sr-nx_ich))/(2*PI)<<"\n";
+					fout_phasespace<<dy*(current->y)/(2*PI)<<"\n"<<dz*(current->z)/(2*PI)<<"\n";
 					fout_phasespace<<current->ux<<"\n"<<current->uy<<"\n"<<current->uz<<"\n";
 					fout_phasespace<<current->g<<"\n";
 					fout_phasespace<<current->chi<<"\n";
@@ -608,7 +614,9 @@ int main()
 				    if(i_particle_p>enthp_p)
 				    {
 					i_particle_p = 0;
-					fout_phasespace_p<<current->q<<"\n"<<dx*(current->x+n*(nx_sr-nx_ich))/(2*PI)<<"\n"<<dy*(current->y)/(2*PI)<<"\n"<<dz*(current->z)/(2*PI)<<"\n";
+					fout_phasespace_p<<current->q<<"\n";
+					fout_phasespace_p<<dx*(current->x+n*(nx_sr-nx_ich))/(2*PI)<<"\n";
+					fout_phasespace_p<<dy*(current->y)/(2*PI)<<"\n"<<dz*(current->z)/(2*PI)<<"\n";
 					fout_phasespace_p<<current->ux<<"\n"<<current->uy<<"\n"<<current->uz<<"\n";
 					fout_phasespace_p<<current->g<<"\n";
 					fout_phasespace_p<<current->chi<<"\n";
@@ -623,7 +631,9 @@ int main()
 				    if(i_particle_ph>enthp_ph)
 				    {
 					i_particle_ph = 0;
-					fout_phasespace_ph<<current->q<<"\n"<<dx*(current->x+n*(nx_sr-nx_ich))/(2*PI)<<"\n"<<dy*(current->y)/(2*PI)<<"\n"<<dz*(current->z)/(2*PI)<<"\n";
+					fout_phasespace_ph<<current->q<<"\n";
+					fout_phasespace_ph<<dx*(current->x+n*(nx_sr-nx_ich))/(2*PI)<<"\n";
+					fout_phasespace_ph<<dy*(current->y)/(2*PI)<<"\n"<<dz*(current->z)/(2*PI)<<"\n";
 					fout_phasespace_ph<<current->ux<<"\n"<<current->uy<<"\n"<<current->uz<<"\n";
 					fout_phasespace_ph<<current->g<<"\n";
 					fout_phasespace_ph<<current->chi<<"\n";
@@ -644,7 +654,9 @@ int main()
 					    if(i_particle_i>enthp_i)
 					    {
 						i_particle_i = 0;
-						fout_phasespace_i[m]<<current->q<<"\n"<<dx*(current->x+n*(nx_sr-nx_ich))/(2*PI)<<"\n"<<dy*(current->y)/(2*PI)<<"\n"<<dz*(current->z)/(2*PI)<<"\n";
+						fout_phasespace_i[m]<<current->q<<"\n";
+						fout_phasespace_i[m]<<dx*(current->x+n*(nx_sr-nx_ich))/(2*PI)<<"\n";
+						fout_phasespace_i[m]<<dy*(current->y)/(2*PI)<<"\n"<<dz*(current->z)/(2*PI)<<"\n";
 						fout_phasespace_i[m]<<current->ux<<"\n"<<current->uy<<"\n"<<current->uz<<"\n";
 						fout_phasespace_i[m]<<current->g<<"\n";
 						fout_phasespace_i[m]<<current->chi<<"\n";
@@ -729,31 +741,92 @@ int main()
 	// start tracking
 	if (l==int(tr_start/dt)) {
 	    cout<<"Tracking started"<<endl;
-	    int x1,y1,z1,x2,y2,z2;
-	    x1 = -1;
-	    y1 = 0;
-	    z1 = 0;
-	    for (int i=0;i<n_tracks;i++) {
-		x2 = (xtr1 + (xtr2-xtr1)*i/n_tracks)/dx;
-		y2 = (ytr1 + (ytr2-ytr1)*i/n_tracks)/dy;
-		z2 = (ztr1 + (ztr2-ztr1)*i/n_tracks)/dz;
-		if (x2!=x1 || y2!=y1 || z2!=z1) {
-		    x1 = x2;
-		    y1 = y2;
-		    z1 = z2;
+	    long trn = 1; // trn = 0 for untracked particles
+	    if (tr_init==0) {
+		int x1,y1,z1,x2,y2,z2;
+		x1 = -1;
+		y1 = 0;
+		z1 = 0;
+		for (int i=0;i<n_tracks;i++) {
+		    x2 = (xtr1 + (xtr2-xtr1)*i/n_tracks)/dx;
+		    y2 = (ytr1 + (ytr2-ytr1)*i/n_tracks)/dy;
+		    z2 = (ztr1 + (ztr2-ztr1)*i/n_tracks)/dz;
+		    if (x2!=x1 || y2!=y1 || z2!=z1) {
+			x1 = x2;
+			y1 = y2;
+			z1 = z2;
+			int n,x;
+			n = x2/(nx_sr-nx_ich);
+			x = x2%(nx_sr-nx_ich);
+			if (n>0 && x<nm) {
+			    n = n - 1;
+			    x = x + nx_sr - nx_ich;
+			}
+			spatial_region::plist::particle* h = psr[n].cp[x][y2][z2].pl.head;
+			spatial_region::plist::particle* p = h;
+			bool b = 1;
+			while (p!=0 && b) {
+			    if (p->cmr==-1) {
+				p->trn = trn;
+				trn++;
+				b = 0;
+			    }
+			    p = p->next;
+			}
+			p = h;
+			b = 1;
+			while (p!=0 && b) {
+			    if (p->cmr==1) {
+				p->trn = trn;
+				trn++;
+				b = 0;
+			    }
+			    p = p->next;
+			}
+			p = h;
+			b = 1;
+			while (p!=0 && b) {
+			    if (p->cmr==0) {
+				p->trn = trn;
+				trn++;
+				b = 0;
+			    }
+			    p = p->next;
+			}
+			for (int m=0;m<n_ion_populations;m++) {
+			    p = h;
+			    b = 1;
+			    while (p!=0 && b) {
+				if (p->cmr==icmr[m]) {
+				    p->trn = trn;
+				    trn++;
+				    b = 0;
+				}
+				p = p->next;
+			    }
+			}
+		    }
+		}
+	    } else {
+		for (int i=0;i<n_tracks;i++) {
+		    int x1,y1,z1;
+		    x1 = ( xtr1 + ( xtr2 - xtr1 ) * rand( ) / RAND_MAX ) / dx;
+		    y1 = ( ytr1 + ( ytr2 - ytr1 ) * rand( ) / RAND_MAX ) / dy;
+		    z1 = ( ztr1 + ( ztr2 - ztr1 ) * rand( ) / RAND_MAX ) / dz;
 		    int n,x;
-		    n = x2/(nx_sr-nx_ich);
-		    x = x2%(nx_sr-nx_ich);
+		    n = x1/(nx_sr-nx_ich);
+		    x = x1%(nx_sr-nx_ich);
 		    if (i!=0 && x<nm) {
 			n = n - 1;
 			x = x + nx_sr - nx_ich;
 		    }
-		    spatial_region::plist::particle* h = psr[n].cp[x][y2][z2].pl.head;
+		    spatial_region::plist::particle* h = psr[n].cp[x][y1][z1].pl.head;
 		    spatial_region::plist::particle* p = h;
 		    bool b = 1;
 		    while (p!=0 && b) {
 			if (p->cmr==-1) {
-			    p->trn = rand();
+			    p->trn = trn;
+			    trn++;
 			    b = 0;
 			}
 			p = p->next;
@@ -762,7 +835,8 @@ int main()
 		    b = 1;
 		    while (p!=0 && b) {
 			if (p->cmr==1) {
-			    p->trn = rand();
+			    p->trn = trn;
+			    trn++;
 			    b = 0;
 			}
 			p = p->next;
@@ -771,7 +845,8 @@ int main()
 		    b = 1;
 		    while (p!=0 && b) {
 			if (p->cmr==0) {
-			    p->trn = rand();
+			    p->trn = trn;
+			    trn++;
 			    b = 0;
 			}
 			p = p->next;
@@ -781,7 +856,8 @@ int main()
 			b = 1;
 			while (p!=0 && b) {
 			    if (p->cmr==icmr[m]) {
-				p->trn = rand();
+				p->trn = trn;
+				trn++;
 				b = 0;
 			    }
 			    p = p->next;
@@ -920,67 +996,89 @@ int main()
 	}
 
 	// добавление частиц для нейтральных потоков (neutral flows)
-	if ( nelflow!=0 || nerflow!=0 ) {
-	    static double xlflow = 1;
-	    if ( xlflow >= 1 ) {
-		xlflow -= 1;
-		double n=nelflow/xnpic; // in n_{cr}
-		int_vector3d cell_pos, v_npic;
-		v_npic.i = 1; // с xnpic приходится обхоиться отдельно, см. ниже
-		v_npic.j = ynpic;
-		v_npic.k = znpic;
-		for (int j=0;j<int(ylength/dy);j++) {
-		    for (int k=0;k<int(zlength/dz);k++) {
-			cell_pos.j=j;
-			cell_pos.k=k;
-			for ( int ii=0; ii<xnpic; ii++ ) {
-			    double x0;
-			    x0 = xlflow - float(ii)/xnpic;
-			    if ( x0 >= 0 ) {
-				cell_pos.i = 3;
-			    } else {
-				cell_pos.i = 2;
-				x0 += 1;
-			    }
-			    psr[0].fill_cell_by_particles(-1,cell_pos,v_npic,n,vlflow/sqrt(1-vlflow*vlflow),x0-0.5,Tlflow); // 0.5 - for a compensation in fill_cell... for xnpic = 1
-			    if (ions=="on")
-				psr[0].fill_cell_by_particles(1/(proton_mass*mcrlflow),cell_pos,v_npic,n,vlflow/sqrt(1-vlflow*vlflow),x0-0.5,Tlflow);
-			}
-		    }
-		}
-	    }
-	    xlflow += dt*vlflow/dx;
-	    //
-	    static double xrflow = 1;
-	    if ( xrflow >= 1 ) {
-		xrflow -= 1;
-		double n=nerflow/xnpic; // in n_{cr}
-		int_vector3d cell_pos, v_npic;
-		v_npic.i = 1; // с xnpic приходится обхоиться отдельно, см. ниже
-		v_npic.j = ynpic;
-		v_npic.k = znpic;
-		for (int j=0;j<int(ylength/dy);j++) {
-		    for (int k=0;k<int(zlength/dz);k++) {
-			cell_pos.j=j;
-			cell_pos.k=k;
-			for ( int ii=0; ii<xnpic; ii++ ) {
-			    double x0;
-			    x0 = xrflow - float(ii)/xnpic;
-			    if ( x0 >= 0 ) {
-				cell_pos.i = nx_sr - 4;
-			    } else {
-				cell_pos.i = nx_sr - 3;
-				x0 += 1;
-			    }
-			    psr[n_sr-1].fill_cell_by_particles(-1,cell_pos,v_npic,n,-vrflow/sqrt(1-vrflow*vrflow),(1-x0)-0.5,Trflow);
-			    if (ions=="on")
-				psr[n_sr-1].fill_cell_by_particles(1/(proton_mass*mcrrflow),cell_pos,v_npic,n,-vrflow/sqrt(1-vrflow*vrflow),(1-x0)-0.5,Trflow);
-			}
-		    }
-		}
-	    }
-	    xrflow += dt*vrflow/dx;
-	}
+  if ( nelflow!=0 ) {
+    static double xlflow = 1;
+    if ( xlflow >= 1 ) {
+      xlflow -= 1;
+      double n=nelflow/xnpic; // in n_{cr}
+      int_vector3d cell_pos, v_npic;
+      v_npic.i = 1; // с xnpic приходится обхоиться отдельно, см. ниже
+      v_npic.j = ynpic;
+      v_npic.k = znpic;
+      for (int j=0;j<int(ylength/dy);j++) {
+        for (int k=0;k<int(zlength/dz);k++) {
+          cell_pos.j=j;
+          cell_pos.k=k;
+          for ( int ii=0; ii<xnpic; ii++ ) {
+            double x0;
+            x0 = xlflow - float(ii)/xnpic;
+            if ( x0 >= 0 ) {
+              cell_pos.i = 3;
+            } else {
+              cell_pos.i = 2;
+              x0 += 1;
+            }
+            double tmp = (j * dy - ylength / 2) / (ylength / 2);
+            tmp = cos(0.5 * PI * tmp * tmp);
+            double tr_env = tmp * tmp;
+            tmp =  (k * dz - zlength / 2) / (zlength / 2);
+            tmp = cos(0.5 * PI * tmp * tmp);
+            tr_env *= tmp * tmp;
+            if (vlflow != 1) {
+              psr[0].fill_cell_by_particles(-1,cell_pos,v_npic, n * tr_env, vlflow/sqrt(1-vlflow*vlflow),x0-0.5,Tlflow); // 0.5 - for a compensation in fill_cell... for xnpic = 1
+              if (ions=="on")
+                psr[0].fill_cell_by_particles(1/(proton_mass*mcrlflow),cell_pos,v_npic, n * tr_env, vlflow/sqrt(1-vlflow*vlflow),x0-0.5,Tlflow);
+            } else {
+              psr[0].fill_cell_by_particles(0, cell_pos, v_npic, n * tr_env, Tlflow, x0-0.5);
+            }
+          }
+        }
+      }
+    }
+    xlflow += dt*vlflow/dx;
+    }
+  if ( nerflow!=0 ) {
+    //
+    static double xrflow = 1;
+    if ( xrflow >= 1 ) {
+      xrflow -= 1;
+      double n=nerflow/xnpic; // in n_{cr}
+      int_vector3d cell_pos, v_npic;
+      v_npic.i = 1; // с xnpic приходится обхоиться отдельно, см. ниже
+      v_npic.j = ynpic;
+      v_npic.k = znpic;
+      for (int j=0;j<int(ylength/dy);j++) {
+        for (int k=0;k<int(zlength/dz);k++) {
+          cell_pos.j=j;
+          cell_pos.k=k;
+          for ( int ii=0; ii<xnpic; ii++ ) {
+            double x0;
+            x0 = xrflow - float(ii)/xnpic;
+            if ( x0 >= 0 ) {
+              cell_pos.i = nx_sr - 4;
+            } else {
+              cell_pos.i = nx_sr - 3;
+              x0 += 1;
+            }
+            double tmp = (j * dy - ylength / 2) / (ylength / 2);
+            tmp = cos(0.5 * PI * tmp * tmp);
+            double tr_env = tmp * tmp;
+            tmp =  (k * dz - zlength / 2) / (zlength / 2);
+            tmp = cos(0.5 * PI * tmp * tmp);
+            tr_env *= tmp * tmp;
+            if (vrflow!=1) {
+              psr[n_sr-1].fill_cell_by_particles(-1,cell_pos,v_npic, n * tr_env, -vrflow/sqrt(1-vrflow*vrflow),(1-x0)-0.5,Trflow);
+              if (ions=="on")
+                psr[n_sr-1].fill_cell_by_particles(1/(proton_mass*mcrrflow),cell_pos,v_npic, n * tr_env ,-vrflow/sqrt(1-vrflow*vrflow),(1-x0)-0.5,Trflow);
+            } else {
+              psr[n_sr-1].fill_cell_by_particles(0, cell_pos, v_npic, n * tr_env, -Trflow, (1-x0)-0.5);
+            }
+          }
+        }
+      }
+    }
+    xrflow += dt*vrflow/dx;
+  }
         
         // вывод данных в файлы (продолжение)
         if(l*dt>=[](ddi* a) {double b=a->f*a->output_period; if(a->prev!=0) b+=(a->prev)->t_end; return b;} (p_current_ddi))
@@ -1013,11 +1111,8 @@ int main()
 			onx0 = nx_ich/2;
 		    psr[i].fout_ex(pof,onx0,onx);
 		}
-		ii = 0;
-		while((ii+1)*(nx_sr-nx_ich)+nx_ich<int((xlength-x0fout)/dx))
-		{
-		    ii = ii + 1;
-		}
+		ii = int(((xlength-x0fout)/dx - nx_ich)/(nx_sr - nx_ich));
+		if(ii<0) ii = 0;
 		psr[ii].fout_ex_yzplane(pof,int((xlength-x0fout)/dx)-ii*(nx_sr-nx_ich));
 		fout_ex.close();
 	    }
@@ -1041,11 +1136,8 @@ int main()
 			onx0 = nx_ich/2;
 		    psr[i].fout_ey(pof,onx0,onx);
 		}
-		ii = 0;
-		while((ii+1)*(nx_sr-nx_ich)+nx_ich<int((xlength-x0fout)/dx))
-		{
-		    ii = ii + 1;
-		}
+		ii = int(((xlength-x0fout)/dx - nx_ich)/(nx_sr - nx_ich));
+		if(ii<0) ii = 0;
 		psr[ii].fout_ey_yzplane(pof,int((xlength-x0fout)/dx)-ii*(nx_sr-nx_ich));
 		fout_ey.close();
 	    }
@@ -1069,11 +1161,8 @@ int main()
 			onx0 = nx_ich/2;
 		    psr[i].fout_ez(pof,onx0,onx);
 		}
-		ii = 0;
-		while((ii+1)*(nx_sr-nx_ich)+nx_ich<int((xlength-x0fout)/dx))
-		{
-		    ii = ii + 1;
-		}
+		ii = int(((xlength-x0fout)/dx - nx_ich)/(nx_sr - nx_ich));
+		if(ii<0) ii = 0;
 		psr[ii].fout_ez_yzplane(pof,int((xlength-x0fout)/dx)-ii*(nx_sr-nx_ich));
 		fout_ez.close();
 	    }
@@ -1097,11 +1186,8 @@ int main()
 			onx0 = nx_ich/2;
 		    psr[i].fout_bx(pof,onx0,onx);
 		}
-		ii = 0;
-		while((ii+1)*(nx_sr-nx_ich)+nx_ich<int((xlength-x0fout)/dx))
-		{
-		    ii = ii + 1;
-		}
+		ii = int(((xlength-x0fout)/dx - nx_ich)/(nx_sr - nx_ich));
+		if(ii<0) ii = 0;
 		psr[ii].fout_bx_yzplane(pof,int((xlength-x0fout)/dx)-ii*(nx_sr-nx_ich));
 		fout_bx.close();
 	    }
@@ -1125,11 +1211,8 @@ int main()
 			onx0 = nx_ich/2;
 		    psr[i].fout_by(pof,onx0,onx);
 		}
-		ii = 0;
-		while((ii+1)*(nx_sr-nx_ich)+nx_ich<int((xlength-x0fout)/dx))
-		{
-		    ii = ii + 1;
-		}
+		ii = int(((xlength-x0fout)/dx - nx_ich)/(nx_sr - nx_ich));
+		if(ii<0) ii = 0;
 		psr[ii].fout_by_yzplane(pof,int((xlength-x0fout)/dx)-ii*(nx_sr-nx_ich));
 		fout_by.close();
 	    }
@@ -1153,11 +1236,8 @@ int main()
 			onx0 = nx_ich/2;
 		    psr[i].fout_bz(pof,onx0,onx);
 		}
-		ii = 0;
-		while((ii+1)*(nx_sr-nx_ich)+nx_ich<int((xlength-x0fout)/dx))
-		{
-		    ii = ii + 1;
-		}
+		ii = int(((xlength-x0fout)/dx - nx_ich)/(nx_sr - nx_ich));
+		if(ii<0) ii = 0;
 		psr[ii].fout_bz_yzplane(pof,int((xlength-x0fout)/dx)-ii*(nx_sr-nx_ich));
 		fout_bz.close();
 	    }
@@ -1183,11 +1263,8 @@ int main()
 		    is_last_sr = 0;
                 psr[i].fout_w(pof,onx0,onx,is_last_sr);
             }
-            ii = 0;
-            while((ii+1)*(nx_sr-nx_ich)+nx_ich<int((xlength-x0fout)/dx))
-            {
-                ii = ii + 1;
-            }
+	    ii = int(((xlength-x0fout)/dx - nx_ich)/(nx_sr - nx_ich));
+	    if(ii<0) ii = 0;
             psr[ii].fout_w_yzplane(pof,int((xlength-x0fout)/dx)-ii*(nx_sr-nx_ich));
             //
             file_name = data_folder+"/inv";
@@ -1211,11 +1288,8 @@ int main()
 		    is_last_sr = 0;
                 psr[i].fout_inv(pof,onx0,onx,is_last_sr);
             }
-            ii = 0;
-            while((ii+1)*(nx_sr-nx_ich)+nx_ich<int((xlength-x0fout)/dx))
-            {
-                ii = ii + 1;
-            }
+	    ii = int(((xlength-x0fout)/dx - nx_ich)/(nx_sr - nx_ich));
+	    if(ii<0) ii = 0;
             psr[ii].fout_inv_yzplane(pof,int((xlength-x0fout)/dx)-ii*(nx_sr-nx_ich));
 	    fout_w.close();
 	    fout_inv.close();
@@ -1551,17 +1625,47 @@ int init()
 	current->units="lambda";
     }
     z00 = current->value*2*PI;
-    if (f_envelope=="focused")
+    
+    // positioning the pulse with coordinates (r0, theta, z0) instead of (x0, y0, z0)
+    current = find("r0",first);  
+    if (current->units != "off" && current->value != 0)  // means that r0 is found (r0 is not zero!)
+    {
+        if (current->units=="um")
+        {
+	    current->value = current->value*1e-4/lambda;
+	    current->units="lambda";
+        }
+        double r0 = current->value*2*PI;
+        current = find("theta",first);
+        if (current->units=="deg")
+        {
+	    current->value = current->value*PI/180;
+	    current->units="rad";
+        }
+        double theta = current->value;
+        x0 = xlength/2 + r0*cos(theta) + 0.00001;  // Bug: Quill cannot create laser pulse exactly at xlength/2
+        y00 = r0*sin(theta);
+    }
+   
+    if ( f_envelope == "focussedSSC" ) {
+	f_envelope = "focused";
+	sscos = 1;
+    }
+    if ( f_envelope == "focused" )
     {
 	x00 = sqrt((x0-xlength/2)*(x0-xlength/2)+y00*y00+z00*z00);
-	sigma = 0.5*(ysigma+zsigma);
+	/*sigma = 0.5*(ysigma+zsigma);
 	sigma0 = sigma*sigma*sigma*sigma/4 - 4*x00*x00;
 	if (sigma0<0)
 	{
 	    cout<<"\n\033[31m"<<"main: improper focused pulse, aborting..."<<"\033[0m"<<endl;
 	    return 1;
 	}
-	sigma0 = sqrt( sigma*sigma/2 - sqrt(sigma0) );
+	sigma0 = sqrt( sigma*sigma/2 - sqrt(sigma0) );*/
+	sigma0 = 0.5*(ysigma+zsigma);
+	sigma = sqrt( sigma0 * sigma0 + 4 * x00 * x00 / ( sigma0 * sigma0 ) );
+	a0y = a0y*sigma0/sigma;
+	a0z = a0z*sigma0/sigma;
     }
     current = find("mwindow",first);
     mwindow = 1;
@@ -1679,6 +1783,60 @@ int init()
 	    current->units="lambda";
 	}
 	p_last_film->gradwidth = current->value*2*PI;
+	current = find("y0film",tmp);
+	if (current->units=="um")
+	{
+	    current->value = current->value*1e-4/lambda;
+	    current->units="lambda";
+	}
+	if (current->units=="fs")
+	{
+	    current->value = current->value*1e-15*2.99792458e10/lambda;
+	    current->units="lambda";
+	}
+	p_last_film->y0 = current->value*2*PI;
+	current = find("y1film",tmp);
+	if (current->units=="um")
+	{
+	    current->value = current->value*1e-4/lambda;
+	    current->units="lambda";
+	}
+	if (current->units=="fs")
+	{
+	    current->value = current->value*1e-15*2.99792458e10/lambda;
+	    current->units="lambda";
+	}
+  if (current->value == 0)
+    p_last_film->y1 = ylength;
+  else
+    p_last_film->y1 = current->value*2*PI;
+	current = find("z0film",tmp);
+	if (current->units=="um")
+	{
+	    current->value = current->value*1e-4/lambda;
+	    current->units="lambda";
+	}
+	if (current->units=="fs")
+	{
+	    current->value = current->value*1e-15*2.99792458e10/lambda;
+	    current->units="lambda";
+	}
+	p_last_film->z0 = current->value*2*PI;
+	current = find("z1film",tmp);
+	if (current->units=="um")
+	{
+	    current->value = current->value*1e-4/lambda;
+	    current->units="lambda";
+	}
+	if (current->units=="fs")
+	{
+	    current->value = current->value*1e-15*2.99792458e10/lambda;
+	    current->units="lambda";
+	}
+  if (current->value == 0)
+    p_last_film->z1 = zlength;
+  else
+    p_last_film->z1 = current->value*2*PI;
 	current = find("nfilm",tmp);
 	if (current->units=="ncr")
 	{
@@ -1695,6 +1853,8 @@ int init()
 	if (current->value==0)
 	    current->value = 1;
 	p_last_film->mcr = current->value;
+	current = find("Tfilm",tmp);
+	p_last_film->T = current->value;
 	do
 	{
 	    current = find("film",tmp);
@@ -1756,23 +1916,27 @@ int init()
 	    }
 	    tmp_p_film = tmp_p_film->prev;
 	}
-	b = 1;
-	for (int i=0;i<m;i++) {
-	    if (mcrlflow==mcr[i])
-		b = 0;
+	if (nelflow!=0) {
+	    b = 1;
+	    for (int i=0;i<m;i++) {
+		if (mcrlflow==mcr[i])
+		    b = 0;
+	    }
+	    if (b==1) {
+		mcr[m] = mcrlflow;
+		m++;
+	    }
 	}
-	if (b==1) {
-	    mcr[m] = mcrlflow;
-	    m++;
-	}
-	b = 1;
-	for (int i=0;i<m;i++) {
-	    if (mcrrflow==mcr[i])
-		b = 0;
-	}
-	if (b==1) {
-	    mcr[m] = mcrrflow;
-	    m++;
+	if (nerflow!=0) {
+	    b = 1;
+	    for (int i=0;i<m;i++) {
+		if (mcrrflow==mcr[i])
+		    b = 0;
+	    }
+	    if (b==1) {
+		mcr[m] = mcrrflow;
+		m++;
+	    }
 	}
 	n_ion_populations = m;
 	icmr = new double[m];
@@ -1865,6 +2029,11 @@ int init()
 	freezing = 0;
     current = find("n_tracks",first);
     n_tracks = current->value;
+    current = find("tr_init",first);
+    if (current->units=="volume")
+	tr_init = 1;
+    else
+	tr_init = 0;
     current = find("tr_start",first);
     if (current->units=="um")
     {
@@ -2026,8 +2195,13 @@ int init()
 	fout_log<<"x0film\n"<<tmp_p_film->x0/2/PI<<"\n";
 	fout_log<<"filmwidth\n"<<tmp_p_film->filmwidth/2/PI<<"\n";
 	fout_log<<"gradwidth\n"<<tmp_p_film->gradwidth/2/PI<<"\n";
+	fout_log<<"y0film\n"<<tmp_p_film->y0/2/PI<<"\n";
+	fout_log<<"y1film\n"<<tmp_p_film->y1/2/PI<<"\n";
+	fout_log<<"z0film\n"<<tmp_p_film->z0/2/PI<<"\n";
+	fout_log<<"z1film\n"<<tmp_p_film->z1/2/PI<<"\n";
 	fout_log<<"nfilm\n"<<tmp_p_film->ne<<"\n";
 	fout_log<<"mcr\n"<<tmp_p_film->mcr<<"\n";
+	fout_log<<"Tfilm\n"<<tmp_p_film->T<<"\n";
 	tmp_p_film = tmp_p_film->prev;
     }
     fout_log<<"n_ion_populations\n"<<n_ion_populations<<"\n";
@@ -2052,7 +2226,8 @@ int init()
     fout_log<<"n_sr\n"<<n_sr<<"\n";
     fout_log<<"n_numa_nodes\n"<<n_numa_nodes<<"\n";
     fout_log<<"n_tracks\n"<<n_tracks<<"\n";
-    fout_log<<"tr_start\n"<<tr_start<<"\n";
+    fout_log<<"tr_start\n"<<tr_start/2/PI<<"\n";
+    fout_log<<"tr_init\n"<<tr_init<<"\n";
     fout_log<<"xtr1\n"<<xtr1<<"\n";
     fout_log<<"ytr1\n"<<ytr1<<"\n";
     fout_log<<"ztr1\n"<<ztr1<<"\n";
@@ -2072,7 +2247,7 @@ int init()
     fout_log<<"W = "<<(a0y*a0y+a0z*a0z)*xsigma*ysigma*zsigma*PI*sqrt(PI/2)/4*lambda*3.691e4/1e7<<" J\n";
     if (f_envelope=="focused")
     {
-	fout_log<<"a0 in focal plane = "<<(a0y*(a0y>a0z)+a0z*(a0z>=a0y))*sigma/sigma0<<"\n";
+	//fout_log<<"a0 in focal plane = "<<(a0y*(a0y>a0z)+a0z*(a0z>=a0y))*sigma/sigma0<<"\n";
 	fout_log<<"aperture: F/"<<sigma0/2<<"\n";
     }
     fout_log<<"lambda = "<<lambda*1e4<<" um\n";

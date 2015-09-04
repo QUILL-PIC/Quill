@@ -1,9 +1,5 @@
-# speed test and bubble example
-# see phasespace.eps_t=24_ in qill3d-2012.09.12-bubble--b_sign--place-revision
-
-# history:
-# 12Sep2012 - 830 s
-# 25Oct2012 - enthp changes from 4 to 40 - 846 s
+# example of laser-plasma parameters that yield a bubble and electron beam with
+# quasimonoenergetic spectrum (at t = 40 !)
 
 # число вычислительных потоков
 #n_sr = 16 # default: 8
@@ -24,15 +20,15 @@ lambda = 1 um # default: cm; possible: um; lambda_p
 # концентрация электронов; используется при добавлении частиц при
 # включенном движущемся окне, а также при расчёте шага по x, если он
 # не задан явно
-ne = 0.02 ncr # default: cm^{-3}; possible: ncr
+ne = 0.145 ncr # default: cm^{-3}; possible: ncr
 
 # размеры области моделирования
 xlength = 20 # default: lambda; possible: um, fs
-ylength = 20 # default: lambda; possible: um
-zlength = 20 # default: lambda; possible: um
+ylength = 22 # default: lambda; possible: um
+zlength = 22 # default: lambda; possible: um
 
 # время моделирования
-t_end = 24 # default: lambda; possible: um, mm, cm
+t_end = 44 # default: lambda; possible: um, mm, cm
 
 # период вывода данных в файл
 output_period = 4 # default: lambda; possible: um, mm, cm
@@ -48,8 +44,8 @@ b_sign = -1 # default: 1, possible: -1
 polarization = linear # default: linear; possible: circular
 # размеры лазерного импульса
 xsigma = 2.8 # default: lambda; possible: um, fs
-ysigma = 2.8 # default: lambda; possible: um
-zsigma = 2.8 # default: lambda; possible: um
+ysigma = 3.2 # default: lambda; possible: um
+zsigma = 3.2 # default: lambda; possible: um
 # расстояние от центра лазерного импульса до правой границы области
 x0 = 5 # default: lambda; possible: um, fs
 # координаты центра лазерного импульса относительно центра области
@@ -69,7 +65,7 @@ phase = 0 pi # default: 0; default units: rad, possible: pi
 #P = 70 TW # peak power; default: cgs; possible: PW, TW
 #I = 4e20 W/cm^2 # peak intensity; default: cgs; possible: W/cm^2
 #W = 70 J # default units: cgs; possible: J
-a0 = 10
+a0 = 15
 #a0y = 1
 #a0z = 1
 
@@ -129,15 +125,31 @@ particles_for_output = epph # default: e; possible: e, ep, eph, epph
 # шаг по энергии в спектре, число точек в спектре и отношение общего
 # числа частиц к числу частиц, все характеристики которых выводятся в
 # файл, для разных сортов частиц
-deps = 0.1 MeV # default: MeV; possible: mc^2
-neps = 200
-enthp = 40
+deps = 1 MeV # default: MeV; possible: mc^2
+neps = 100
+enthp = 100
 #deps_p = 0.5 MeV # default value = deps; default units: MeV; possible: mc^2
 #neps_p = 140 # default = neps
 enthp_p = 1 # default = enthp
-#deps_ph = 0.5 MeV # default value = deps; default units: MeV; possible: mc^2
-#neps_ph = 800 # default = neps
-#enthp_ph = 10 # default = enthp
+deps_ph = 0.00025 MeV # default value = deps; default units: MeV; possible: mc^2
+neps_ph = 100 # default = neps
+enthp_ph = 10 # default = enthp
+
+# число частиц каждого сорта для вывода их траекторий в файл
+n_tracks = 80 # default = 0
+# момент включения алгоритма вывода траекторий частиц
+tr_start = 1 # default value = 0; default units: lambda; possible: um, mm, cm
+tr_init = line # default: line; possible: volume
+# координаты концов прямого отрезка (tr_init = line) или диагональ
+# прямоугольного параллелепипеда (tr_init = volume), с которого в
+# момент времени tr_start берутся частицы для отслеживания траекторий;
+# default value = 0
+xtr1 = 19.5 # default: lambda; possible: um, fs
+ytr1 = 1 # default: lambda; possible: um
+ztr1 = 11 # default: lambda; possible: um
+xtr2 = 19.5 # default: lambda; possible: um, fs
+ytr2 = 21 # default: lambda; possible: um
+ztr2 = 11 # default: lambda; possible: um
 
 # алгоритм слияния квазичастиц
 #pmerging = on # default: off; possible: on
@@ -146,3 +158,6 @@ enthp_p = 1 # default = enthp
 
 # алгоритм «заморозки» частиц в магнитном поле
 #freezing = on # default: off; possible: on
+
+# имя папки для результатов; не забудьте создать её вручную!
+data_folder = results # default: results

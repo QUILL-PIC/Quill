@@ -13,10 +13,10 @@ __name__ =\
 'qplot - provides functions for visualization of quill results'
 __doc__ = 'see source'
 
-def density(t=0,plane='xy',max_w=0,max_e_density=0,max_p_density=0,max_g_density=0,max_i_density=0,data_folder='../results/',axis=[],save2=''):
+def density(t=0,plane='xy',max_w=0,max_e_density=0,max_p_density=0,max_g_density=0,max_i_density=0,axis=[],extent=None,save2=''):
     'Plots w and particle densities.'
     resread.t = '%g' % t
-    resread.data_folder = data_folder
+    #resread.data_folder = data_folder
     resread.read_parameters()
     #
     tcmap.red()
@@ -55,12 +55,16 @@ def density(t=0,plane='xy',max_w=0,max_e_density=0,max_p_density=0,max_g_density
     if max_i_density==0:
 	max_i_density = max_e_density
     #
-    plt.imshow(resread.density('rho_ph',plane),'tcmap_blue',interpolation='none',vmin=0,vmax=max_g_density,origin='lower',extent=(0,xlength,0,ylength))
-    plt.imshow(w,'tcmap_orange',interpolation='none',vmin=0,vmax=max_w,origin='lower',extent=(0,xlength,0,ylength))
+    if extent == None:
+	extent = (0,xlength,0,ylength)
+    elif extent == 'xi':
+	extent = ( resread.xi( 0, t ), resread.xi( xlength, t ), 0, ylength )
+    plt.imshow(resread.density('rho_ph',plane),'tcmap_blue',interpolation='none',vmin=0,vmax=max_g_density,origin='lower',extent=extent)
+    plt.imshow(w,'tcmap_orange',interpolation='none',vmin=0,vmax=max_w,origin='lower',extent=extent)
     if resread.icmr!=[]:
-	plt.imshow(resread.density('irho_'+str(resread.icmr[0])+'_',plane),'tcmap_purple',interpolation='none',vmin=0,vmax=max_i_density,origin='lower',extent=(0,xlength,0,ylength))
-    plt.imshow(edensity,'tcmap_green',interpolation='none',vmin=0,vmax=max_e_density,origin='lower',extent=(0,xlength,0,ylength))
-    plt.imshow(resread.density('rho_p',plane),'tcmap_red',interpolation='none',vmin=0,vmax=max_p_density,origin='lower',extent=(0,xlength,0,ylength))
+	plt.imshow(resread.density('irho_'+str(resread.icmr[0])+'_',plane),'tcmap_purple',interpolation='none',vmin=0,vmax=max_i_density,origin='lower',extent=extent)
+    plt.imshow(edensity,'tcmap_green',interpolation='none',vmin=0,vmax=max_e_density,origin='lower',extent=extent)
+    plt.imshow(resread.density('rho_p',plane),'tcmap_red',interpolation='none',vmin=0,vmax=max_p_density,origin='lower',extent=extent)
     #
     if save2=='':
 	plt.show()
@@ -110,7 +114,7 @@ def particles(t=0,space=['x','y'],particles='geip',colors='bgmrcyk',r=5,alpha=0.
     elif save2!=None:
 	plt.savefig(save2)
 
-def tracks(space=['x','y'],particles='geip',t0=0,t1=0,colors='bgmrcyk',cmaps=['jet'],clims2all=1,axis=[],save2='',r=2,data_folder='../results/'):
+def tracks(space=['x','y'],particles='geip',t0=0,t1=0,colors='bgmrcyk',cmaps=['jet'],clims2all=1,axis=[],save2='',r=2):
     'Plots particle tracks as lines in 2D or dots in 3D (phase)*space*\n\
     at [tr_start+*t0*,tr_start+*t1*]\n\
     Examples:\n\
@@ -120,10 +124,10 @@ def tracks(space=['x','y'],particles='geip',t0=0,t1=0,colors='bgmrcyk',cmaps=['j
     '
     # clims2all=1 -> color limits for cmaps[i] (vmin,vmax) the same
     # for all particles (trajectories) of this type
-    resread.data_folder = data_folder
+    #resread.data_folder = data_folder
     resread.read_parameters()
     track_names = []
-    for filename in os.listdir(data_folder):
+    for filename in os.listdir(resread.data_folder):
 	if filename.find('track')==0:
 	    track_names.append(filename)
     tracks = []
@@ -134,7 +138,7 @@ def tracks(space=['x','y'],particles='geip',t0=0,t1=0,colors='bgmrcyk',cmaps=['j
 	if t1!=0 and np.floor(t1/resread.dt)<len(tmp[0,:]):
 	    tracks.append(tmp[:,np.floor(t0/resread.dt):np.floor(t1/resread.dt)])
 	else:
-	    tracks.append(tmp[:,9*np.floor(t0/resread.dt):])
+	    tracks.append(tmp[:,np.floor(t0/resread.dt):])
 	cmr.append(float( trackname[ trackname.find('_')+1 : trackname.find('_',trackname.find('_')+1) ] ))
     def cmr2int(a):
 	'Converts cmr *a* to the int index of *colors* or *cmaps*'
@@ -159,21 +163,22 @@ def tracks(space=['x','y'],particles='geip',t0=0,t1=0,colors='bgmrcyk',cmaps=['j
 	    for j in np.arange(len(resread.icmr)):
 		if a==resread.icmr[j]:
 		    return (particles.find('i')+j)%maxv
+	    return 0
 	else:
 	    return 0
     if len(space)==2:
 	if colors!='':
 	    for i in np.arange(len(track_names)):
 		if cmr[i]==-1 and particles.find('e')!=-1:
-		    plt.plot(tracks[i][0,:],tracks[i][1,:],colors[cmr2int(cmr[i])])
+		    plt.plot(tracks[i][0,:],tracks[i][1,:],color=colors[cmr2int(cmr[i])])
 		elif cmr[i]==1 and particles.find('p')!=-1:
-		    plt.plot(tracks[i][0,:],tracks[i][1,:],colors[cmr2int(cmr[i])])
+		    plt.plot(tracks[i][0,:],tracks[i][1,:],color=colors[cmr2int(cmr[i])])
 		elif cmr[i]==0 and particles.find('g')!=-1:
-		    plt.plot(tracks[i][0,:],tracks[i][1,:],colors[cmr2int(cmr[i])])
+		    plt.plot(tracks[i][0,:],tracks[i][1,:],color=colors[cmr2int(cmr[i])])
 		elif particles.find('i')!=-1:
 		    for j in np.arange(len(resread.icmr)):
 			if cmr[i]==resread.icmr[j]:
-			    plt.plot(tracks[i][0,:],tracks[i][1,:],colors[cmr2int(cmr[i])])
+			    plt.plot(tracks[i][0,:],tracks[i][1,:],color=colors[cmr2int(cmr[i])])
 	else:
 	    for i in np.arange(len(track_names)):
 		if cmr[i]==-1 and particles.find('e')!=-1:
@@ -449,7 +454,7 @@ def mollweide(t=None,nlongitude=80,nlatitude=40,Nlevels=15,save2='',data_folder=
 	else:
 	    plt.savefig(save2)
 
-def field(t=0,field='ex',plane='xy',fmax=None,data_folder='../results/',axis=[],save2=''):
+def field(t=0,field='ex',plane='xy',fmax=None,data_folder='../results/',extent=None,axis=[],save2=''):
     'Plots fields.'
     resread.t = '%g' % t
     resread.data_folder = data_folder
@@ -475,7 +480,11 @@ def field(t=0,field='ex',plane='xy',fmax=None,data_folder='../results/',axis=[],
 	fmax = np.max( [-np.min(f), np.max(f)] )
 	print 'fmax = ', fmax
     #
-    plt.imshow(f,'bwr',interpolation='none',vmin=-fmax,vmax=fmax,origin='lower',extent=(0,xlength,0,ylength))
+    if extent == None:
+	extent = (0,xlength,0,ylength)
+    elif extent == 'xi':
+	extent = ( resread.xi( 0, t ), resread.xi( xlength, t ), 0, ylength )
+    plt.imshow(f,'bwr',interpolation='none',vmin=-fmax,vmax=fmax,origin='lower',extent=extent)
     #
     if save2=='':
 	plt.show()
@@ -503,3 +512,19 @@ def energy(data_folder='../results/',save2=''):
 	    plt.show()
 	else:
 	    plt.savefig(save2)
+
+def tracks2(space=['x', 'y'], tracks=None, save2=''):
+    'Plots 2d tracks in the specified *space*'
+    if not tracks:
+        tracks = resread.tracks()
+    if len(space) == 2:
+        x = space[0]
+        y = space[1]
+        plt.xlabel(x)
+        plt.ylabel(y)
+	for track in tracks:
+	    plt.plot(track[x], track[y])
+    if not save2:
+        plt.show()
+    else:
+        plt.savefig(save2)

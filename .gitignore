@@ -7,4 +7,5 @@ conf
 *.gif
 *.swp
 *.pyc
-results-*/
+results*/
+quill3d/file*.conf

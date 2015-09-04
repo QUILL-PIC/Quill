@@ -530,6 +530,10 @@ film::film()
     x0 = 0;
     filmwidth = 0;
     gradwidth = 0;
+    y0 = 0;
+    y1 = 0;
+    z0 = 0;
+    z1 = 0;
     ne = 0;
     mcr = 1;
 }
