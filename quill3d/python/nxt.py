@@ -8,9 +8,9 @@ import resread
 df = '../results/'
 yav = 1
 inp = 'bicubic' # interpolation
-cmap = 'bwr'
+cmap = 'Greens'
 iaa = 2 # /int for antialiasing
-f2draw = 'by'
+f2draw = 'rho'
 
 def onaxis(data_folder,filename,t,yav=1):
     resread.data_folder = data_folder
@@ -46,8 +46,8 @@ sigma =  resread.output_period/resread.dx/iaa
 print 'sigma = ', sigma
 
 tmp = np.array([])
-#for t in np.arange(0, 39, resread.output_period):
-for t in np.arange(0, resread.t_end+0.5*resread.dt, resread.output_period):
+for t in np.arange(0, 77, resread.output_period):
+#for t in np.arange(0, resread.t_end+0.5*resread.dt, resread.output_period):
     print str('%g'%t)
     if f2draw=='rho':
 	n = -onaxis(df,f2draw,str('%g'%t),yav)
@@ -67,7 +67,8 @@ ax = f.add_subplot(111)
 
 extent = (0,resread.t_end,0,resread.nx*resread.dx)
 plt.imshow(nxt,cmap=cmap,interpolation=inp,origin='lower',extent=extent)
-plt.clim(-10,10)
+plt.clim(0,4)
+#plt.clim(-10,10)
 plt.colorbar()
 
 plt.xlabel(r'$ct/\lambda$')
