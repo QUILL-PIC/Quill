@@ -374,22 +374,27 @@ void spatial_region::fill_cell_by_particles(double cmr, int_vector3d& a, int_vec
 		tmp_p->z = z0 + double(a.k) + double(kp)/double(b.k);
 		if ( T!=0 && cmr!=0 ){
 		    double v0 = ux0/sqrt( 1 + ux0*ux0 );
-		    double a,b,c,r,v;
-		    /* gives r with approximately gaussian
-		     * distribution */
+		    double a, b, c, r, gamma, v;
+		    // gives gamma with approximately e^(-(x-1)/T) distribution
 		    do {
-			v = get_rand();
-		    } while ( get_rand() > pow( cos(0.5*PI*v), 4 ) );
-		    // gives random direction
+            gamma = 1 + get_rand() * 5 * T;
+		    } while ( get_rand() > exp( -(gamma - 1) / T));
+		    // gives random direction (uniform)
 		    do {
 			a = 2*get_rand()-1;
 			b = 2*get_rand()-1;
 			c = 2*get_rand()-1;
 			r = sqrt( a*a + b*b + c*c );
-		    } while ( r > 1 );
-		    a = T*v*a/r;
-		    b = T*v*b/r;
-		    c = T*v*c/r;
+		    } while ( r > 1 || r == 0);
+        a = a / r;
+        b = b / r;
+        c = c / r;
+        // (a, b, c) now is the random vector uniformly distributed on a unit
+        // sphere
+        v = sqrt(1 - 1 / (gamma * gamma));
+		    a = v * a; // vx'
+		    b = v * b; // vy'
+		    c = v * c; // vz'
 		    // Lorentz transformation to lab reference frame
 		    b = b*sqrt( 1 - v0*v0 )/( 1 + a*v0 );
 		    c = c*sqrt( 1 - v0*v0 )/( 1 + a*v0 );
@@ -469,7 +474,7 @@ void spatial_region::add_beam(double cmr, double n0, double ux0, double xb, doub
     }
 }
 
-void spatial_region::film(double x0, double x1, double ne, bool ions, double cmr, double gradwidth, double y0, double y1, double z0, double z1, double T)
+void spatial_region::film(double x0, double x1, double ne, bool ions, double cmr, double gradwidth, double y0, double y1, double z0, double z1, double T, double vx, bool is_profiled)
 { /* x0 - координата левой границы плёнки, x1 - правой, ne -
      концентрация электронов в плёнке, нормированная на критическую
      концентрацию */
@@ -477,6 +482,7 @@ void spatial_region::film(double x0, double x1, double ne, bool ions, double cmr
      * 0 на левой границе плёнки до ne при x0+gradwidth */
     /* при gradwidth<0 плотность плёнки линейно спадает от ne до 0 на
      * участке с градиентом */
+  // if is_profiled == 1 then film has transverse envelope
 
     int_vector3d a,b;
     b.i = xnpic;
@@ -495,34 +501,48 @@ void spatial_region::film(double x0, double x1, double ne, bool ions, double cmr
 	{
 	    for(int k=int(z0/dz)+1;k<int(z1/dz)-1;k++)
 	    {
+        double nes;
+        if (is_profiled == 1) {
+            double tmp = (j * dy - ny * dy / 2) / (ny * dy / 2);
+            tmp = cos(0.5 * PI * tmp * tmp);
+            double tr_env = tmp * tmp;
+            tmp =  (k * dz - nz * dz / 2) / (nz * dz / 2);
+            tmp = cos(0.5 * PI * tmp * tmp);
+            tr_env *= tmp * tmp;
+            nes = ne * tr_env;
+        } else {
+          nes = ne;
+        }
+        //
 		a.i = i;
 		a.j = j;
 		a.k = k;
+    double ux0 = vx / sqrt(1 - vx * vx);
 		if (gradwidth>=0) {
 		    if (i>=int((x0+gradwidth)/dx))
 		    {
-			fill_cell_by_particles(-1,a,b,ne,0,0,T);
+			fill_cell_by_particles(-1, a, b, nes, ux0, 0, T);
 			if (ions)
-			    fill_cell_by_particles(cmr,a,b,ne);
+			    fill_cell_by_particles(cmr, a, b, nes, ux0, 0, T * cmr);
 		    }
 		    else
 		    {
-			fill_cell_by_particles(-1,a,b,ne*(i*dx-x0)/gradwidth,0,0,T);
+			fill_cell_by_particles(-1, a, b, nes*(i*dx-x0)/gradwidth, ux0, 0, T);
 			if (ions)
-			    fill_cell_by_particles(cmr,a,b,ne*(i*dx-x0)/gradwidth);
+			    fill_cell_by_particles(cmr, a, b, nes*(i*dx-x0)/gradwidth, ux0, 0, T * cmr);
 		    }
 		} else {
 		    if (i>=int((x0-gradwidth)/dx))
 		    {
-			fill_cell_by_particles(-1,a,b,ne,0,0,T);
+			fill_cell_by_particles(-1, a, b, nes, ux0, 0, T);
 			if (ions)
-			    fill_cell_by_particles(cmr,a,b,ne);
+			    fill_cell_by_particles(cmr, a, b, nes, ux0, 0, T * cmr);
 		    }
 		    else
 		    {
-			fill_cell_by_particles(-1,a,b,ne*(1 + (i*dx-x0)/gradwidth),0,0,T);
+			fill_cell_by_particles(-1, a, b, nes * (1 + (i * dx - x0) / gradwidth), ux0, 0, T);
 			if (ions)
-			    fill_cell_by_particles(cmr,a,b,ne*(1 + (i*dx-x0)/gradwidth));
+			    fill_cell_by_particles(cmr, a, b, nes * (1 + (i * dx - x0) / gradwidth), ux0, 0, T * cmr);
 		    }
 		}
 	    }
