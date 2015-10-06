@@ -1,5 +1,8 @@
 /* run_config.cpp; this program runs quill through MPI processes for various
 initial parameters (i.e., a0, n0).
+Change the section marked *changeme*, set parameters there and set df (data
+folder, used for naming of result folders). Units of ne, a0, etc are the same as
+in initial conf file.
 Compiling:
 $ mpic++ run_config.cpp
 Usage:
@@ -9,16 +12,20 @@ $ ./parse.sh .suffix > conf
 or 
 $ make conf FILE='.suffix'
 for human-readable-config "../quill3d-conf/quill.conf.suffix".
-Second, provide "myhostfile" containing hostnames for quill execution, for
-example, "myhostfile" file can contain:
+Second, provide hostfile containing hostnames for quill execution, for
+example, "hfile" file that contains:
 n10
 n11
 n12
 Notice that you should have ssh access to the nodes n10-n12 with rsa keys, and
-nodes should be free from other heavy computations.
-Then, run the program with the option -np equal to the number of parameter sets,
-i.e. a0_size*ne_size (do not forget to use screen):
-$ mpirun --hostfile myhostfile -np 12 ./a.out
+nodes should be free from other heavy computations (check this by $ gstat -a).
+You shoud run the program with the option -np equal to the number of parameter sets,
+i.e. a0_size * ne_size (do not forget to use screen also):
+$ mpirun --quiet --hostfile hfile -np 12 ./a.out
+However, it is preferable to use *torque*. For this purpose, check file job.sh,
+write paths in it and run (submit):
+$ qsub job.sh
+Look for quill's output in job.sh.o* and job.sh.e*. Use qstat to check status.
 */
 
 #include <iostream>
@@ -42,16 +49,13 @@ int main()
 {
 	int np,id;
 
-	const int arr_size=3,a0_size=1,ne_size=31;
-	std::string str[arr_size]={"ne","a0","data_folder"};
-	double a0[a0_size]={15};
-	double ne[ne_size]={0.01689643,  0.01841711,  0.02007465,  0.02188137,  0.02385069,
-          0.02599726,  0.02833701,  0.03088734,  0.0336672 ,  0.03669725,
-          0.04      ,  0.0436    ,  0.047524  ,  0.05180116,  0.05646326,
-          0.06154496,  0.067084  ,  0.07312156,  0.07970251,  0.08687573,
-          0.09469455,  0.10321706,  0.11250659,  0.12263218,  0.13366908,
-          0.1456993 ,  0.15881224,  0.17310534,  0.18868482,  0.20566645,
-          0.22417643};
+  /*changeme*/
+	const int arr_size=3,a0_size=5,ne_size=3;
+	std::string str[arr_size]={"ne","theta","data_folder"};
+	double a0[a0_size]={0, 5, 10, 20, 35};
+	double ne[ne_size]={9e22, 18e22, 36e22};
+  std::string df = "results1";
+  /*changeme*/
 
 	
 	//make variants of parameters
@@ -86,11 +90,11 @@ int main()
 
 	//make param data_folder
 	std::ostringstream param_d_f;
-	param_d_f<<"results_ne"<<arr_struct_parameters[id].ne<<"-a0"<<arr_struct_parameters[id].a0;
+	param_d_f<<df+"_"+str[0]<<arr_struct_parameters[id].ne<<"-"+str[1]<<arr_struct_parameters[id].a0;
 	arr_struct_parameters[id].data_folder=param_d_f.str();
 
-	set_parameter(file_content,"ne",arr_struct_parameters[id].ne);
-	set_parameter(file_content,"a0",arr_struct_parameters[id].a0);
+	set_parameter(file_content,str[0],arr_struct_parameters[id].ne);
+	set_parameter(file_content,str[1],arr_struct_parameters[id].a0);
 	set_parameter(file_content,"data_folder",arr_struct_parameters[id].data_folder);
 
 	//make filename
@@ -105,7 +109,7 @@ int main()
 
 	//make dir
 	std::ostringstream new_dir;
-	new_dir<<"mkdir results_ne"<<arr_struct_parameters[id].ne<<"-a0"<<arr_struct_parameters[id].a0;
+	new_dir<<"mkdir "+df+"_"+str[0]<<arr_struct_parameters[id].ne<<"-"+str[1]<<arr_struct_parameters[id].a0;
 	std::string command_mkdir=new_dir.str();
 	system(command_mkdir.c_str());
 

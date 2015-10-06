@@ -31,6 +31,7 @@ bool mwindow,mwseed;
 double crpc;
 double* ppd;
 double phase,phi;
+double shenergy, shphase; // second harmonic relative energy and phase
 ddi* p_last_ddi; // ddi включает t_end, output_period и f - счётчик для вывода данных в файлы
 ddi* p_current_ddi;
 film* p_last_film;
@@ -265,7 +266,17 @@ int main()
 		f_reflection3 += tmpf[jj];
 	    }
 	}
-	for (int i=0;i<n_sr;i++) psr[i].f_init_focused(a0y,a0z,xsigma,sigma0,xlength-x0-dx*i*(nx_sr - nx_ich),xlength/2-x0,b_sign,phase,y00,z00,0,0,sscos);
+  if (shenergy == 0)
+      for (int i=0;i<n_sr;i++) psr[i].f_init_focused(a0y,a0z,xsigma,sigma0,xlength-x0-dx*i*(nx_sr - nx_ich),xlength/2-x0,b_sign,phase,y00,z00,0,0,sscos);
+  else {
+      double alpha, beta;
+      alpha = sqrt(1 - shenergy);
+      beta = sqrt(shenergy);
+      for (int i=0;i<n_sr;i++)
+          psr[i].f_init_focused(a0y * alpha, a0z * alpha, xsigma,sigma0,xlength-x0-dx*i*(nx_sr - nx_ich),xlength/2-x0,b_sign,phase,y00,z00,0,0,sscos);
+      for (int i=0;i<n_sr;i++)
+          psr[i].f_init_focused(a0y * beta, a0z * beta, xsigma,sigma0,xlength-x0-dx*i*(nx_sr - nx_ich),xlength/2-x0,b_sign, shphase,y00,z00, 1, 0,sscos, 2);
+  }
 	if (phi!=0) {
 	    for (int i=0;i<n_sr;i++) psr[i].f_init_focused(a0y,a0z,xsigma,sigma0,x0-dx*i*(nx_sr - nx_ich),-xlength/2+x0,b_sign,phase,-y00,-z00,1,phi);
 	}
@@ -1667,6 +1678,12 @@ int init()
 	a0y = a0y*sigma0/sigma;
 	a0z = a0z*sigma0/sigma;
     }
+    current = find("shenergy", first);
+    shenergy = current->value;
+    current = find("shphase",first);
+    if (current->units=="pi")
+        current->value = current->value * PI;
+    shphase = current->value;
     current = find("mwindow",first);
     mwindow = 1;
     if (current->units=="off") mwindow = 0;
@@ -2171,6 +2188,8 @@ int init()
     fout_log<<"lp_reflection\n"<<lp_reflection<<"\n";
     fout_log<<"f_reflection\n"<<f_reflection<<"\n";
     fout_log<<"phi\n"<<phi<<"\n";
+    fout_log<<"shenergy\n"<<shenergy<<"\n";
+    fout_log<<"shphase\n"<<shphase<<"\n";
     fout_log<<"beam\n"<<beam<<"\n";
     fout_log<<"beam_particles\n"<<beam_particles<<"\n";
     fout_log<<"Nb\n"<<Nb<<"\n";

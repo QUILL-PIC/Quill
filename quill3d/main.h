@@ -151,7 +151,7 @@ public:
     void fout_irho_yzplane(int,ofstream*,int);
     void fout_tracks(double,int);
     void f_init_cos(double,double,double,double,double,double,bool=0,bool=1,double=0,double=0,double=0,double=0,bool=1,double=0);
-    void f_init_focused(double,double,double,double,double,double,bool=1,double=0,double=0,double=0,bool=1,double=0,bool=0);
+    void f_init_focused(double,double,double,double,double,double,bool=1,double=0,double=0,double=0,bool=1,double=0,bool=0, double = 1);
     void f_init_uniformB(double, double);
     void add_beam(double,double,double,double,double,double);
     void film(double,double,double,bool,double,double,double,double,double,double,double);
