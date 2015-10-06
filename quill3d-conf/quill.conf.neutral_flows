@@ -18,7 +18,7 @@ dy = 0.12 # lambda
 dz = 0.12 # lambda
 
 # длина волны лазерного импульса
-lambda = 1 cm # default: cm; possible: um; lambda_p
+lambda = 7e-7 cm # default: cm; possible: um; lambda_p
 
 # концентрация электронов; используется при добавлении частиц при
 # включенном движущемся окне, а также при расчёте шага по x, если он
@@ -33,14 +33,9 @@ zlength = 20 # default: lambda; possible: um
 # Можно задать несколько пар t_end, output_period, при этом на отрезке
 # [0,t_end_1] будет использоваться output_period_1 и т. д.
 # время моделирования
-t_end = 90 # default: lambda; possible: um, mm, cm
+t_end = 60 # default: lambda; possible: um, mm, cm
 # период вывода данных в файл
 output_period = 0.5 # default: lambda; possible: um, mm, cm, t_end
-#
-#t_end = 24
-#output_period = 0.2
-#t_end = 40
-#output_period = 1
 
 # По умолчанию лазерные импульсы распространяются к центру области;
 # величины, задающие лазерный импульс (например, a0y, a0z), относятся
@@ -131,41 +126,53 @@ ions = on # default: off; possible: on
 # список плёнок; все параметры плёнки должны быть обязательно
 # определены после film = on для данной плёнки и до того, как
 # встретится film = on для следующей плёнки
-film = off # default: off; possible: on
+film = on # default: off; possible: on
 # расстояние от левой границы области до левой границы плёнки
-x0film = 9 # default: 0; default units: lambda, possible: um, fs
+x0film = 2.5 dx # default: 0; default units: lambda, possible: um, fs, dx
 # полная толщина плёнки
-filmwidth = 0.2 # default: lambda, possible: um, fs
+filmwidth = 40 # default: lambda, possible: um, fs
 # толщина части плёнки с линейным ростом плотности от 0 до nfilm
 gradwidth = 0 # default units: lambda, possible: um, fs
 # концентрация электронов в плёнке
-nfilm = 0.5 ne # default: cm^{-3}; possible: ncr, ne
+nfilm = 1 ne # default: cm^{-3}; possible: ncr, ne
 # отношение массы (в массах протона) к заряду (в зарядах протона) для
 # иона плёнки
-mcr = 1 # default: 1
+mcr = 0.0054 # m_i = 10 m_e # default: 1
+# безразмерная температура электронов плёнки, f ~ e^(-(\gamma-1) / T)
+# для ионов T -> T * cmr, хотя это не вполне корректно
+Tfilm = 4 # default: 0
+# начальная скорость плёнки
+vxfilm = 0.99875 # gamma = 20
 #
-#film = off # default: off; possible: on
-#x0film = 11 # default: 0; default units: lambda, possible: um, fs
-#filmwidth = 0.4 # default: lambda, possible: um, fs
-#gradwidth = 0 # default: 0; default units: lambda, possible: um, fs
-#nfilm = 0.25 ne # default: cm^{-3}; possible: ncr, ne
-#mcr = 2 # default: 1
+film = on # default: off; possible: on
+x0film = 970.5 dx # 50 # default: 0; default units: lambda, possible: um, fs
+filmwidth = 40 # default: lambda, possible: um, fs
+gradwidth = 0 # default: 0; default units: lambda, possible: um, fs
+nfilm = 1 ne # default: cm^{-3}; possible: ncr, ne
+mcr = 0.0054 # default: 1
+Tfilm = 4 # default: 0
+vxfilm = -0.99875 # gamma = 20
 
 # neutral (elecrons+ions) flows, left and right
 # (neflow!=0 turns off mowing window)
+# (neflow!=0 makes film transversely profiled)
 nelflow = 1 ne # default units: ne
-vlflow = 0.9997 # default: 0
-mcrlflow = 5.4452e-4 # positrons
-Tlflow = 1e-4 # adds random speed; default: 0
+vlflow = 0.99875 # default: 0
+mcrlflow = 0.0054
+# безразмерная температура электронов в сопутствующей потоку системе отсчёта,
+# f ~ e^(-(\gamma-1) / T)
+# для ионов T -> T * cmr, хотя это не вполне корректно
+Tlflow = 4 # default: 0
+#
 nerflow = 1 ne # default units: ne
-vrflow = 0.9997 # default: 0
-mcrrflow = 5.4452e-4
-Trflow = 1e-4 # default: 0
+vrflow = 0.99875 # default: 0
+mcrrflow = 0.0054
+Trflow = 4 # default: 0
 
 # число рядов частиц в ячейке по координатам
-xnpic = 2
-ynpic = 2
-znpic = 2
+xnpic = 1
+ynpic = 1
+znpic = 1
 
 # сорта частиц, данные о которых следует выводить в файл
 particles_for_output = epph # default: e; possible: e, ep, eph, epph
@@ -173,32 +180,35 @@ particles_for_output = epph # default: e; possible: e, ep, eph, epph
 # шаг по энергии в спектре, число точек в спектре и отношение общего
 # числа частиц к числу частиц, все характеристики которых выводятся в
 # файл, для разных сортов частиц
-deps = 0.05 MeV # default: MeV; possible: mc^2
-neps = 800
-enthp = 300
+deps = 0.2 MeV # default: MeV; possible: mc^2
+neps = 1000
+enthp = 1000
 #deps_p = 0.5 MeV # default value = deps; default units: MeV; possible: mc^2
 #neps_p = 140 # default = neps
 #enthp_p = 1 # default = enthp
-deps_ph = 1e-7 MeV # default value = deps; default units: MeV; possible: mc^2
+#deps_ph = 1e-7 MeV # default value = deps; default units: MeV; possible: mc^2
 #neps_ph = 800 # default = neps
 #enthp_ph = 300 # default = enthp
 # шаг по энергии в ионном спектре в MeV на нуклон
-deps_i = 91.9 MeV
+deps_i = 40 MeV
 #neps_i = 800 # default = neps
 #enthp_i = 10 # default = enthp
 
 # число частиц каждого сорта для вывода их траекторий в файл
-n_tracks = 100 # default = 0
+n_tracks = 400 # default = 0
 # момент включения алгоритма вывода траекторий частиц
-tr_start = 40 # default value = 0; default units: lambda; possible: um, mm, cm
-# координаты концов прямого отрезка, с которого в момент времени
-# tr_start берутся частицы для отслеживания траекторий; default value = 0
+tr_start = 0 # default value = 0; default units: lambda; possible: um, mm, cm
+tr_init = volume # default: line; possible: volume
+# координаты концов прямого отрезка (tr_init = line) или диагональ
+# прямоугольного параллелепипеда (tr_init = volume), с которого в
+# момент времени tr_start берутся частицы для отслеживания траекторий;
+# default value = 0
 xtr1 = 35 # default: lambda; possible: um, fs
-ytr1 = 0 # default: lambda; possible: um
-ztr1 = 10 # default: lambda; possible: um
-xtr2 = 35 # default: lambda; possible: um, fs
-ytr2 = 20 # default: lambda; possible: um
-ztr2 = 10 # default: lambda; possible: um
+ytr1 = 5 # default: lambda; possible: um
+ztr1 = 5 # default: lambda; possible: um
+xtr2 = 35.1 # default: lambda; possible: um, fs
+ytr2 = 15 # default: lambda; possible: um
+ztr2 = 15 # default: lambda; possible: um
 
 # алгоритм слияния квазичастиц; nl - nonlinear(q), ti -
 # type-independently

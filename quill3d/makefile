@@ -19,7 +19,7 @@ debug: $(OBJECTS)
 	$(CXX) -o quill $(CXXFLAGS) $(OBJECTS) $(CXXLIBS)
 
 parallel: parallel.cpp
-	$(CXX) -o parallel $(CXXFlLAGS) parallel.cpp -pthread
+	$(CXX) -o parallel $(CXXFLAGS) parallel.cpp -pthread
 
 .PHONY : clean
 clean:
