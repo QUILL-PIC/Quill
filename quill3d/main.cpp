@@ -55,6 +55,7 @@ std::string pmerging,pmerging_now;
 std::string lp_reflection,f_reflection;
 std::string ions;
 std::string data_folder;
+ios_base::openmode output_mode;
 int init();
 //------------------------------
 
@@ -456,16 +457,16 @@ int main()
 	    file_name = data_folder+"/rho";
 	    sprintf(file_num_pchar,"%g",int([](ddi* a) {double b=a->f*a->output_period; if(a->prev!=0) b+=(a->prev)->t_end; return b;} (p_current_ddi)/2/PI*file_name_accuracy)/file_name_accuracy);
 	    file_name = file_name + file_num_pchar;
-	    ofstream fout_rho(file_name.c_str());
+	    ofstream fout_rho(file_name.c_str(), output_mode);
 	    pof = &fout_rho;
 	    //
 	    file_name = data_folder+"/rho_p";
 	    file_name = file_name + file_num_pchar;
-	    ofstream fout_rho_p(file_name.c_str());
+	    ofstream fout_rho_p(file_name.c_str(), output_mode);
 	    //
 	    file_name = data_folder+"/rho_ph";
 	    file_name = file_name + file_num_pchar;
-	    ofstream fout_rho_ph(file_name.c_str());
+	    ofstream fout_rho_ph(file_name.c_str(), output_mode);
 	    if (particles_for_output=="ep"||particles_for_output=="epph")
 		pof_p = &fout_rho_p;
 	    else
@@ -484,7 +485,7 @@ int main()
 		    onx0 = 0;
 		else
 		    onx0 = nx_ich/2;
-		psr[i].fout_rho(pof,pof_p,pof_ph,onx0,onx);
+		psr[i].fout_rho(pof,pof_p,pof_ph,onx0,onx, output_mode);
 	    }
 	    ii = int(((xlength-x0fout)/dx - nx_ich)/(nx_sr - nx_ich));
 	    if(ii<0) ii = 0;
@@ -511,7 +512,7 @@ int main()
 			    onx0 = 0;
 			else
 			    onx0 = nx_ich/2;
-			psr[i].fout_irho(n,&fout_irho,onx0,onx);
+			psr[i].fout_irho(n,&fout_irho,onx0,onx, output_mode);
 		    }
 		    ii = int(((xlength-x0fout)/dx - nx_ich)/(nx_sr - nx_ich));
 		    if(ii<0) ii = 0;
@@ -1109,7 +1110,7 @@ int main()
 			onx0 = 0;
 		    else
 			onx0 = nx_ich/2;
-		    psr[i].fout_ex(pof,onx0,onx);
+		    psr[i].fout_ex(pof,onx0,onx, output_mode);
 		}
 		ii = int(((xlength-x0fout)/dx - nx_ich)/(nx_sr - nx_ich));
 		if(ii<0) ii = 0;
@@ -1134,7 +1135,7 @@ int main()
 			onx0 = 0;
 		    else
 			onx0 = nx_ich/2;
-		    psr[i].fout_ey(pof,onx0,onx);
+		    psr[i].fout_ey(pof,onx0,onx, output_mode);
 		}
 		ii = int(((xlength-x0fout)/dx - nx_ich)/(nx_sr - nx_ich));
 		if(ii<0) ii = 0;
@@ -1159,7 +1160,7 @@ int main()
 			onx0 = 0;
 		    else
 			onx0 = nx_ich/2;
-		    psr[i].fout_ez(pof,onx0,onx);
+		    psr[i].fout_ez(pof,onx0,onx, output_mode);
 		}
 		ii = int(((xlength-x0fout)/dx - nx_ich)/(nx_sr - nx_ich));
 		if(ii<0) ii = 0;
@@ -1172,7 +1173,7 @@ int main()
 		file_name = data_folder+"/bx";
 		sprintf(file_num_pchar,"%g",int([](ddi* a) {double b=a->f*a->output_period; if(a->prev!=0) b+=(a->prev)->t_end; return b;} (p_current_ddi)/2/PI*file_name_accuracy)/file_name_accuracy);
 		file_name = file_name + file_num_pchar;
-		ofstream fout_bx(file_name.c_str());
+		ofstream fout_bx(file_name.c_str(), output_mode);
 		pof = &fout_bx;
 		for(int i=0;i<n_sr;i++)
 		{
@@ -1184,7 +1185,7 @@ int main()
 			onx0 = 0;
 		    else
 			onx0 = nx_ich/2;
-		    psr[i].fout_bx(pof,onx0,onx);
+		    psr[i].fout_bx(pof,onx0,onx, output_mode);
 		}
 		ii = int(((xlength-x0fout)/dx - nx_ich)/(nx_sr - nx_ich));
 		if(ii<0) ii = 0;
@@ -1209,7 +1210,7 @@ int main()
 			onx0 = 0;
 		    else
 			onx0 = nx_ich/2;
-		    psr[i].fout_by(pof,onx0,onx);
+		    psr[i].fout_by(pof,onx0,onx, output_mode);
 		}
 		ii = int(((xlength-x0fout)/dx - nx_ich)/(nx_sr - nx_ich));
 		if(ii<0) ii = 0;
@@ -1234,7 +1235,7 @@ int main()
 			onx0 = 0;
 		    else
 			onx0 = nx_ich/2;
-		    psr[i].fout_bz(pof,onx0,onx);
+		    psr[i].fout_bz(pof,onx0,onx, output_mode);
 		}
 		ii = int(((xlength-x0fout)/dx - nx_ich)/(nx_sr - nx_ich));
 		if(ii<0) ii = 0;
@@ -2061,6 +2062,11 @@ int init()
     data_folder = current->units;
     if (data_folder == "")
 	data_folder = "results";
+    current = find("output_mode", first);
+    if (current->units == "binary")
+        output_mode = ios_base::out | ios_base::binary;
+    else
+        output_mode = ios_base::out;
     //
     current = first;
     while (current->next!=0)
@@ -2182,6 +2188,7 @@ int init()
     fout_log<<"freezing\n";
     if (freezing==1) fout_log<<"on"; else fout_log<<"off";
     fout_log<<'\n';
+    fout_log << "output_mode\n" << output_mode << '\n';
     fout_log<<"#------------------------------\n";
     fout_log<<"polarization = "<<polarization<<"\n";
     fout_log<<"P = "<<(a0y*(a0y>a0z)+a0z*(a0z>=a0y))*(a0y*(a0y>a0z)+a0z*(a0z>=a0y))/8*ysigma*zsigma*8.75e9/1e12<<" TW\n";

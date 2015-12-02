@@ -1,3 +1,4 @@
+#include <iostream>
 #include <fstream>
 #include "main.h"
 
@@ -134,18 +135,74 @@ void spatial_region::compute_energy(int n1, int n2, double a, double b)
 	ienergy[n] = ienergy[n]*b;
 }
 
-void spatial_region::fout_ex(ofstream* pfout, int n0, int n)
+double getjx(spatial_region::cellj*** cj, int i, int j, int k) {
+    return cj[i][j][k].jx;
+}
+
+double getdouble(double*** a, int i, int j, int k) {
+    return a[i][j][k];
+}
+
+double getex(spatial_region::celle*** ce, int i, int j, int k) {
+    return ce[i][j][k].ex;
+}
+
+double getey(spatial_region::celle*** ce, int i, int j, int k) {
+    return ce[i][j][k].ey;
+}
+
+double getez(spatial_region::celle*** ce, int i, int j, int k) {
+    return ce[i][j][k].ez;
+}
+
+double getbx(spatial_region::cellb*** cb, int i, int j, int k) {
+    return cb[i][j][k].bx;
+}
+
+double getby(spatial_region::cellb*** cb, int i, int j, int k) {
+    return cb[i][j][k].by;
+}
+
+double getbz(spatial_region::cellb*** cb, int i, int j, int k) {
+    return cb[i][j][k].bz;
+}
+
+template<typename T> void write_binary(ofstream* f, T*** data, double get(T***,
+        int, int, int), int n0, int n, int ny, int nz) {
+    double* a = new double[(n - n0) * (ny + nz)]; /* for values in xy and xz
+                                                     planes */
+    for (int i = n0; i < n; ++i) {
+        int k = nz / 2;
+        for (int j = 0; j < ny; ++j)
+            a[i * (ny + nz) + j] = get(data, i, j, k);
+        int j = ny / 2;
+        for (int k = 0; k < nz; ++k)
+            a[i * (ny + nz) + ny + k] = get(data, i, j, k);
+    }
+    f->write(reinterpret_cast<char*>(a), sizeof(double) * (n - n0) * (ny +
+                nz));
+    delete[] a;
+}
+
+void spatial_region::fout_ex(ofstream* pfout, int n0, int n, ios_base::openmode
+        mode)
 {
     /* n-n0 - длина массива по x (для данного spatial_region'а) для
      * вывода сечения плоскостью xy и плоскостью xz */
-    for(int i=n0;i<n;i++)
-    {
-        int k=nz/2;
-	for(int j=0;j<ny;j++)
-	    (*pfout)<<ce[i][j][k].ex<<"\n";
-	int j=ny/2;
-	for(int k=0;k<nz;k++)
-	    (*pfout)<<ce[i][j][k].ex<<"\n";
+    if (mode == ios_base::out) {
+        for(int i=n0;i<n;i++)
+        {
+            int k=nz/2;
+            for(int j=0;j<ny;j++)
+                (*pfout)<<ce[i][j][k].ex<<"\n";
+            int j=ny/2;
+            for(int k=0;k<nz;k++)
+                (*pfout)<<ce[i][j][k].ex<<"\n";
+        }
+    } else if (mode == ios_base::out | ios_base::binary) {
+        write_binary<spatial_region::celle>(pfout, ce, getex, n0, n, ny, nz);
+    } else {
+        cerr << "fout_irho: ERROR: wrong mode" << endl;
     }
 }
 
@@ -158,18 +215,25 @@ void spatial_region::fout_ex_yzplane(ofstream* pfout, int i)
     }
 }
 
-void spatial_region::fout_ey(ofstream* pfout, int n0, int n)
+void spatial_region::fout_ey(ofstream* pfout, int n0, int n, ios_base::openmode
+        mode)
 {
     /* n-n0 - длина массива по x (для данного spatial_region'а) для
      * вывода сечения плоскостью xy и плоскостью xz */
-    for(int i=n0;i<n;i++)
-    {
-        int k=nz/2;
-	for(int j=0;j<ny;j++)
-	    (*pfout)<<ce[i][j][k].ey<<"\n";
-	int j=ny/2;
-	for(int k=0;k<nz;k++)
-	    (*pfout)<<ce[i][j][k].ey<<"\n";
+    if (mode == ios_base::out) {
+        for(int i=n0;i<n;i++)
+        {
+            int k=nz/2;
+            for(int j=0;j<ny;j++)
+                (*pfout)<<ce[i][j][k].ey<<"\n";
+            int j=ny/2;
+            for(int k=0;k<nz;k++)
+                (*pfout)<<ce[i][j][k].ey<<"\n";
+        }
+    } else if (mode == ios_base::out | ios_base::binary) {
+        write_binary<spatial_region::celle>(pfout, ce, getey, n0, n, ny, nz);
+    } else {
+        cerr << "fout_irho: ERROR: wrong mode" << endl;
     }
 }
 
@@ -182,18 +246,25 @@ void spatial_region::fout_ey_yzplane(ofstream* pfout, int i)
     }
 }
 
-void spatial_region::fout_ez(ofstream* pfout, int n0, int n)
+void spatial_region::fout_ez(ofstream* pfout, int n0, int n, ios_base::openmode
+        mode)
 {
     /* n-n0 - длина массива по x (для данного spatial_region'а) для
      * вывода сечения плоскостью xy и плоскостью xz */
-    for(int i=n0;i<n;i++)
-    {
-        int k=nz/2;
-	for(int j=0;j<ny;j++)
-	    (*pfout)<<ce[i][j][k].ez<<"\n";
-	int j=ny/2;
-	for(int k=0;k<nz;k++)
-	    (*pfout)<<ce[i][j][k].ez<<"\n";
+    if (mode == ios_base::out) {
+        for(int i=n0;i<n;i++)
+        {
+            int k=nz/2;
+            for(int j=0;j<ny;j++)
+                (*pfout)<<ce[i][j][k].ez<<"\n";
+            int j=ny/2;
+            for(int k=0;k<nz;k++)
+                (*pfout)<<ce[i][j][k].ez<<"\n";
+        }
+    } else if (mode == ios_base::out | ios_base::binary) {
+        write_binary<spatial_region::celle>(pfout, ce, getez, n0, n, ny, nz);
+    } else {
+        cerr << "fout_irho: ERROR: wrong mode" << endl;
     }
 }
 
@@ -206,18 +277,25 @@ void spatial_region::fout_ez_yzplane(ofstream* pfout, int i)
     }
 }
 
-void spatial_region::fout_bx(ofstream* pfout, int n0, int n)
+void spatial_region::fout_bx(ofstream* pfout, int n0, int n, ios_base::openmode
+        mode)
 {
     /* n-n0 - длина массива по x (для данного spatial_region'а) для
      * вывода сечения плоскостью xy и плоскостью xz */
-    for(int i=n0;i<n;i++)
-    {
-        int k=nz/2;
-	for(int j=0;j<ny;j++)
-	    (*pfout)<<cb[i][j][k].bx<<"\n";
-	int j=ny/2;
-	for(int k=0;k<nz;k++)
-	    (*pfout)<<cb[i][j][k].bx<<"\n";
+    if (mode == ios_base::out) {
+        for(int i=n0;i<n;i++)
+        {
+            int k=nz/2;
+            for(int j=0;j<ny;j++)
+                (*pfout)<<cb[i][j][k].bx<<"\n";
+            int j=ny/2;
+            for(int k=0;k<nz;k++)
+                (*pfout)<<cb[i][j][k].bx<<"\n";
+        }
+    } else if (mode == ios_base::out | ios_base::binary) {
+        write_binary<spatial_region::cellb>(pfout, cb, getbx, n0, n, ny, nz);
+    } else {
+        cerr << "fout_irho: ERROR: wrong mode" << endl;
     }
 }
 
@@ -230,18 +308,25 @@ void spatial_region::fout_bx_yzplane(ofstream* pfout, int i)
     }
 }
 
-void spatial_region::fout_by(ofstream* pfout, int n0, int n)
+void spatial_region::fout_by(ofstream* pfout, int n0, int n, ios_base::openmode
+        mode)
 {
     /* n-n0 - длина массива по x (для данного spatial_region'а) для
      * вывода сечения плоскостью xy и плоскостью xz */
-    for(int i=n0;i<n;i++)
-    {
-        int k=nz/2;
-	for(int j=0;j<ny;j++)
-	    (*pfout)<<cb[i][j][k].by<<"\n";
-	int j=ny/2;
-	for(int k=0;k<nz;k++)
-	    (*pfout)<<cb[i][j][k].by<<"\n";
+    if (mode == ios_base::out) {
+        for(int i=n0;i<n;i++)
+        {
+            int k=nz/2;
+            for(int j=0;j<ny;j++)
+                (*pfout)<<cb[i][j][k].by<<"\n";
+            int j=ny/2;
+            for(int k=0;k<nz;k++)
+                (*pfout)<<cb[i][j][k].by<<"\n";
+        }
+    } else if (mode == ios_base::out | ios_base::binary) {
+        write_binary<spatial_region::cellb>(pfout, cb, getby, n0, n, ny, nz);
+    } else {
+        cerr << "fout_irho: ERROR: wrong mode" << endl;
     }
 }
 
@@ -254,18 +339,25 @@ void spatial_region::fout_by_yzplane(ofstream* pfout, int i)
     }
 }
 
-void spatial_region::fout_bz(ofstream* pfout, int n0, int n)
+void spatial_region::fout_bz(ofstream* pfout, int n0, int n, ios_base::openmode
+        mode)
 {
     /* n-n0 - длина массива по x (для данного spatial_region'а) для
      * вывода сечения плоскостью xy и плоскостью xz */
-    for(int i=n0;i<n;i++)
-    {
-        int k=nz/2;
-	for(int j=0;j<ny;j++)
-	    (*pfout)<<cb[i][j][k].bz<<"\n";
-	int j=ny/2;
-	for(int k=0;k<nz;k++)
-	    (*pfout)<<cb[i][j][k].bz<<"\n";
+    if (mode == ios_base::out) {
+        for(int i=n0;i<n;i++)
+        {
+            int k=nz/2;
+            for(int j=0;j<ny;j++)
+                (*pfout)<<cb[i][j][k].bz<<"\n";
+            int j=ny/2;
+            for(int k=0;k<nz;k++)
+                (*pfout)<<cb[i][j][k].bz<<"\n";
+        }
+    } else if (mode == ios_base::out | ios_base::binary) {
+        write_binary<spatial_region::cellb>(pfout, cb, getbz, n0, n, ny, nz);
+    } else {
+        cerr << "fout_irho: ERROR: wrong mode" << endl;
     }
 }
 
@@ -404,54 +496,63 @@ void spatial_region::fout_inv_yzplane(ofstream* pfout, int i)
     }
 }
 
-void spatial_region::fout_rho(ofstream* pfout, ofstream* pfout_p, ofstream* pfout_ph, int n0, int n)
+void spatial_region::fout_rho(ofstream* pfout, ofstream* pfout_p, ofstream* pfout_ph, int n0, int n, ios_base::openmode mode)
 {
     /* n-n0 - длина массива по x (для данного spatial_region'а) для
      * вывода сечения плоскостью xy и плоскостью xz */
-    for(int i=n0;i<n;i++)
-    {
-        int k=nz/2;
-        for(int j=0;j<ny;j++)
+    if (mode == ios_base::out) {
+        for(int i=n0;i<n;i++)
         {
-            (*pfout)<<cj[i][j][k].jx<<"\n";
+            int k=nz/2;
+            for(int j=0;j<ny;j++)
+            {
+                (*pfout)<<cj[i][j][k].jx<<"\n";
+            }
+            int j=ny/2;
+            for(int k=0;k<nz;k++)
+            {
+                (*pfout)<<cj[i][j][k].jx<<"\n";
+            }
         }
-        int j=ny/2;
-        for(int k=0;k<nz;k++)
+        if (pfout_p!=0)
         {
-            (*pfout)<<cj[i][j][k].jx<<"\n";
+        for(int i=n0;i<n;i++)
+        {
+            int k=nz/2;
+            for(int j=0;j<ny;j++)
+            {
+            (*pfout_p)<<cj[i][j][k].jy<<"\n";
+            }
+            int j=ny/2;
+            for(int k=0;k<nz;k++)
+            {
+            (*pfout_p)<<cj[i][j][k].jy<<"\n";
+            }
         }
-    }
-    if (pfout_p!=0)
-    {
-	for(int i=n0;i<n;i++)
-	{
-	    int k=nz/2;
-	    for(int j=0;j<ny;j++)
-	    {
-		(*pfout_p)<<cj[i][j][k].jy<<"\n";
-	    }
-	    int j=ny/2;
-	    for(int k=0;k<nz;k++)
-	    {
-		(*pfout_p)<<cj[i][j][k].jy<<"\n";
-	    }
-	}
-    }
-    if (pfout_ph!=0)
-    {
-	for(int i=n0;i<n;i++)
-	{
-	    int k=nz/2;
-	    for(int j=0;j<ny;j++)
-	    {
-		(*pfout_ph)<<cj[i][j][k].jz<<"\n";
-	    }
-	    int j=ny/2;
-	    for(int k=0;k<nz;k++)
-	    {
-		(*pfout_ph)<<cj[i][j][k].jz<<"\n";
-	    }
-	}
+        }
+        if (pfout_ph!=0)
+        {
+        for(int i=n0;i<n;i++)
+        {
+            int k=nz/2;
+            for(int j=0;j<ny;j++)
+            {
+            (*pfout_ph)<<cj[i][j][k].jz<<"\n";
+            }
+            int j=ny/2;
+            for(int k=0;k<nz;k++)
+            {
+            (*pfout_ph)<<cj[i][j][k].jz<<"\n";
+            }
+        }
+        }
+    } else if (mode == ios_base::out | ios_base::binary) {
+        // if (*pfout) ... --- TODO: check if file is ok
+        write_binary<spatial_region::cellj>(pfout, cj, getjx, n0, n, ny, nz);
+        write_binary<spatial_region::cellj>(pfout_p, cj, getjx, n0, n, ny, nz);
+        write_binary<spatial_region::cellj>(pfout_ph, cj, getjx, n0, n, ny, nz);
+    } else {
+        cerr << "fout_rho: ERROR: wrong mode" << endl;
     }
 }
 
@@ -486,23 +587,30 @@ void spatial_region::fout_rho_yzplane(ofstream* pfout, ofstream* pfout_p, ofstre
     }
 }
 
-void spatial_region::fout_irho(int ion_type, ofstream* pfout, int n0, int n)
+void spatial_region::fout_irho(int ion_type, ofstream* pfout, int n0, int n,
+        ios_base::openmode mode)
 {
     /* n-n0 - длина массива по x (для данного spatial_region'а) для
      * вывода сечения плоскостью xy и плоскостью xz */
     // ion_type - index for icmr array
-    for(int i=n0;i<n;i++)
-    {
-        int k=nz/2;
-        for(int j=0;j<ny;j++)
+    if (mode == ios_base::out) {
+        for(int i=n0;i<n;i++)
         {
-            (*pfout)<<irho[ion_type][i][j][k]<<"\n";
+            int k=nz/2;
+            for(int j=0;j<ny;j++)
+            {
+                (*pfout)<<irho[ion_type][i][j][k]<<"\n";
+            }
+            int j=ny/2;
+            for(int k=0;k<nz;k++)
+            {
+                (*pfout)<<irho[ion_type][i][j][k]<<"\n";
+            }
         }
-        int j=ny/2;
-        for(int k=0;k<nz;k++)
-        {
-            (*pfout)<<irho[ion_type][i][j][k]<<"\n";
-        }
+    } else if (mode == ios_base::out | ios_base::binary) {
+        write_binary<double>(pfout, irho[ion_type], getdouble, n0, n, ny, nz);
+    } else {
+        cerr << "fout_irho: ERROR: wrong mode" << endl;
     }
 }
 

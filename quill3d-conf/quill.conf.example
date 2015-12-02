@@ -148,7 +148,8 @@ nfilm = 0.5 ne # default: cm^{-3}; possible: ncr, ne
 # отношение массы (в массах протона) к заряду (в зарядах протона) для
 # иона плёнки
 mcr = 1 # default: 1
-# "температура" (разброс скоростей) электронов плёнки
+# безразмерная температура электронов плёнки, f ~ e^(-(\gamma-1) / T)
+# для ионов T -> T * cmr (cmr = 1 для позитрона), хотя это не вполне корректно
 #Tfilm = 0.1 # default: 0
 #
 film = off # default: off; possible: on
@@ -221,3 +222,7 @@ freezing = off # default: off; possible: on
 
 # имя папки для результатов; не забудьте создать её вручную!
 data_folder = res_hb # default: results
+
+# режим вывода данных в файл (пока что только для плотности и компонент
+# электромагнитных полей в плоскостях xy и xz)
+output_mode = binary # default: text; possible: binary

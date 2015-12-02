@@ -446,7 +446,8 @@ def mollweide(t=None,nlongitude=80,nlatitude=40,Nlevels=15,save2='',data_folder=
     #ax = f.add_subplot(111) # qwe
     #ax.imshow(rp,interpolation='none') # qwe
     ax = f.add_subplot(111,projection='mollweide')
-    ax.contour(lng,lat,rp,Nlevels,cmap='jet',origin=None)
+    #ax.contour(lng,lat,rp,Nlevels,cmap='jet',origin=None)
+    ax.contour(lng,lat,rp,Nlevels,origin=None)
     #
     if save2!=None:
 	if save2=='':
