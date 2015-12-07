@@ -139,6 +139,14 @@ double getjx(spatial_region::cellj*** cj, int i, int j, int k) {
     return cj[i][j][k].jx;
 }
 
+double getjy(spatial_region::cellj*** cj, int i, int j, int k) {
+    return cj[i][j][k].jy;
+}
+
+double getjz(spatial_region::cellj*** cj, int i, int j, int k) {
+    return cj[i][j][k].jz;
+}
+
 double getdouble(double*** a, int i, int j, int k) {
     return a[i][j][k];
 }
@@ -174,13 +182,23 @@ template<typename T> void write_binary(ofstream* f, T*** data, double get(T***,
     for (int i = n0; i < n; ++i) {
         int k = nz / 2;
         for (int j = 0; j < ny; ++j)
-            a[i * (ny + nz) + j] = get(data, i, j, k);
+            a[(i - n0) * (ny + nz) + j] = get(data, i, j, k);
         int j = ny / 2;
         for (int k = 0; k < nz; ++k)
-            a[i * (ny + nz) + ny + k] = get(data, i, j, k);
+            a[(i - n0) * (ny + nz) + ny + k] = get(data, i, j, k);
     }
     f->write(reinterpret_cast<char*>(a), sizeof(double) * (n - n0) * (ny +
                 nz));
+    delete[] a;
+}
+
+template<typename T> void write_binary_yzplane(ofstream* f, T*** data, double
+        get(T***, int, int, int), int i, int ny, int nz) {
+    double* a = new double[ny * nz];
+    for(int j=0;j<ny;j++)
+        for(int k=0;k<nz;k++)
+            a[j * nz + k] = get(data, i, j, k);
+    f->write(reinterpret_cast<char*>(a), sizeof(double) * (ny * nz));
     delete[] a;
 }
 
@@ -202,16 +220,23 @@ void spatial_region::fout_ex(ofstream* pfout, int n0, int n, ios_base::openmode
     } else if (mode == ios_base::out | ios_base::binary) {
         write_binary<spatial_region::celle>(pfout, ce, getex, n0, n, ny, nz);
     } else {
-        cerr << "fout_irho: ERROR: wrong mode" << endl;
+        cerr << "fout_ex: ERROR: wrong mode" << endl;
     }
 }
 
-void spatial_region::fout_ex_yzplane(ofstream* pfout, int i)
+void spatial_region::fout_ex_yzplane(ofstream* pfout, int i, ios_base::openmode
+        mode)
 {
-    for(int j=0;j<ny;j++)
-    {
-	for(int k=0;k<nz;k++)
-	    (*pfout)<<ce[i][j][k].ex<<"\n";
+    if (mode == ios_base::out) {
+        for(int j=0;j<ny;j++) {
+            for(int k=0;k<nz;k++)
+                (*pfout)<<ce[i][j][k].ex<<"\n";
+        }
+    } else if (mode == ios_base::out | ios_base::binary) {
+        write_binary_yzplane<spatial_region::celle>(pfout, ce, getex, i, ny,
+                nz);
+    } else {
+        cerr << "fout_ex_yzplane: ERROR: wrong mode" << endl;
     }
 }
 
@@ -233,16 +258,23 @@ void spatial_region::fout_ey(ofstream* pfout, int n0, int n, ios_base::openmode
     } else if (mode == ios_base::out | ios_base::binary) {
         write_binary<spatial_region::celle>(pfout, ce, getey, n0, n, ny, nz);
     } else {
-        cerr << "fout_irho: ERROR: wrong mode" << endl;
+        cerr << "fout_ey: ERROR: wrong mode" << endl;
     }
 }
 
-void spatial_region::fout_ey_yzplane(ofstream* pfout, int i)
+void spatial_region::fout_ey_yzplane(ofstream* pfout, int i, ios_base::openmode
+        mode)
 {
-    for(int j=0;j<ny;j++)
-    {
-	for(int k=0;k<nz;k++)
-	    (*pfout)<<ce[i][j][k].ey<<"\n";
+    if (mode == ios_base::out) {
+        for(int j=0;j<ny;j++) {
+        for(int k=0;k<nz;k++)
+            (*pfout)<<ce[i][j][k].ey<<"\n";
+        }
+    } else if (mode == ios_base::out | ios_base::binary) {
+        write_binary_yzplane<spatial_region::celle>(pfout, ce, getey, i, ny,
+                nz);
+    } else {
+        cerr << "fout_ey_yzplane: ERROR: wrong mode" << endl;
     }
 }
 
@@ -264,16 +296,23 @@ void spatial_region::fout_ez(ofstream* pfout, int n0, int n, ios_base::openmode
     } else if (mode == ios_base::out | ios_base::binary) {
         write_binary<spatial_region::celle>(pfout, ce, getez, n0, n, ny, nz);
     } else {
-        cerr << "fout_irho: ERROR: wrong mode" << endl;
+        cerr << "fout_ez: ERROR: wrong mode" << endl;
     }
 }
 
-void spatial_region::fout_ez_yzplane(ofstream* pfout, int i)
+void spatial_region::fout_ez_yzplane(ofstream* pfout, int i, ios_base::openmode
+        mode)
 {
-    for(int j=0;j<ny;j++)
-    {
-	for(int k=0;k<nz;k++)
-	    (*pfout)<<ce[i][j][k].ez<<"\n";
+    if (mode == ios_base::out) {
+        for(int j=0;j<ny;j++) {
+        for(int k=0;k<nz;k++)
+            (*pfout)<<ce[i][j][k].ez<<"\n";
+        }
+    } else if (mode == ios_base::out | ios_base::binary) {
+        write_binary_yzplane<spatial_region::celle>(pfout, ce, getez, i, ny,
+                nz);
+    } else {
+        cerr << "fout_ez_yzplane: ERROR: wrong mode" << endl;
     }
 }
 
@@ -295,16 +334,23 @@ void spatial_region::fout_bx(ofstream* pfout, int n0, int n, ios_base::openmode
     } else if (mode == ios_base::out | ios_base::binary) {
         write_binary<spatial_region::cellb>(pfout, cb, getbx, n0, n, ny, nz);
     } else {
-        cerr << "fout_irho: ERROR: wrong mode" << endl;
+        cerr << "fout_bx: ERROR: wrong mode" << endl;
     }
 }
 
-void spatial_region::fout_bx_yzplane(ofstream* pfout, int i)
+void spatial_region::fout_bx_yzplane(ofstream* pfout, int i, ios_base::openmode
+        mode)
 {
-    for(int j=0;j<ny;j++)
-    {
-	for(int k=0;k<nz;k++)
-	    (*pfout)<<cb[i][j][k].bx<<"\n";
+    if (mode == ios_base::out) {
+        for(int j=0;j<ny;j++) {
+        for(int k=0;k<nz;k++)
+            (*pfout)<<cb[i][j][k].bx<<"\n";
+        }
+    } else if (mode == ios_base::out | ios_base::binary) {
+        write_binary_yzplane<spatial_region::cellb>(pfout, cb, getbx, i, ny,
+                nz);
+    } else {
+        cerr << "fout_bx_yzplane: ERROR: wrong mode" << endl;
     }
 }
 
@@ -326,16 +372,23 @@ void spatial_region::fout_by(ofstream* pfout, int n0, int n, ios_base::openmode
     } else if (mode == ios_base::out | ios_base::binary) {
         write_binary<spatial_region::cellb>(pfout, cb, getby, n0, n, ny, nz);
     } else {
-        cerr << "fout_irho: ERROR: wrong mode" << endl;
+        cerr << "fout_by: ERROR: wrong mode" << endl;
     }
 }
 
-void spatial_region::fout_by_yzplane(ofstream* pfout, int i)
+void spatial_region::fout_by_yzplane(ofstream* pfout, int i, ios_base::openmode
+        mode)
 {
-    for(int j=0;j<ny;j++)
-    {
-	for(int k=0;k<nz;k++)
-	    (*pfout)<<cb[i][j][k].by<<"\n";
+    if (mode == ios_base::out) {
+        for(int j=0;j<ny;j++) {
+            for(int k=0;k<nz;k++)
+                (*pfout)<<cb[i][j][k].by<<"\n";
+        }
+    } else if (mode == ios_base::out | ios_base::binary) {
+        write_binary_yzplane<spatial_region::cellb>(pfout, cb, getby, i, ny,
+                nz);
+    } else {
+        cerr << "fout_by_yzplane: ERROR: wrong mode" << endl;
     }
 }
 
@@ -357,16 +410,23 @@ void spatial_region::fout_bz(ofstream* pfout, int n0, int n, ios_base::openmode
     } else if (mode == ios_base::out | ios_base::binary) {
         write_binary<spatial_region::cellb>(pfout, cb, getbz, n0, n, ny, nz);
     } else {
-        cerr << "fout_irho: ERROR: wrong mode" << endl;
+        cerr << "fout_bz: ERROR: wrong mode" << endl;
     }
 }
 
-void spatial_region::fout_bz_yzplane(ofstream* pfout, int i)
+void spatial_region::fout_bz_yzplane(ofstream* pfout, int i, ios_base::openmode
+        mode)
 {
-    for(int j=0;j<ny;j++)
-    {
-	for(int k=0;k<nz;k++)
-	    (*pfout)<<cb[i][j][k].bz<<"\n";
+    if (mode == ios_base::out) {
+        for(int j=0;j<ny;j++) {
+            for(int k=0;k<nz;k++)
+                (*pfout)<<cb[i][j][k].bz<<"\n";
+        }
+    } else if (mode == ios_base::out | ios_base::binary) {
+        write_binary_yzplane<spatial_region::cellb>(pfout, cb, getbz, i, ny,
+                nz);
+    } else {
+        cerr << "fout_bz_yzplane: ERROR: wrong mode" << endl;
     }
 }
 
@@ -549,41 +609,45 @@ void spatial_region::fout_rho(ofstream* pfout, ofstream* pfout_p, ofstream* pfou
     } else if (mode == ios_base::out | ios_base::binary) {
         // if (*pfout) ... --- TODO: check if file is ok
         write_binary<spatial_region::cellj>(pfout, cj, getjx, n0, n, ny, nz);
-        write_binary<spatial_region::cellj>(pfout_p, cj, getjx, n0, n, ny, nz);
-        write_binary<spatial_region::cellj>(pfout_ph, cj, getjx, n0, n, ny, nz);
+        write_binary<spatial_region::cellj>(pfout_p, cj, getjy, n0, n, ny, nz);
+        write_binary<spatial_region::cellj>(pfout_ph, cj, getjz, n0, n, ny, nz);
     } else {
         cerr << "fout_rho: ERROR: wrong mode" << endl;
     }
 }
 
-void spatial_region::fout_rho_yzplane(ofstream* pfout, ofstream* pfout_p, ofstream* pfout_ph, int i)
+void spatial_region::fout_rho_yzplane(ofstream* pfout, ofstream* pfout_p, ofstream* pfout_ph, int i, ios_base::openmode
+        mode)
 {
-    for(int j=0;j<ny;j++)
-    {
-        for(int k=0;k<nz;k++)
-        {
-            (*pfout)<<cj[i][j][k].jx<<"\n";
+    if (mode == ios_base::out) {
+        for(int j=0;j<ny;j++) {
+            for(int k=0;k<nz;k++) {
+                (*pfout)<<cj[i][j][k].jx<<"\n";
+            }
         }
-    }
-    if (pfout_p!=0)
-    {
-	for(int j=0;j<ny;j++)
-	{
-	    for(int k=0;k<nz;k++)
-	    {
-		(*pfout_p)<<cj[i][j][k].jy<<"\n";
-	    }
-	}
-    }
-    if (pfout_ph!=0)
-    {
-	for(int j=0;j<ny;j++)
-	{
-	    for(int k=0;k<nz;k++)
-	    {
-		(*pfout_ph)<<cj[i][j][k].jz<<"\n";
-	    }
-	}
+        if (pfout_p!=0) {
+            for(int j=0;j<ny;j++) {
+                for(int k=0;k<nz;k++) {
+                    (*pfout_p)<<cj[i][j][k].jy<<"\n";
+                }
+            }
+        }
+        if (pfout_ph!=0) {
+            for(int j=0;j<ny;j++) {
+                for(int k=0;k<nz;k++) {
+                    (*pfout_ph)<<cj[i][j][k].jz<<"\n";
+                }
+            }
+        }
+    } else if (mode == ios_base::out | ios_base::binary) {
+        write_binary_yzplane<spatial_region::cellj>(pfout, cj, getjx, i, ny,
+                nz);
+        write_binary_yzplane<spatial_region::cellj>(pfout_p, cj, getjy, i, ny,
+                nz);
+        write_binary_yzplane<spatial_region::cellj>(pfout_ph, cj, getjz, i, ny,
+                nz);
+    } else {
+        cerr << "fout_rho_yzplane: ERROR: wrong mode" << endl;
     }
 }
 
@@ -614,14 +678,20 @@ void spatial_region::fout_irho(int ion_type, ofstream* pfout, int n0, int n,
     }
 }
 
-void spatial_region::fout_irho_yzplane(int ion_type,ofstream* pfout, int i)
+void spatial_region::fout_irho_yzplane(int ion_type, ofstream* pfout, int i,
+        ios_base::openmode mode)
 {
-    for(int j=0;j<ny;j++)
-    {
-        for(int k=0;k<nz;k++)
-        {
-            (*pfout)<<irho[ion_type][i][j][k]<<"\n";
+    if (mode == ios_base::out) {
+        for(int j=0;j<ny;j++) {
+            for(int k=0;k<nz;k++) {
+                (*pfout)<<irho[ion_type][i][j][k]<<"\n";
+            }
         }
+    } else if (mode == ios_base::out | ios_base::binary) {
+        write_binary_yzplane<double>(pfout, irho[ion_type], getdouble, i, ny,
+                nz);
+    } else {
+        cerr << "fout_irho_yzplane: ERROR: wrong mode" << endl;
     }
 }
 

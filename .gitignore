@@ -9,3 +9,5 @@ conf
 *.pyc
 results*/
 quill3d/file*.conf
+quill3d/a.out
+quill3d/job.sh.*

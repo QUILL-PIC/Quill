@@ -1,41 +1,41 @@
-# Общий вид строк: имя_переменной = [значение] [размерность]
-# значение (double) или размерность (string) можно не указывать
-# Пробелы и части строк, следующие за '#', игнорируются
+# Излучение гамма-квантов при падении F/2 сфокусированного 30 fs, 910 nm, 6 J
+# импульса на 5 \lambda слой SiO_2 аэрогеля (rho = 0.1 g\,cm^{-3}) для разных
+# углов падения; предполагается полная ионизация вещества
 
 # число вычислительных потоков
 n_sr = 16; # default: 8
 # число NUMA-нодов
-n_numa_nodes = 4 # default: 2
+n_numa_nodes = 2 # default: 2
 
 # шаги численной сетки; если задан dt, но не задан dx, то dx
 # вычисляется автоматически так, чтобы алгоритм NDFX давал наименьшую
 # дисперсию, но был устойчив; если dt не задан, то он вычисляется как
 # половина критического для данной плотности шага по времени, после dx
 # вычисляется автоматически по dt и ne, как написано выше
-dt = 0.05 # lambda
-#dx = 0.05130 # lambda
-dy = 0.12 # lambda
-dz = 0.12 # lambda
+#dt = 0.014 # lambda
+#dx = 0.0164 # lambda
+dy = 0.14 # lambda
+dz = 0.14 # lambda
 
 # длина волны лазерного импульса
-lambda = 1.05e-6 cm # ncr = 4 * 2.4e24 cm^{-3} # default: cm; possible: um; lambda_p
+lambda = 0.91 um # default: cm; possible: um; lambda_p
 
 # концентрация электронов; используется при добавлении частиц при
 # включенном движущемся окне, а также при расчёте шага по x, если он
 # не задан явно
-ne = 1 ncr # default: cm^{-3}; possible: ncr
+ne = 1.8e23 cm^{-3} # default: cm^{-3}; possible: ncr
 
 # размеры области моделирования
-xlength = 90 # default: lambda; possible: um, fs
-ylength = 20 # default: lambda; possible: um
-zlength = 20 # default: lambda; possible: um
+xlength = 70 # default: lambda; possible: um, fs
+ylength = 50 # default: lambda; possible: um
+zlength = 30 # default: lambda; possible: um
 
 # Можно задать несколько пар t_end, output_period, при этом на отрезке
 # [0,t_end_1] будет использоваться output_period_1 и т. д.
 # время моделирования
-t_end = 60 # default: lambda; possible: um, mm, cm
+t_end = 40 # default: lambda; possible: um, mm, cm
 # период вывода данных в файл
-output_period = 1 # default: lambda; possible: um, mm, cm, t_end
+output_period = 2.5 # default: lambda; possible: um, mm, cm, t_end
 
 # По умолчанию лазерные импульсы распространяются к центру области;
 # величины, задающие лазерный импульс (например, a0y, a0z), относятся
@@ -45,7 +45,7 @@ output_period = 1 # default: lambda; possible: um, mm, cm, t_end
 # (исключение: в случае, если x' параллелен z, то y' совпадает с y и
 # z' лежит в плоскости xy).
 # тип огибающей лазерного импульса
-f_envelope = cos # default: cos, possible: focused, sscos
+f_envelope = focused # default: cos, possible: focused, sscos
 # по умолчанию лазерные импульсы распространяются к центру области
 # моделирования; b_sign = -1 меняет направление магнитного поля
 # импульсов и, следовательно, их направление распространения на
@@ -55,26 +55,31 @@ b_sign = 1 # default: 1, possible: -1
 # необходимо задать значение - отношение a0z к a0y=a0; эллиптическая
 # поляризация будет задана корректно только в том случае, если задано
 # a_0, а не P, I, W и т. п.
-polarization = 0.7 elliptic # default: linear; possible: circular, elliptic
-# размеры лазерного импульса
-xsigma = 2 # default: lambda; possible: um, fs
-ysigma = 2 # default: lambda; possible: um
-zsigma = 2 # default: lambda; possible: um
+polarization = linear # default: linear; possible: circular
+# размеры лазерного импульса (в перетяжке)
+xsigma = 30 fs # default: lambda; possible: um, fs
+ysigma = 0.65 # default: lambda; possible: um
+zsigma = 0.65 # default: lambda; possible: um
 # расстояние от центра лазерного импульса до правой границы области
-x0 = 10.5 # default: lambda; possible: um, fs
+#x0 = 55 # default: lambda; possible: um, fs
 # координаты центра лазерного импульса относительно центра области
-y0 = 0.45 # default: 0; default units: lambda; possible: um
-z0 = 0.17 # default: 0; default units: lambda; possible: um
+#y0 = 0 # default: 0; default units: lambda; possible: um
+z0 = 0 # default: 0; default units: lambda; possible: um
+# r0, theta - положение импульса в полярной сист.коорд. в пл. XY,
+# при этом r0 отсчитывается от центра области (должно быть больше 0),
+# вместо x0 - r0*cos(theta)+xlength/2, вместо y0 - r0*sin(theta),
+r0 = 25 # default: lambda; possible: um
+theta = 30 deg # default: 0; default units: rad, possible: deg
 # абсолютная фаза импульса
 phase = 0 pi # default: 0; default units: rad, possible: pi
 # добавление лазерных импульсов - зеркальных отражений относительно
 # плоскостей, проходящих через центр области моделирования
-#lp_reflection = xy&xz&yz # default: off; possible: xy, xz, yz, xy&xz, xy&yz, xz&yz, xy&xz&yz
+lp_reflection = off # default: off; possible: xy, xz, yz, xy&xz, xy&yz, xz&yz, xy&xz&yz
 # заменяет в зеркальном отражении лазерного импульса соответствующее
 # значение a0 на -a0, за счёт чего, например, можно изменить
 # направление вращения поля в нём в случае циркулярной поляризации;
 # нужно задавать для каждого из значений lp_reflection
-#f_reflection = off&off&y # default: off; possible: y, z, off&z, etc.
+f_reflection = off # default: off; possible: y, z, off&z, etc.
 # phi!=0 полностью отменяет действие lp_reflection и f_reflection, при
 # этом создаётся второй лазерный импульс - отражение первого
 # относительно центра области; поля второго импульса при этом
@@ -82,43 +87,48 @@ phase = 0 pi # default: 0; default units: rad, possible: pi
 # оси x' на угол phi, отсчитываемый от y' к z'
 #phi = 0.5 pi # default: 0; default units: rad, possible: pi
 # мощность/интенсивность/энергия/безразмерная амплитуда лазерного импульса
-#P = 70 TW # peak power; default: cgs; possible: PW, TW
+#P = 100 TW # peak power; default: cgs; possible: PW, TW
 #I = 4e20 W/cm^2 # peak intensity; default: cgs; possible: W/cm^2
-#W = 50 J # default units: cgs; possible: J
-a0 = 0
+#W = 36 J # default units: cgs; possible: J
+a0 = 126
 # если a0y=a0z=0, то используются значения, вычисленные по
 # polarization, P, I, W или a0
 #a0y = 3.2
-#a0z = 1.7
+#a0z = 316
+# Вторая гармоника задаётся таким образом, чтобы поперечный размер пучков первой
+# и второй гармоник в перетяжке был одинаков. shenergy - относительная (по
+# энергии) амплитуда второй гармоники в перетяжке. Амплитуда первой гармоники
+# уменьшается так, чтобы суммарная энергия гармоник оставалась равной энергии,
+# заданной через a0, a0y, W и т. п. shphase - фаза второй гармоники относительно
+# первой.
+#shenergy = 0.3 # default = 0
+#shphase = 0 pi # default: 0; default units: rad, possible: pi
 
-# движущееся окно; выключается при наличии нейтральных потоков (flows)
+# движущееся окно
 mwindow = off # default: on; possible: on, off
-# moving window velocity
-#mwspeed = 0.4 # default: 1
 # включает или отключает добавление частиц на передней границе области
 # при работе движущегося окна
 mwseed = off # default: on; possible: on, off
-
 # компоненты полей для вывода в файл
 e_components_for_output = xyz # default: none; possible: x, y, z, xy, xz, yz, xyz
 b_components_for_output = xyz # default: none; possible: x, y, z, xy, xz, yz, xyz
 # расстояние от правой границы области до плоскости yz, данные в
 # которой выводятся в файл;
-#x0fout = 9 # default value: xlength/2; default units: lambda; possible: um, fs
+#x0fout = 7.9 # default value: xlength/2; default units: lambda; possible: um, fs
 
 # пучок частиц
 beam = off # default: off; possible: on, off
 # тип частиц пучка
-beam_particles = e # default: e; possible: e, p, ph
+#beam_particles = ph # default: e; possible: e, p, ph
 # число частиц в пучке
-Nb = 1e10
+#Nb = 2e12
 # энергия частиц в пучке; в слечае epsb<0 пучок летит справа налево
-epsb = -50 # MeV; possible: mc^2
+#epsb = 5 # MeV; possible: mc^2
 # размеры пучка: xb - половина длины пучка, rb - радиус пучка
-xb = 4 # default: lambda; possible: um, fs
-rb = 4 # default: lambda; possible: um
+#xb = 2 # default: lambda; possible: um, fs
+#rb = 2 # default: lambda; possible: um
 # расстояние от правой границы области до центра пучка
-x0b = 5 # default: lambda; possible: um, fs
+#x0b = 10 # default: lambda; possible: um, fs
 
 # включение ионов (только для плёнок)
 ions = on # default: off; possible: on
@@ -126,47 +136,49 @@ ions = on # default: off; possible: on
 # список плёнок; все параметры плёнки должны быть обязательно
 # определены после film = on для данной плёнки и до того, как
 # встретится film = on для следующей плёнки
+# Отношение массы к заряду ионов Si и O почти одинаковое, поэтому плёнку можно
+# заменить на одну
+# SiO2
 film = on # default: off; possible: on
+x0film = 35 # default: 0; default units: lambda, possible: um, fs
+filmwidth = 5.0 # default: lambda, possible: um, fs
+gradwidth = 0 # default: 0; default units: lambda, possible: um, fs
+y0film = 10  # default: 0; default units: lambda, possible: um, fs
+y1film = 30  # default: ylength; default units: lambda, possible: um, fs
+z0film = 10  # default: 0; default units: lambda, possible: um, fs
+z1film = 20  # default: zlength; default units: lambda, possible: um, fs
+nfilm = 0.334 ne # default: cm^{-3}; possible: ncr, ne
+mcr = 2 # default: 1
+# Si
+##film = on # default: off; possible: on
 # расстояние от левой границы области до левой границы плёнки
-x0film = 2.5 dx # default: 0; default units: lambda, possible: um, fs, dx
+#x0film = 35 # default: 0; default units: lambda, possible: um, fs
 # полная толщина плёнки
-filmwidth = 40 # default: lambda, possible: um, fs
+#filmwidth = 5.0 # default: lambda, possible: um, fs
 # толщина части плёнки с линейным ростом плотности от 0 до nfilm
-gradwidth = 0 # default units: lambda, possible: um, fs
+#gradwidth = 0 # default units: lambda, possible: um, fs
+# координаты нижней и верхней границ плёнки
+#y0film = 10  # default: 0; default units: lambda, possible: um, fs
+#y1film = 30  # default: ylength; default units: lambda, possible: um, fs
+# то же для z
+#z0film = 10  # default: 0; default units: lambda, possible: um, fs
+#z1film = 20  # default: zlength; default units: lambda, possible: um, fs
 # концентрация электронов в плёнке
-nfilm = 0.25 ne # default: cm^{-3}; possible: ncr, ne
+#nfilm = 0.157 ne # default: cm^{-3}; possible: ncr, ne
 # отношение массы (в массах протона) к заряду (в зарядах протона) для
 # иона плёнки
-mcr = 0.0054 # m_i = 10 m_e # default: 1
-# безразмерная температура электронов плёнки, f ~ e^(-(\gamma-1) / T)
-# для ионов T -> T * cmr (cmr = 1 для позитрона), хотя это не вполне корректно
-Tfilm = 200 # default: 0
-# начальная скорость плёнки
-vxfilm = 0.995 # gamma = 10
-#
-film = on # default: off; possible: on
-x0film = 970.5 dx # default: 0; default units: lambda, possible: um, fs
-filmwidth = 40 # default: lambda, possible: um, fs
-gradwidth = 0 # default: 0; default units: lambda, possible: um, fs
-nfilm = 1 ne # default: cm^{-3}; possible: ncr, ne
-mcr = 0.0054 # default: 1
-Tfilm = 20 # default: 0
-vxfilm = -0.9992 # gamma = 25
-
-# neutral (elecrons+ions) flows, left and right
-# (neflow!=0 turns off mowing window)
-# (neflow!=0 makes film transversely profiled)
-nelflow = 0.25 ne # default units: ne
-vlflow = 0.995 # default: 0
-mcrlflow = 0.0054
-# безразмерная температура электронов в сопутствующей потоку системе отсчёта, f
-# ~ e^(-(\gamma-1) / T) для ионов T -> T * cmr, хотя это не вполне корректно
-Tlflow = 200 # default: 0
-#
-nerflow = 1 ne # default units: ne
-vrflow = 0.9992 # default: 0
-mcrrflow = 0.0054
-Trflow = 20 # default: 0
+#mcr = 2.001 # default: 1
+# O
+#film = on # default: off; possible: on
+#x0film = 35 # default: 0; default units: lambda, possible: um, fs
+#filmwidth = 5.0 # default: lambda, possible: um, fs
+#gradwidth = 0 # default: 0; default units: lambda, possible: um, fs
+#y0film = 10  # default: 0; default units: lambda, possible: um, fs
+#y1film = 30  # default: ylength; default units: lambda, possible: um, fs
+#z0film = 10  # default: 0; default units: lambda, possible: um, fs
+#z1film = 20  # default: zlength; default units: lambda, possible: um, fs
+#nfilm = 0.177 ne # default: cm^{-3}; possible: ncr, ne
+#mcr = 1.999 # default: 1
 
 # число рядов частиц в ячейке по координатам
 xnpic = 1
@@ -179,48 +191,44 @@ particles_for_output = epph # default: e; possible: e, ep, eph, epph
 # шаг по энергии в спектре, число точек в спектре и отношение общего
 # числа частиц к числу частиц, все характеристики которых выводятся в
 # файл, для разных сортов частиц
-deps = 1 MeV # default: MeV; possible: mc^2
-neps = 1000
-enthp = 1000
+deps = 0.3 MeV # default: MeV; possible: mc^2
+neps = 500
+enthp = 20
 #deps_p = 0.5 MeV # default value = deps; default units: MeV; possible: mc^2
 #neps_p = 140 # default = neps
 #enthp_p = 1 # default = enthp
-#deps_ph = 1e-7 MeV # default value = deps; default units: MeV; possible: mc^2
-#neps_ph = 800 # default = neps
-#enthp_ph = 300 # default = enthp
+deps_ph = 0.003 MeV # default value = deps; default units: MeV; possible: mc^2
+#neps_ph = 1000 # default = neps
+#enthp_ph = 1 # default = enthp
 # шаг по энергии в ионном спектре в MeV на нуклон
-deps_i = 120 MeV
+deps_i = 0.03 # default value = deps; default units: Mev/nucleon
 #neps_i = 800 # default = neps
 #enthp_i = 10 # default = enthp
 
 # число частиц каждого сорта для вывода их траекторий в файл
-n_tracks = 100 # default = 0
+#n_tracks = 100 # default = 0
 # момент включения алгоритма вывода траекторий частиц
-tr_start = 0 # default value = 0; default units: lambda; possible: um, mm, cm
+tr_start = 10 # default value = 0; default units: lambda; possible: um, mm, cm
 tr_init = volume # default: line; possible: volume
 # координаты концов прямого отрезка (tr_init = line) или диагональ
 # прямоугольного параллелепипеда (tr_init = volume), с которого в
 # момент времени tr_start берутся частицы для отслеживания траекторий;
 # default value = 0
 xtr1 = 35 # default: lambda; possible: um, fs
-ytr1 = 5 # default: lambda; possible: um
-ztr1 = 5 # default: lambda; possible: um
-xtr2 = 35.1 # default: lambda; possible: um, fs
-ytr2 = 15 # default: lambda; possible: um
-ztr2 = 15 # default: lambda; possible: um
+ytr1 = 23 # default: lambda; possible: um
+ztr1 = 13 # default: lambda; possible: um
+xtr2 = 37 # 16 # default: lambda; possible: um, fs
+ytr2 = 27 # default: lambda; possible: um
+ztr2 = 17 # default: lambda; possible: um
 
 # алгоритм слияния квазичастиц; nl - nonlinear(q), ti -
 # type-independently
 pmerging = nl # default: off; possible: nl, ti
 # критическое отношение числа квазичастиц одного сорта к числу ячеек
-crpc = 10.0
+crpc = 0.02
 
 # алгоритм «заморозки» частиц в магнитном поле
 freezing = off # default: off; possible: on
 
 # имя папки для результатов; не забудьте создать её вручную!
-data_folder = results # default: results
-
-# режим вывода данных в файл (пока что только для плотности частиц и компонент
-# электромагнитных полей)
-output_mode = binary # default: text; possible: binary
+data_folder = results1 # default: results

@@ -130,31 +130,31 @@ public:
     void create_arrays(int,int,int,int,int);
     ~spatial_region();
     void fout_ex(ofstream*,int,int, ios_base::openmode);
-    void fout_ex_yzplane(ofstream*,int);
+    void fout_ex_yzplane(ofstream*,int, ios_base::openmode);
     void fout_ey(ofstream*,int,int, ios_base::openmode);
-    void fout_ey_yzplane(ofstream*,int);
+    void fout_ey_yzplane(ofstream*,int, ios_base::openmode);
     void fout_ez(ofstream*,int,int, ios_base::openmode);
-    void fout_ez_yzplane(ofstream*,int);
+    void fout_ez_yzplane(ofstream*,int, ios_base::openmode);
     void fout_bx(ofstream*,int,int, ios_base::openmode);
-    void fout_bx_yzplane(ofstream*,int);
+    void fout_bx_yzplane(ofstream*,int, ios_base::openmode);
     void fout_by(ofstream*,int,int, ios_base::openmode);
-    void fout_by_yzplane(ofstream*,int);
+    void fout_by_yzplane(ofstream*,int, ios_base::openmode);
     void fout_bz(ofstream*,int,int, ios_base::openmode);
-    void fout_bz_yzplane(ofstream*,int);
+    void fout_bz_yzplane(ofstream*,int, ios_base::openmode);
     void fout_w(ofstream*,int,int,bool);
     void fout_w_yzplane(ofstream*,int);
     void fout_inv(ofstream*,int,int,bool);
     void fout_inv_yzplane(ofstream*,int);
     void fout_rho(ofstream*,ofstream*,ofstream*,int,int, ios_base::openmode);
-    void fout_rho_yzplane(ofstream*,ofstream*,ofstream*,int);
+    void fout_rho_yzplane(ofstream*,ofstream*,ofstream*,int, ios_base::openmode);
     void fout_irho(int,ofstream*,int,int, ios_base::openmode);
-    void fout_irho_yzplane(int,ofstream*,int);
+    void fout_irho_yzplane(int,ofstream*,int, ios_base::openmode);
     void fout_tracks(double,int);
     void f_init_cos(double,double,double,double,double,double,bool=0,bool=1,double=0,double=0,double=0,double=0,bool=1,double=0);
-    void f_init_focused(double,double,double,double,double,double,bool=1,double=0,double=0,double=0,bool=1,double=0,bool=0);
+    void f_init_focused(double,double,double,double,double,double,bool=1,double=0,double=0,double=0,bool=1,double=0,bool=0, double = 1);
     void f_init_uniformB(double, double);
     void add_beam(double,double,double,double,double,double);
-    void film(double,double,double,bool,double,double,double);
+    void film(double,double,double,bool,double,double,double,double,double,double,double,double, bool);
     void fill_cell_by_particles(double,int_vector3d&,int_vector3d&,double,double=0,double=0,double=0);
     void fadvance_ndfx();
     void f_zeroing_on_boundaries();
@@ -193,7 +193,7 @@ class film
 {
 public:
     film* prev;
-    double x0, filmwidth, gradwidth, ne, mcr, T;
+    double x0, filmwidth, gradwidth, y0, y1, z0, z1, ne, mcr, T, vx;
     film();
 };
 

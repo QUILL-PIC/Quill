@@ -61,7 +61,7 @@ b_sign = 1 # default: 1, possible: -1
 # поляризация будет задана корректно только в том случае, если задано
 # a_0, а не P, I, W и т. п.
 polarization = 0.5 elliptic # default: linear; possible: circular, elliptic
-# размеры лазерного импульса
+# размеры лазерного импульса (в перетяжке)
 xsigma = 2.8 # default: lambda; possible: um, fs
 ysigma = 2.8 # default: lambda; possible: um
 zsigma = 2.8 # default: lambda; possible: um
@@ -100,6 +100,14 @@ W = 50 J # default units: cgs; possible: J
 # polarization, P, I, W или a0
 #a0y = 3.2
 #a0z = 1.7
+# Вторая гармоника задаётся таким образом, чтобы поперечный размер пучков первой
+# и второй гармоник в перетяжке был одинаков. shenergy - относительная (по
+# энергии) амплитуда второй гармоники в перетяжке. Амплитуда первой гармоники
+# уменьшается так, чтобы суммарная энергия гармоник оставалась равной энергии,
+# заданной через a0, a0y, W и т. п. shphase - фаза второй гармоники относительно
+# первой.
+shenergy = 1 # default = 0
+shphase = 0 pi # default: 0; default units: rad, possible: pi
 
 # движущееся окно; выключается при наличии нейтральных потоков (flows)
 mwindow = off # default: on; possible: on, off
@@ -164,7 +172,10 @@ mcr = 2 # default: 1
 #nelflow = 1 ne # default units: ne
 vlflow = 0.999 # default: 0
 mcrlflow = 5.4452e-4 # positrons
-Tlflow = 1e-3 # adds random speed; default: 0
+# безразмерная температура электронов в сопутствующей потоку системе отсчёта,
+# f ~ e^(-(\gamma-1) / T)
+# для ионов T -> T * cmr, хотя это не вполне корректно
+Tlflow = 0.1 # default: 0
 #nerflow = 1 ne # default units: ne
 vrflow = 0.999 # default: 0
 mcrrflow = 5.4452e-4
@@ -223,6 +234,6 @@ freezing = off # default: off; possible: on
 # имя папки для результатов; не забудьте создать её вручную!
 data_folder = res_hb # default: results
 
-# режим вывода данных в файл (пока что только для плотности и компонент
-# электромагнитных полей в плоскостях xy и xz)
+# режим вывода данных в файл (пока что только для плотности частиц и компонент
+# электромагнитных полей)
 output_mode = binary # default: text; possible: binary

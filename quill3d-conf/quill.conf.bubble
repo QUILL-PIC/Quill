@@ -72,8 +72,8 @@ a0 = 15
 # движущееся окно
 mwindow = on # default: on; possible: on, off
 # компоненты полей для вывода в файл
-#e_components_for_output = xy # default: none; possible: x, y, z, xy, xz, yz, xyz
-#b_components_for_output = z # default: none; possible: x, y, z, xy, xz, yz, xyz
+e_components_for_output = xyz # default: none; possible: x, y, z, xy, xz, yz, xyz
+b_components_for_output = xyz # default: none; possible: x, y, z, xy, xz, yz, xyz
 # расстояние от правой границы области до плоскости yz, данные в
 # которой выводятся в файл;
 #x0fout = 10.2 # default value: xlength/2; default units: lambda; possible: um, fs
@@ -161,3 +161,7 @@ ztr2 = 11 # default: lambda; possible: um
 
 # имя папки для результатов; не забудьте создать её вручную!
 data_folder = results # default: results
+
+# режим вывода данных в файл (пока что только для плотности частиц и компонент
+# электромагнитных полей)
+output_mode = binary # default: text; possible: binary
