@@ -9,7 +9,7 @@ static map<string, double> conf;
 // fills up global variable conf with values from log file,
 // prints variable name and value if flag is true
 extern "C"
-void configure(char* charlog, bool flag = false) {
+void configure(const char* charlog, bool flag = false) {
     string log(charlog); // copies the null-terminated character sequence
     fstream fs(log, ios_base::in);
     if (fs) {
@@ -29,21 +29,21 @@ void configure(char* charlog, bool flag = false) {
             }
         }
     } else {
-        cerr << "chameleon-core: configure: ERROR: no such file, " << log <<
+        cerr << "libchameleon: configure: ERROR: no such file, " << log <<
             endl;
     }
 }
 
 // returns value from conf that corresponds to charname
 extern "C"
-double get(char* charname) {
+double get(const char* charname) {
     string name(charname);
     return conf[name];
 }
 
 // reads 2D data
 extern "C"
-double* read(char* charfilename, char* charplane) {
+double* read2d(const char* charfilename, const char* charplane) {
     string filename(charfilename);
     string plane(charplane);
     long nx = conf["nx"];
@@ -66,11 +66,11 @@ double* read(char* charfilename, char* charplane) {
             a = new double[n];
             fs.read(reinterpret_cast<char*>(a), sizeof(double) * n);
         } else {
-            cerr << "chameleon-core: read:: ERROR: unknown output_mode" << endl;
+            cerr << "libchameleon: read:: ERROR: unknown output_mode" << endl;
             return nullptr;
         }
     } else {
-        cerr << "chameleon-core: read: ERROR: no such file, " << filename <<
+        cerr << "libchameleon: read: ERROR: no such file, " << filename <<
             endl;
         return nullptr;
     }
@@ -92,7 +92,7 @@ double* read(char* charfilename, char* charplane) {
             for (long j = 0; j < nz; ++j)
                 b[i * nz + j] = a[nx * (ny + nz) + i * nz + j];
     } else {
-        cerr << "chameleon-core: read: possible plane values are xy, xz and yz,"
+        cerr << "libchameleon: read: possible plane values are xy, xz and yz,"
             "given: " << plane << endl;
         delete[] a;
         return nullptr;
