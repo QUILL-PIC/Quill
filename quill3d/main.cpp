@@ -1031,10 +1031,10 @@ int main()
               x0 += 1;
             }
             double tmp = (j * dy - ylength / 2) / (ylength / 2);
-            tmp = cos(0.5 * PI * tmp * tmp);
+            tmp = cos(0.5 * PI * tmp * tmp * tmp * tmp * tmp);
             double tr_env = tmp * tmp;
             tmp =  (k * dz - zlength / 2) / (zlength / 2);
-            tmp = cos(0.5 * PI * tmp * tmp);
+            tmp = cos(0.5 * PI * tmp * tmp * tmp * tmp * tmp);
             tr_env *= tmp * tmp;
             if (vlflow != 1) {
               psr[0].fill_cell_by_particles(-1,cell_pos,v_npic, n * tr_env, vlflow/sqrt(1-vlflow*vlflow),x0-0.5,Tlflow); // 0.5 - for a compensation in fill_cell... for xnpic = 1
@@ -1073,10 +1073,10 @@ int main()
               x0 += 1;
             }
             double tmp = (j * dy - ylength / 2) / (ylength / 2);
-            tmp = cos(0.5 * PI * tmp * tmp);
+            tmp = cos(0.5 * PI * tmp * tmp * tmp * tmp * tmp);
             double tr_env = tmp * tmp;
             tmp =  (k * dz - zlength / 2) / (zlength / 2);
-            tmp = cos(0.5 * PI * tmp * tmp);
+            tmp = cos(0.5 * PI * tmp * tmp * tmp * tmp * tmp);
             tr_env *= tmp * tmp;
             if (vrflow!=1) {
               psr[n_sr-1].fill_cell_by_particles(-1,cell_pos,v_npic, n * tr_env, -vrflow/sqrt(1-vrflow*vrflow),(1-x0)-0.5,Trflow);
