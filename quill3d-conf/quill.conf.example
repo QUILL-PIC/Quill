@@ -151,6 +151,12 @@ x0film = 9 # default: 0; default units: lambda, possible: um, fs
 filmwidth = 0.2 # default: lambda, possible: um, fs
 # толщина части плёнки с линейным ростом плотности от 0 до nfilm
 gradwidth = 0 # default units: lambda, possible: um, fs
+# координаты нижней и верхней границ плёнки
+#y0film = 10  # default: 0; default units: lambda, possible: um, fs
+#y1film = 30  # default: ylength; default units: lambda, possible: um, fs
+# то же для z
+#z0film = 10  # default: 0; default units: lambda, possible: um, fs
+#z1film = 20  # default: zlength; default units: lambda, possible: um, fs
 # концентрация электронов в плёнке
 nfilm = 0.5 ne # default: cm^{-3}; possible: ncr, ne
 # отношение массы (в массах протона) к заряду (в зарядах протона) для
