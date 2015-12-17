@@ -1,6 +1,6 @@
 import time
 import matplotlib.pyplot as plt
-import resread
+#import resread
 import chameleon
 
 t0 = time.clock()
@@ -13,11 +13,11 @@ t0 = time.clock()
 # chameleon
 # text mode; 5.1 M, 0.21 s, binary: 4.7 M, 0.02 s
 chameleon.configure('../results/log', True)
-ne = -chameleon.read('../results/rho0', 'xy')
+ne = -chameleon.read2d('../results/rho20', 'xy')
 t1 = time.clock()
 
 print('reading time:', t1 - t0, 's')
 
 plt.imshow(ne, 'jet', interpolation='none', origin='lower')
 plt.colorbar()
-plt.show()
+plt.savefig('example-py.png')
