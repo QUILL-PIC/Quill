@@ -13,10 +13,11 @@ __name__ =\
 'qplot - provides functions for visualization of quill results'
 __doc__ = 'see source'
 
-def density(t=0,plane='xy',max_w=0,max_e_density=0,max_p_density=0,max_g_density=0,max_i_density=0,axis=[],extent=None,save2=''):
+def density(t=0,plane='xy',max_w=0,max_e_density=0,max_p_density=0,max_g_density=0,max_i_density=0,axis=[],extent=None,save2='',data_folder=''):
     'Plots w and particle densities.'
     resread.t = '%g' % t
-    #resread.data_folder = data_folder
+    if data_folder != '':
+        resread.data_folder = data_folder
     resread.read_parameters()
     #
     tcmap.red()
@@ -114,7 +115,7 @@ def particles(t=0,space=['x','y'],particles='geip',colors='bgmrcyk',r=5,alpha=0.
     elif save2!=None:
         plt.savefig(save2)
 
-def tracks(space=['x','y'],particles='geip',t0=0,t1=0,colors='bgmrcyk',cmaps=['jet'],clims2all=1,axis=[],save2='',r=2):
+def tracks(space=['x','y'],particles='geip',t0=0,t1=0,colors='bgmrcyk',cmaps=['jet'],clims2all=1,axis=[],save2='',r=2,data_folder=''):
     'Plots particle tracks as lines in 2D or dots in 3D (phase)*space*\n\
     at [tr_start+*t0*,tr_start+*t1*]\n\
     Examples:\n\
@@ -124,7 +125,8 @@ def tracks(space=['x','y'],particles='geip',t0=0,t1=0,colors='bgmrcyk',cmaps=['j
     '
     # clims2all=1 -> color limits for cmaps[i] (vmin,vmax) the same
     # for all particles (trajectories) of this type
-    #resread.data_folder = data_folder
+    if data_folder != '':
+        resread.data_folder = data_folder
     resread.read_parameters()
     track_names = []
     for filename in os.listdir(resread.data_folder):
@@ -514,8 +516,10 @@ def energy(data_folder='../results/',save2=''):
         else:
             plt.savefig(save2)
 
-def tracks2(space=['x', 'y'], tracks=None, save2=''):
+def tracks2(space=['x', 'y'], tracks=None, save2='', data_folder=''):
     'Plots 2d tracks in the specified *space*'
+    if data_folder != '':
+        resread.data_folder = data_folder
     if not tracks:
         tracks = resread.tracks()
     if len(space) == 2:
