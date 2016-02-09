@@ -72,14 +72,15 @@ def density(t=0,plane='xy',max_w=0,max_e_density=0,max_p_density=0,max_g_density
     else:
         plt.savefig(save2)
 
-def particles(t=0,space=['x','y'],particles='geip',colors='bgmrcyk',r=5,alpha=0.01,cmap='jet',gamma=0,data_folder='../results/',axis=[],save2=''):
+def particles(t=0,space=['x','y'],particles='geip',colors='bgmrcyk',r=5,alpha=0.01,cmap='jet',gamma=0,data_folder='',axis=[],save2=''):
     'Plots particles as dots in (phase)*space*.\n\
     \n\
     Examples:\n\
     qplot.particles(10,[\'x\',\'y\']),\n\
     qplot.particles(15,[\'x\',\'y\',\'g\'],\'i\',gamma=1).'
     resread.t = '%g' % t
-    resread.data_folder = data_folder
+    if data_folder != '':
+        resread.data_folder = data_folder
     resread.read_parameters()
     plt.xlabel(space[0])
     plt.ylabel(space[1])
@@ -247,12 +248,13 @@ def tracks(space=['x','y'],particles='geip',t0=0,t1=0,colors='bgmrcyk',cmaps=['j
     else:
         plt.savefig(save2)
 
-def rpattern(t=None,particles='geip',colors='bgmrcyk',dphi=0.1,save2='',data_folder='../results/'):
+def rpattern(t=None,particles='geip',colors='bgmrcyk',dphi=0.1,save2='',data_folder=''):
     'Plots radiation pattern of the emitted energy\n\
     Examples:\n\
     rpattern() # plots radiation patterns for all particles\n\
     at t_end'
-    resread.data_folder = data_folder
+    if data_folder != '':
+        resread.data_folder = data_folder
     resread.read_parameters()
     if t==None:
         t = resread.t_end - resread.dt
@@ -299,7 +301,7 @@ def rpattern(t=None,particles='geip',colors='bgmrcyk',dphi=0.1,save2='',data_fol
     else:
         plt.savefig(save2)
 
-def spectrum(t=None,particles='geip',colors='bgmrcyk',sptype='simple',axis=[],save2='',data_folder='../results/'):
+def spectrum(t=None,particles='geip',colors='bgmrcyk',sptype='simple',axis=[],save2='',data_folder=''):
     'spectrum() # plots spectrum for all particles\n\
     at t_end\n\
     Examples:\n\
@@ -309,7 +311,8 @@ def spectrum(t=None,particles='geip',colors='bgmrcyk',sptype='simple',axis=[],sa
     plt.ylabel('dN/deps, a.u.')
     if axis!=[]:
         plt.axis(axis)
-    resread.data_folder = data_folder
+    if data_folder != '':
+        resread.data_folder = data_folder
     resread.read_parameters()
     if t==None:
         t = resread.t_end - resread.dt
@@ -369,7 +372,7 @@ directivity_lat1 = 0
 directivity_lng1 = 0
 directivity_lat2 = 0
 directivity_lng2 = 0
-def mollweide(t=None,nlongitude=80,nlatitude=40,Nlevels=15,save2='',data_folder='../results/'):
+def mollweide(t=None,nlongitude=80,nlatitude=40,Nlevels=15,save2='',data_folder=''):
     'Plots photon radiation pattern in Mollweide projection (z-axis\n\
     sticks out of the north pole and y-axis sticks out of the\n\
     projection center) and computes (antenna-like) directivity.\n\
@@ -378,7 +381,8 @@ def mollweide(t=None,nlongitude=80,nlatitude=40,Nlevels=15,save2='',data_folder=
     global directivity, directivity_lat, directivity_lng,\
     directivity_lat1, directivity_lng1, directivity_lat2,\
     directivity_lng2
-    resread.data_folder = data_folder
+    if data_folder != '':
+        resread.data_folder = data_folder
     resread.read_parameters()
     if t==None:
         t = resread.t_end - resread.dt
@@ -457,10 +461,11 @@ def mollweide(t=None,nlongitude=80,nlatitude=40,Nlevels=15,save2='',data_folder=
         else:
             plt.savefig(save2)
 
-def field(t=0,field='ex',plane='xy',fmax=None,data_folder='../results/',extent=None,axis=[],save2=''):
+def field(t=0,field='ex',plane='xy',fmax=None,data_folder='',extent=None,axis=[],save2=''):
     'Plots fields.'
     resread.t = '%g' % t
-    resread.data_folder = data_folder
+    if data_folder != '':
+        resread.data_folder = data_folder
     resread.read_parameters()
     #
     plt.title(field)
@@ -494,9 +499,10 @@ def field(t=0,field='ex',plane='xy',fmax=None,data_folder='../results/',extent=N
     else:
         plt.savefig(save2)
 
-def energy(data_folder='../results/',save2=''):
+def energy(data_folder='',save2=''):
     'Plots energy of electrons, ions, etc. vs time'
-    resread.data_folder = data_folder
+    if data_folder != '':
+        resread.data_folder = data_folder
     resread.read_parameters()
     tmp = resread.t_data('energy')
     plt.plot(tmp[:,0],tmp[:,1],'k') # em fields
