@@ -4,21 +4,21 @@ using namespace std;
 
 const double PI = 3.141592653589793;
 const double proton_mass = 1836.1526721; /* 1836... - отношение массы
-					    протона к массе электрона
-					  */
+                                            протона к массе электрона
+                                          */
 
 class vector3d
 {
-public:
-    double x,y,z;
-    vector3d();
+    public:
+        double x,y,z;
+        vector3d();
 };
 
 class int_vector3d
 {
-public:
-    int i,j,k;
-    int_vector3d();
+    public:
+        int i,j,k;
+        int_vector3d();
 };
 
 class spatial_region
@@ -43,7 +43,7 @@ class spatial_region
     int particle_size;
     int pointer_size;
     //
-public:
+    public:
     double N_e,N_p,N_ph;
     int N_qp_e, N_qp_p, N_qp_g; // N_qp - number of quasiparticles
     int* N_qp_i;
@@ -54,36 +54,36 @@ public:
     //
     class plist
     {
-    public:
-	class particle
-	{
-	public:
-	    double x,y,z,ux,uy,uz,g,q,cmr,chi; // cmr - charge to mass ratio,
-	    int trn; // track name
-	    particle* next;
-	    particle* previous;
-	    particle();
-	    vector3d get_displacement(double&);
-	    void coordinate_advance(vector3d&);
-	    void momentum_advance(vector3d&,vector3d&,double&);
-	};
-	particle* head;
-	particle* start;
-	plist();
-	void xplus(double);
+        public:
+            class particle
+            {
+                public:
+                    double x,y,z,ux,uy,uz,g,q,cmr,chi; // cmr - charge to mass ratio,
+                    int trn; // track name
+                    particle* next;
+                    particle* previous;
+                    particle();
+                    vector3d get_displacement(double&);
+                    void coordinate_advance(vector3d&);
+                    void momentum_advance(vector3d&,vector3d&,double&);
+            };
+            particle* head;
+            particle* start;
+            plist();
+            void xplus(double);
     };
     //
     class pwpa
     { // page with particles
-    public:
-	plist::particle* head;
-	pwpa* previous;
+        public:
+            plist::particle* head;
+            pwpa* previous;
     };
     class pwpo
     { // page with pointers
-    public:
-	plist::particle** head;
-	pwpo* previous;
+        public:
+            plist::particle** head;
+            pwpo* previous;
     };
     plist::particle* p_lap; // pointer to last allocated particle
     plist::particle** pp_lfp; // pointer to pointer to last free place (particle)
@@ -92,33 +92,33 @@ public:
     //
     class celle
     {
-    public:
-	double ex,ey,ez;
-	celle();
+        public:
+            double ex,ey,ez;
+            celle();
     };
     class cellj
     {
-    public:
-	double jx,jy,jz;
-	cellj();
+        public:
+            double jx,jy,jz;
+            cellj();
     };
     class cellb
     {
-    public:
-	double bx,by,bz;
-	cellb();
+        public:
+            double bx,by,bz;
+            cellb();
     };
     class cellbe
     {
-    public:
-	double bex,bey,bez;
-	cellbe();
+        public:
+            double bex,bey,bez;
+            cellbe();
     };
     class cellp
     {
-    public:
-	plist pl;
-	cellp();
+        public:
+            plist pl;
+            cellp();
     };
     celle*** ce;
     cellb*** cb;
@@ -181,8 +181,8 @@ public:
     void compute_energy(int,int,double,double);
     double chi(vector3d&,vector3d&,vector3d&,double&);
     double w(const double&,double&,const double&); /* осторожно,
-					  эта функция может изменить r
-					  (второй аргумент)! */
+                                                      эта функция может изменить r
+                                                      (второй аргумент)! */
     double tilde_w(double&,double&,double&);
     double mathcal_W(vector3d&,vector3d&);
     void pmerging(double*,string);
@@ -191,30 +191,30 @@ public:
 
 class film
 {
-public:
-    film* prev;
-    double x0, filmwidth, gradwidth, y0, y1, z0, z1, ne, mcr, T, vx;
-    film();
+    public:
+        film* prev;
+        double x0, filmwidth, gradwidth, y0, y1, z0, z1, ne, mcr, T, vx;
+        film();
 };
 
 class ddi
 { // double, double, int
     public:
-	ddi* prev;
-	ddi* next;
-	double t_end,output_period;
-	int f;
+        ddi* prev;
+        ddi* next;
+        double t_end,output_period;
+        int f;
 };
 
 class var
 {
-public:
-    std::string name;
-    double value;
-    std::string units;
-    var* next;
-    int read();
-    var();
+    public:
+        std::string name;
+        double value;
+        std::string units;
+        var* next;
+        int read();
+        var();
 };
 
 vector3d regulate(double&, double&, double&);
