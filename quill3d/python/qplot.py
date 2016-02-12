@@ -13,7 +13,7 @@ __name__ =\
 'qplot - provides functions for visualization of quill results'
 __doc__ = 'see source'
 
-def density(t=0,plane='xy',max_w=0,max_e_density=0,max_p_density=0,max_g_density=0,max_i_density=0,axis=[],extent=None,save2='',data_folder=''):
+def density(t=0,plane='xy',max_w=0,max_e_density=0,max_p_density=0,max_g_density=0,max_i_density=0,axis=[],extent=None,save2='',data_folder='',particles='geipw'):
     'Plots w and particle densities.'
     resread.t = '%g' % t
     if data_folder != '':
@@ -60,12 +60,21 @@ def density(t=0,plane='xy',max_w=0,max_e_density=0,max_p_density=0,max_g_density
         extent = (0,xlength,0,ylength)
     elif extent == 'xi':
         extent = ( resread.xi( 0, t ), resread.xi( xlength, t ), 0, ylength )
-    plt.imshow(resread.density('rho_ph',plane),'tcmap_blue',interpolation='none',vmin=0,vmax=max_g_density,origin='lower',extent=extent)
-    plt.imshow(w,'tcmap_orange',interpolation='none',vmin=0,vmax=max_w,origin='lower',extent=extent)
-    if resread.icmr!=[]:
+
+    if 'g' in particles:
+        plt.imshow(resread.density('rho_ph',plane),'tcmap_blue',interpolation='none',vmin=0,vmax=max_g_density,origin='lower',extent=extent)
+
+    if 'w' in particles:
+        plt.imshow(w,'tcmap_orange',interpolation='none',vmin=0,vmax=max_w,origin='lower',extent=extent)
+
+    if resread.icmr!=[] and 'i' in particles:
         plt.imshow(resread.density('irho_'+str(resread.icmr[0])+'_',plane),'tcmap_purple',interpolation='none',vmin=0,vmax=max_i_density,origin='lower',extent=extent)
-    plt.imshow(edensity,'tcmap_green',interpolation='none',vmin=0,vmax=max_e_density,origin='lower',extent=extent)
-    plt.imshow(resread.density('rho_p',plane),'tcmap_red',interpolation='none',vmin=0,vmax=max_p_density,origin='lower',extent=extent)
+
+    if 'e' in particles:
+        plt.imshow(edensity,'tcmap_green',interpolation='none',vmin=0,vmax=max_e_density,origin='lower',extent=extent)
+
+    if 'p' in particles:
+        plt.imshow(resread.density('rho_p',plane),'tcmap_red',interpolation='none',vmin=0,vmax=max_p_density,origin='lower',extent=extent)
     #
     if save2=='':
         plt.show()
