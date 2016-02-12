@@ -6,7 +6,7 @@ double spatial_region::get_rand()
     // Метод Фибоначчи с запаздываниями
     double a;
     /* для неограниченного массива было бы
-    a = random[n_random-55] - random[n_random-24]; */
+       a = random[n_random-55] - random[n_random-24]; */
     a = random[n_random%55] - random[(n_random+31)%55]; // 55-24=31
     if (a<0) a = a + 1;
     random[n_random%55] = a;
@@ -36,31 +36,31 @@ double spatial_region::w(const double& g, double& r, const double& chi)
      * )/(sqrt(2*pi))/( x + 0.80049 )^(3/4) */
     if ((1-r)*g<1||r==0||chi==0)
     {
-	return 0;
+        return 0;
     }
     else if (chi>0.133)
     { /* 0.133 соответствует обрезке высоких частот в спектре (для
-	 классики; здесь же, наоборот, частоты не обрезаются) при
-	 e^{-5} и переходу к квантовому случаю, если обрезка по
-	 частотам переваливает за 1/2 всего частотного интервала */
-	double d = r/((1-r)*chi);
-	double a = pow(d,(double) 1/3);
-	double kappa = a*a;
-	// 1/( 137*2*sqrt(pi) ) = 0.0020591
-	return -0.0020591*e_s/(g*g)*exp(-2*d/3)*( 1/sqrt(sqrt((kappa+0.80049)*(kappa+0.80049)*(kappa+0.80049))) - (2*(1-r)+r*r)*chi*a/r*sqrt(sqrt(kappa+0.70861*(1-0.65*kappa/(1+kappa*kappa)))) );
+         классики; здесь же, наоборот, частоты не обрезаются) при
+         e^{-5} и переходу к квантовому случаю, если обрезка по
+         частотам переваливает за 1/2 всего частотного интервала */
+        double d = r/((1-r)*chi);
+        double a = pow(d,(double) 1/3);
+        double kappa = a*a;
+        // 1/( 137*2*sqrt(pi) ) = 0.0020591
+        return -0.0020591*e_s/(g*g)*exp(-2*d/3)*( 1/sqrt(sqrt((kappa+0.80049)*(kappa+0.80049)*(kappa+0.80049))) - (2*(1-r)+r*r)*chi*a/r*sqrt(sqrt(kappa+0.70861*(1-0.65*kappa/(1+kappa*kappa)))) );
     }
     else
     {
-	double r_max; /* излучение на частотах, больших g*r_max/hbar,
-			 не вычисляется */
-	r_max = 1/(1+2/(3*5*chi));
-	r = r_max*r;
-	double d = r/((1-r)*chi);
-	double a = pow(d,(double) 1/3);
-	double kappa = a*a;
-	// 1/( 137*2*sqrt(pi) ) = 0.0020591
-	// *rmax, поскольку частотный интервал уменьшен
-	return -r_max*0.0020591*e_s/(g*g)*exp(-2*d/3)*( 1/sqrt(sqrt((kappa+0.80049)*(kappa+0.80049)*(kappa+0.80049))) - (2*(1-r)+r*r)*chi*a/r*sqrt(sqrt(kappa+0.70861*(1-0.65*kappa/(1+kappa*kappa)))) );
+        double r_max; /* излучение на частотах, больших g*r_max/hbar,
+                         не вычисляется */
+        r_max = 1/(1+2/(3*5*chi));
+        r = r_max*r;
+        double d = r/((1-r)*chi);
+        double a = pow(d,(double) 1/3);
+        double kappa = a*a;
+        // 1/( 137*2*sqrt(pi) ) = 0.0020591
+        // *rmax, поскольку частотный интервал уменьшен
+        return -r_max*0.0020591*e_s/(g*g)*exp(-2*d/3)*( 1/sqrt(sqrt((kappa+0.80049)*(kappa+0.80049)*(kappa+0.80049))) - (2*(1-r)+r*r)*chi*a/r*sqrt(sqrt(kappa+0.70861*(1-0.65*kappa/(1+kappa*kappa)))) );
     }
 }
 
@@ -72,18 +72,18 @@ double spatial_region::tilde_w(double& g, double& r, double& chi)
      * )/(sqrt(2*pi))/( x + 0.80049 )^(3/4) */
     if (chi==0||r*g<1||(1-r)*g<1)
     {
-	return 0;
+        return 0;
     }
     else
     {
-	double a;
-	double d;
-	double kappa;
-	d = 1/(r*(1-r)*chi);
-	a = pow(d,(double)1/3);
-	kappa = a*a;
-	// 1/( 137*2*sqrt(pi) ) = 0.0020591
-	return 0.0020591*e_s/(g*g)*exp(-2*d/3)*(1/sqrt(sqrt((kappa+0.80049)*(kappa+0.80049)*(kappa+0.80049))) - (2*r*(1-r)-1)*chi*a*sqrt(sqrt(kappa+0.70861*(1-0.65*kappa/(1+kappa*kappa)))));
+        double a;
+        double d;
+        double kappa;
+        d = 1/(r*(1-r)*chi);
+        a = pow(d,(double)1/3);
+        kappa = a*a;
+        // 1/( 137*2*sqrt(pi) ) = 0.0020591
+        return 0.0020591*e_s/(g*g)*exp(-2*d/3)*(1/sqrt(sqrt((kappa+0.80049)*(kappa+0.80049)*(kappa+0.80049))) - (2*r*(1-r)-1)*chi*a*sqrt(sqrt(kappa+0.70861*(1-0.65*kappa/(1+kappa*kappa)))));
     }
 }
 
@@ -98,12 +98,12 @@ double spatial_region::mathcal_W(vector3d& e, vector3d& b)
     xi = sqrt(a+f);
     theta = sqrt(a-f);
     if (xi!=0)
-	if (theta!=0)
-	    return e_s*e_s/(4*PI)*xi*theta/tanh(PI*theta/xi)*exp(-PI*e_s/xi);
-	else
-	    return e_s*e_s/(4*PI)*xi*xi/PI*exp(-PI*e_s/xi);
+        if (theta!=0)
+            return e_s*e_s/(4*PI)*xi*theta/tanh(PI*theta/xi)*exp(-PI*e_s/xi);
+        else
+            return e_s*e_s/(4*PI)*xi*xi/PI*exp(-PI*e_s/xi);
     else
-	return 0;
+        return 0;
 }
 
 spatial_region::plist::particle* spatial_region::bear_particle(double cmr, vector3d& position, vector3d& direction, double g, double chi, double q)
@@ -119,9 +119,9 @@ spatial_region::plist::particle* spatial_region::bear_particle(double cmr, vecto
     p->y = position.y;
     p->z = position.z;
     if (cmr==0)
-	a = g/sqrt(direction.x*direction.x + direction.y*direction.y + direction.z*direction.z);
+        a = g/sqrt(direction.x*direction.x + direction.y*direction.y + direction.z*direction.z);
     else
-	a = sqrt((g*g-1)/(direction.x*direction.x + direction.y*direction.y + direction.z*direction.z));
+        a = sqrt((g*g-1)/(direction.x*direction.x + direction.y*direction.y + direction.z*direction.z));
     p->ux = a*direction.x;
     p->uy = a*direction.y;
     p->uz = a*direction.z;
@@ -147,37 +147,37 @@ void spatial_region::birth_from_vacuum(double q)
         {
             for(int k=2;k<nz-2;k++)
             {
-		/* 0.5 - чтобы избежать пересечений, вызванных очень
-		 * незначительными смещениями */
-		position.x = i + 0.5;
-		position.y = j + 0.5;
-		position.z = k + 0.5;
-		e = e_to_particle(position.x,position.y,position.z);
-		b = b_to_particle(position.x,position.y,position.z);
-		if (get_rand()<mathcal_W(e,b)*dt*dx*dy*dz)
-		{
-		    /* начальное направление движения безразлично при
-		     * g = 1 */
-		    p1 = bear_particle(-1,position,direction,1,0,-q);
-		    p1->momentum_advance(e,b,a);
-		    p2 = bear_particle(1,position,direction,1,0,q);
-		    p2->momentum_advance(e,b,a);
-		    p1->next = p2;
-		    p2->previous = p1;
-		    if (cp[i][j][k].pl.head==0)
-		    {
-			cp[i][j][k].pl.head = p1;
-		    }
-		    else
-		    {
-			p2->next = cp[i][j][k].pl.head;
-			cp[i][j][k].pl.head->previous = p2;
-			cp[i][j][k].pl.head = p1;
-		    }
-		    cp[i][j][k].pl.start = cp[i][j][k].pl.head;
-		}
-	    }
-	}
+                /* 0.5 - чтобы избежать пересечений, вызванных очень
+                 * незначительными смещениями */
+                position.x = i + 0.5;
+                position.y = j + 0.5;
+                position.z = k + 0.5;
+                e = e_to_particle(position.x,position.y,position.z);
+                b = b_to_particle(position.x,position.y,position.z);
+                if (get_rand()<mathcal_W(e,b)*dt*dx*dy*dz)
+                {
+                    /* начальное направление движения безразлично при
+                     * g = 1 */
+                    p1 = bear_particle(-1,position,direction,1,0,-q);
+                    p1->momentum_advance(e,b,a);
+                    p2 = bear_particle(1,position,direction,1,0,q);
+                    p2->momentum_advance(e,b,a);
+                    p1->next = p2;
+                    p2->previous = p1;
+                    if (cp[i][j][k].pl.head==0)
+                    {
+                        cp[i][j][k].pl.head = p1;
+                    }
+                    else
+                    {
+                        p2->next = cp[i][j][k].pl.head;
+                        cp[i][j][k].pl.head->previous = p2;
+                        cp[i][j][k].pl.head = p1;
+                    }
+                    cp[i][j][k].pl.start = cp[i][j][k].pl.head;
+                }
+            }
+        }
     }
 }
 
@@ -196,252 +196,252 @@ void spatial_region::pmerging(double* ppd, string pmerging)
     double* qs = new double[3+n_ion_populations];
     double* a = new double[3+n_ion_populations];
     for (int i=0;i<3+n_ion_populations;i++) {
-	qs[i] = 0;
-	a[i] = 0;
+        qs[i] = 0;
+        a[i] = 0;
     }
     for(int i=0;i<nx;i++) {
         for(int j=0;j<ny;j++) {
             for(int k=0;k<nz;k++) {
                 current = cp[i][j][k].pl.head;
                 while(current!=0) {
-		    if (current->cmr==-1)
-			a[0] -= current->q;
-		    else if (current->cmr==1)
-			a[1] += current->q;
-		    else if (current->cmr==0)
-			a[2] += current->q;
-		    else {
-			for (int ii=0;ii<n_ion_populations;ii++) {
-			    if (current->cmr==icmr[ii])
-				a[3+ii] += current->q;
-			}
-		    }
-		    current = current->next;
-		}
-	    }
-	}
+                    if (current->cmr==-1)
+                        a[0] -= current->q;
+                    else if (current->cmr==1)
+                        a[1] += current->q;
+                    else if (current->cmr==0)
+                        a[2] += current->q;
+                    else {
+                        for (int ii=0;ii<n_ion_populations;ii++) {
+                            if (current->cmr==icmr[ii])
+                                a[3+ii] += current->q;
+                        }
+                    }
+                    current = current->next;
+                }
+            }
+        }
     }
     if (pmerging=="ti") {
-	for(int i=0;i<nx;i++) {
-	    for(int j=0;j<ny;j++) {
-		for(int k=0;k<nz;k++) {
-		    current = cp[i][j][k].pl.head;
-		    while(current!=0) {
-			if (get_rand()<ppd[0]) {
-			    tmp = current->next;
-			    if (current->cmr==-1)
-				qs[0] -= current->q;
-			    else if (current->cmr==1)
-				qs[1] += current->q;
-			    else if (current->cmr==0)
-				qs[2] += current->q;
-			    else {
-				for (int ii=0;ii<n_ion_populations;ii++) {
-				    if (current->cmr==icmr[ii])
-					qs[3+ii] += current->q;
-				}
-			    }
-			    //
-			    if (current->next!=0)
-				(current->next)->previous = current->previous;
-			    //
-			    if (current->previous!=0)
-				(current->previous)->next = current->next;
-			    else {
-				cp[i][j][k].pl.head = current->next;
-				cp[i][j][k].pl.start = cp[i][j][k].pl.head;
-			    }
-			    delete_particle(current);
-			    //
-			    current = tmp;
-			}
-			else
-			    current = current->next;
-		    }
-		}
-	    }
-	}
-	//
-	if (a[0]-qs[0]!=0)
-	    a[0] = a[0]/(a[0]-qs[0]);
-	if (a[1]-qs[1]!=0)
-	    a[1] = a[1]/(a[1]-qs[1]);
-	if (a[2]-qs[2]!=0)
-	    a[2] = a[2]/(a[2]-qs[2]);
-	for (int i=0;i<n_ion_populations;i++) {
-	    if (a[3+i]-qs[3+i]!=0)
-		a[3+i] = a[3+i]/(a[3+i]-qs[3+i]);
-	}
-	for(int i=0;i<nx;i++) {
-	    for(int j=0;j<ny;j++) {
-		for(int k=0;k<nz;k++) {
-		    current = cp[i][j][k].pl.head;
-		    while(current!=0) {
-			if (current->cmr==-1)
-			    current->q = a[0]*current->q;
-			else if (current->cmr==1)
-			    current->q = a[1]*current->q;
-			else if (current->cmr==0)
-			    current->q = a[2]*current->q;
-			else {
-			    for (int ii=0;ii<n_ion_populations;ii++) {
-				if (current->cmr==icmr[ii])
-				    current->q = a[3+ii]*current->q;
-			    }
-			}
-			current = current->next;
-		    }
-		}
-	    }
-	}
+        for(int i=0;i<nx;i++) {
+            for(int j=0;j<ny;j++) {
+                for(int k=0;k<nz;k++) {
+                    current = cp[i][j][k].pl.head;
+                    while(current!=0) {
+                        if (get_rand()<ppd[0]) {
+                            tmp = current->next;
+                            if (current->cmr==-1)
+                                qs[0] -= current->q;
+                            else if (current->cmr==1)
+                                qs[1] += current->q;
+                            else if (current->cmr==0)
+                                qs[2] += current->q;
+                            else {
+                                for (int ii=0;ii<n_ion_populations;ii++) {
+                                    if (current->cmr==icmr[ii])
+                                        qs[3+ii] += current->q;
+                                }
+                            }
+                            //
+                            if (current->next!=0)
+                                (current->next)->previous = current->previous;
+                            //
+                            if (current->previous!=0)
+                                (current->previous)->next = current->next;
+                            else {
+                                cp[i][j][k].pl.head = current->next;
+                                cp[i][j][k].pl.start = cp[i][j][k].pl.head;
+                            }
+                            delete_particle(current);
+                            //
+                            current = tmp;
+                        }
+                        else
+                            current = current->next;
+                    }
+                }
+            }
+        }
+        //
+        if (a[0]-qs[0]!=0)
+            a[0] = a[0]/(a[0]-qs[0]);
+        if (a[1]-qs[1]!=0)
+            a[1] = a[1]/(a[1]-qs[1]);
+        if (a[2]-qs[2]!=0)
+            a[2] = a[2]/(a[2]-qs[2]);
+        for (int i=0;i<n_ion_populations;i++) {
+            if (a[3+i]-qs[3+i]!=0)
+                a[3+i] = a[3+i]/(a[3+i]-qs[3+i]);
+        }
+        for(int i=0;i<nx;i++) {
+            for(int j=0;j<ny;j++) {
+                for(int k=0;k<nz;k++) {
+                    current = cp[i][j][k].pl.head;
+                    while(current!=0) {
+                        if (current->cmr==-1)
+                            current->q = a[0]*current->q;
+                        else if (current->cmr==1)
+                            current->q = a[1]*current->q;
+                        else if (current->cmr==0)
+                            current->q = a[2]*current->q;
+                        else {
+                            for (int ii=0;ii<n_ion_populations;ii++) {
+                                if (current->cmr==icmr[ii])
+                                    current->q = a[3+ii]*current->q;
+                            }
+                        }
+                        current = current->next;
+                    }
+                }
+            }
+        }
     } else if (pmerging=="nl") {
-	double* av_q = new double[3+n_ion_populations];
-	for(int i=0;i<3+n_ion_populations;i++)
-	    av_q[i] = 0;
-	for(int i=0;i<nx;i++) {
-	    for(int j=0;j<ny;j++) {
-		for(int k=0;k<nz;k++) {
-		    current = cp[i][j][k].pl.head;
-		    while(current!=0) {
-			if (current->cmr==-1)
-			    av_q[0] += 1;
-			else if (current->cmr==1)
-			    av_q[1] += 1;
-			else if (current->cmr==0)
-			    av_q[2] += 1;
-			else {
-			    for (int ii=0;ii<n_ion_populations;ii++) {
-				if (current->cmr==icmr[ii])
-				    av_q[3+ii] += 1;
-			    }
-			}
-			current = current->next;
-		    }
-		}
-	    }
-	}
-	for (int i=0;i<3+n_ion_populations;i++)
-	    av_q[i] = a[i]/av_q[i];
-	for(int i=0;i<nx;i++) {
-	    for(int j=0;j<ny;j++) {
-		for(int k=0;k<nz;k++) {
-		    current = cp[i][j][k].pl.head;
-		    while(current!=0) {
-			tmp = current->next;
-			if (current->cmr==-1) {
-			    if (get_rand()<ppd[0]*_ppd(-current->q,av_q[0])) {
-				if (current->next!=0)
-				    (current->next)->previous = current->previous;
-				if (current->previous!=0)
-				    (current->previous)->next = current->next;
-				else {
-				    cp[i][j][k].pl.head = current->next;
-				    cp[i][j][k].pl.start = current->next;
-				}
-				delete_particle(current);
-			    } 
-			} else if (current->cmr==1) {
-			    if (get_rand()<ppd[1]*_ppd(current->q,av_q[1])) {
-				if (current->next!=0)
-				    (current->next)->previous = current->previous;
-				if (current->previous!=0)
-				    (current->previous)->next = current->next;
-				else {
-				    cp[i][j][k].pl.head = current->next;
-				    cp[i][j][k].pl.start = current->next;
-				}
-				delete_particle(current);
-			    } 
-			} else if (current->cmr==0) {
-			    if (get_rand()<ppd[2]*_ppd(current->q,av_q[2])) {
-				if (current->next!=0)
-				    (current->next)->previous = current->previous;
-				if (current->previous!=0)
-				    (current->previous)->next = current->next;
-				else {
-				    cp[i][j][k].pl.head = current->next;
-				    cp[i][j][k].pl.start = current->next;
-				}
-				delete_particle(current);
-			    } 
-			} else {
-			    for (int ii=0;ii<n_ion_populations;ii++) {
-				if (current->cmr==icmr[ii]) {
-				    if (get_rand()<ppd[3+ii]*_ppd(current->q,av_q[3+ii])) {
-					if (current->next!=0)
-					    (current->next)->previous = current->previous;
-					if (current->previous!=0)
-					    (current->previous)->next = current->next;
-					else {
-					    cp[i][j][k].pl.head = current->next;
-					    cp[i][j][k].pl.start = current->next;
-					}
-					delete_particle(current);
-				    } 
-				}
-			    }
-			}
-			current = tmp;
-		    }
-		}
-	    }
-	}
-	for(int i=0;i<nx;i++) {
-	    for(int j=0;j<ny;j++) {
-		for(int k=0;k<nz;k++) {
-		    current = cp[i][j][k].pl.head;
-		    while(current!=0) {
-			if (current->cmr==-1) {
-			    current->q = current->q/(1-ppd[0]*_ppd(-current->q,av_q[0]));
-			    qs[0] -= current->q;
-			} else if (current->cmr==1) {
-			    current->q = current->q/(1-ppd[1]*_ppd(current->q,av_q[1]));
-			    qs[1] += current->q;
-			} else if (current->cmr==0) {
-			    current->q = current->q/(1-ppd[2]*_ppd(current->q,av_q[2]));
-			    qs[2] += current->q;
-			} else {
-			    for (int ii=0;ii<n_ion_populations;ii++) {
-				if (current->cmr==icmr[ii]) {
-				    current->q = current->q/(1-ppd[3+ii]*_ppd(current->q,av_q[3+ii]));
-				    qs[3+ii] += current->q;
-				}
-			    }
-			}
-			current = current->next;
-		    }
-		}
-	    }
-	}
-	for(int i=0;i<3+n_ion_populations;i++) {
-	    if (qs[i]!=0)
-		a[i] = a[i]/qs[i];
-	    else
-		a[i] = 0;
-	}
-	for(int i=0;i<nx;i++) {
-	    for(int j=0;j<ny;j++) {
-		for(int k=0;k<nz;k++) {
-		    current = cp[i][j][k].pl.head;
-		    while(current!=0) {
-			if (current->cmr==-1)
-			    current->q = a[0]*current->q;
-			else if (current->cmr==1)
-			    current->q = a[1]*current->q;
-			else if (current->cmr==0)
-			    current->q = a[2]*current->q;
-			else {
-			    for (int ii=0;ii<n_ion_populations;ii++) {
-				if (current->cmr==icmr[ii])
-				    current->q = a[3+ii]*current->q;
-			    }
-			}
-			current = current->next;
-		    }
-		}
-	    }
-	}
-	delete[] av_q;
+        double* av_q = new double[3+n_ion_populations];
+        for(int i=0;i<3+n_ion_populations;i++)
+            av_q[i] = 0;
+        for(int i=0;i<nx;i++) {
+            for(int j=0;j<ny;j++) {
+                for(int k=0;k<nz;k++) {
+                    current = cp[i][j][k].pl.head;
+                    while(current!=0) {
+                        if (current->cmr==-1)
+                            av_q[0] += 1;
+                        else if (current->cmr==1)
+                            av_q[1] += 1;
+                        else if (current->cmr==0)
+                            av_q[2] += 1;
+                        else {
+                            for (int ii=0;ii<n_ion_populations;ii++) {
+                                if (current->cmr==icmr[ii])
+                                    av_q[3+ii] += 1;
+                            }
+                        }
+                        current = current->next;
+                    }
+                }
+            }
+        }
+        for (int i=0;i<3+n_ion_populations;i++)
+            av_q[i] = a[i]/av_q[i];
+        for(int i=0;i<nx;i++) {
+            for(int j=0;j<ny;j++) {
+                for(int k=0;k<nz;k++) {
+                    current = cp[i][j][k].pl.head;
+                    while(current!=0) {
+                        tmp = current->next;
+                        if (current->cmr==-1) {
+                            if (get_rand()<ppd[0]*_ppd(-current->q,av_q[0])) {
+                                if (current->next!=0)
+                                    (current->next)->previous = current->previous;
+                                if (current->previous!=0)
+                                    (current->previous)->next = current->next;
+                                else {
+                                    cp[i][j][k].pl.head = current->next;
+                                    cp[i][j][k].pl.start = current->next;
+                                }
+                                delete_particle(current);
+                            } 
+                        } else if (current->cmr==1) {
+                            if (get_rand()<ppd[1]*_ppd(current->q,av_q[1])) {
+                                if (current->next!=0)
+                                    (current->next)->previous = current->previous;
+                                if (current->previous!=0)
+                                    (current->previous)->next = current->next;
+                                else {
+                                    cp[i][j][k].pl.head = current->next;
+                                    cp[i][j][k].pl.start = current->next;
+                                }
+                                delete_particle(current);
+                            } 
+                        } else if (current->cmr==0) {
+                            if (get_rand()<ppd[2]*_ppd(current->q,av_q[2])) {
+                                if (current->next!=0)
+                                    (current->next)->previous = current->previous;
+                                if (current->previous!=0)
+                                    (current->previous)->next = current->next;
+                                else {
+                                    cp[i][j][k].pl.head = current->next;
+                                    cp[i][j][k].pl.start = current->next;
+                                }
+                                delete_particle(current);
+                            } 
+                        } else {
+                            for (int ii=0;ii<n_ion_populations;ii++) {
+                                if (current->cmr==icmr[ii]) {
+                                    if (get_rand()<ppd[3+ii]*_ppd(current->q,av_q[3+ii])) {
+                                        if (current->next!=0)
+                                            (current->next)->previous = current->previous;
+                                        if (current->previous!=0)
+                                            (current->previous)->next = current->next;
+                                        else {
+                                            cp[i][j][k].pl.head = current->next;
+                                            cp[i][j][k].pl.start = current->next;
+                                        }
+                                        delete_particle(current);
+                                    } 
+                                }
+                            }
+                        }
+                        current = tmp;
+                    }
+                }
+            }
+        }
+        for(int i=0;i<nx;i++) {
+            for(int j=0;j<ny;j++) {
+                for(int k=0;k<nz;k++) {
+                    current = cp[i][j][k].pl.head;
+                    while(current!=0) {
+                        if (current->cmr==-1) {
+                            current->q = current->q/(1-ppd[0]*_ppd(-current->q,av_q[0]));
+                            qs[0] -= current->q;
+                        } else if (current->cmr==1) {
+                            current->q = current->q/(1-ppd[1]*_ppd(current->q,av_q[1]));
+                            qs[1] += current->q;
+                        } else if (current->cmr==0) {
+                            current->q = current->q/(1-ppd[2]*_ppd(current->q,av_q[2]));
+                            qs[2] += current->q;
+                        } else {
+                            for (int ii=0;ii<n_ion_populations;ii++) {
+                                if (current->cmr==icmr[ii]) {
+                                    current->q = current->q/(1-ppd[3+ii]*_ppd(current->q,av_q[3+ii]));
+                                    qs[3+ii] += current->q;
+                                }
+                            }
+                        }
+                        current = current->next;
+                    }
+                }
+            }
+        }
+        for(int i=0;i<3+n_ion_populations;i++) {
+            if (qs[i]!=0)
+                a[i] = a[i]/qs[i];
+            else
+                a[i] = 0;
+        }
+        for(int i=0;i<nx;i++) {
+            for(int j=0;j<ny;j++) {
+                for(int k=0;k<nz;k++) {
+                    current = cp[i][j][k].pl.head;
+                    while(current!=0) {
+                        if (current->cmr==-1)
+                            current->q = a[0]*current->q;
+                        else if (current->cmr==1)
+                            current->q = a[1]*current->q;
+                        else if (current->cmr==0)
+                            current->q = a[2]*current->q;
+                        else {
+                            for (int ii=0;ii<n_ion_populations;ii++) {
+                                if (current->cmr==icmr[ii])
+                                    current->q = a[3+ii]*current->q;
+                            }
+                        }
+                        current = current->next;
+                    }
+                }
+            }
+        }
+        delete[] av_q;
     }
     delete[] qs;
     delete[] a;

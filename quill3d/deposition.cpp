@@ -369,61 +369,61 @@ void spatial_region::rhodeposition(spatial_region::plist::particle& p)
     zb = 1 - za;
     if (is_inside(i,j,k))
     {
-	if (p.cmr==-1)
-	{ // electrons
-	    cj[i][j][k].jx = cj[i][j][k].jx + p.q*xb*yb*zb;
-	    cj[i+1][j][k].jx = cj[i+1][j][k].jx + p.q*xa*yb*zb;
-	    cj[i][j+1][k].jx = cj[i][j+1][k].jx + p.q*xb*ya*zb;
-	    cj[i][j][k+1].jx = cj[i][j][k+1].jx + p.q*xb*yb*za;
-	    cj[i+1][j+1][k].jx = cj[i+1][j+1][k].jx + p.q*xa*ya*zb;
-	    cj[i+1][j][k+1].jx = cj[i+1][j][k+1].jx + p.q*xa*yb*za;
-	    cj[i][j+1][k+1].jx = cj[i][j+1][k+1].jx + p.q*xb*ya*za;
-	    cj[i+1][j+1][k+1].jx = cj[i+1][j+1][k+1].jx + p.q*xa*ya*za;
-	}
-	else if (p.cmr==1)
-	{ // positrons
-	    cj[i][j][k].jy = cj[i][j][k].jy + p.q*xb*yb*zb;
-	    cj[i+1][j][k].jy = cj[i+1][j][k].jy + p.q*xa*yb*zb;
-	    cj[i][j+1][k].jy = cj[i][j+1][k].jy + p.q*xb*ya*zb;
-	    cj[i][j][k+1].jy = cj[i][j][k+1].jy + p.q*xb*yb*za;
-	    cj[i+1][j+1][k].jy = cj[i+1][j+1][k].jy + p.q*xa*ya*zb;
-	    cj[i+1][j][k+1].jy = cj[i+1][j][k+1].jy + p.q*xa*yb*za;
-	    cj[i][j+1][k+1].jy = cj[i][j+1][k+1].jy + p.q*xb*ya*za;
-	    cj[i+1][j+1][k+1].jy = cj[i+1][j+1][k+1].jy + p.q*xa*ya*za;
-	}
-	else if (p.cmr==0)
-	{ // photons
-	    cj[i][j][k].jz = cj[i][j][k].jz + p.q*xb*yb*zb;
-	    cj[i+1][j][k].jz = cj[i+1][j][k].jz + p.q*xa*yb*zb;
-	    cj[i][j+1][k].jz = cj[i][j+1][k].jz + p.q*xb*ya*zb;
-	    cj[i][j][k+1].jz = cj[i][j][k+1].jz + p.q*xb*yb*za;
-	    cj[i+1][j+1][k].jz = cj[i+1][j+1][k].jz + p.q*xa*ya*zb;
-	    cj[i+1][j][k+1].jz = cj[i+1][j][k+1].jz + p.q*xa*yb*za;
-	    cj[i][j+1][k+1].jz = cj[i][j+1][k+1].jz + p.q*xb*ya*za;
-	    cj[i+1][j+1][k+1].jz = cj[i+1][j+1][k+1].jz + p.q*xa*ya*za;
-	}
-	else
-	{
-	    int n;
-	    n = 0;
-	    while (n!=n_ion_populations)
-	    {
-		if (p.cmr==icmr[n])
-		{
-		    irho[n][i][j][k] += p.q*xb*yb*zb;
-		    irho[n][i+1][j][k] += p.q*xa*yb*zb;
-		    irho[n][i][j+1][k] += p.q*xb*ya*zb;
-		    irho[n][i][j][k+1] += p.q*xb*yb*za;
-		    irho[n][i+1][j+1][k] += p.q*xa*ya*zb;
-		    irho[n][i+1][j][k+1] += p.q*xa*yb*za;
-		    irho[n][i][j+1][k+1] += p.q*xb*ya*za;
-		    irho[n][i+1][j+1][k+1] += p.q*xa*ya*za;
-		    n = n_ion_populations;
-		}
-		else
-		    n++;
-	    }
-	}
+        if (p.cmr==-1)
+        { // electrons
+            cj[i][j][k].jx = cj[i][j][k].jx + p.q*xb*yb*zb;
+            cj[i+1][j][k].jx = cj[i+1][j][k].jx + p.q*xa*yb*zb;
+            cj[i][j+1][k].jx = cj[i][j+1][k].jx + p.q*xb*ya*zb;
+            cj[i][j][k+1].jx = cj[i][j][k+1].jx + p.q*xb*yb*za;
+            cj[i+1][j+1][k].jx = cj[i+1][j+1][k].jx + p.q*xa*ya*zb;
+            cj[i+1][j][k+1].jx = cj[i+1][j][k+1].jx + p.q*xa*yb*za;
+            cj[i][j+1][k+1].jx = cj[i][j+1][k+1].jx + p.q*xb*ya*za;
+            cj[i+1][j+1][k+1].jx = cj[i+1][j+1][k+1].jx + p.q*xa*ya*za;
+        }
+        else if (p.cmr==1)
+        { // positrons
+            cj[i][j][k].jy = cj[i][j][k].jy + p.q*xb*yb*zb;
+            cj[i+1][j][k].jy = cj[i+1][j][k].jy + p.q*xa*yb*zb;
+            cj[i][j+1][k].jy = cj[i][j+1][k].jy + p.q*xb*ya*zb;
+            cj[i][j][k+1].jy = cj[i][j][k+1].jy + p.q*xb*yb*za;
+            cj[i+1][j+1][k].jy = cj[i+1][j+1][k].jy + p.q*xa*ya*zb;
+            cj[i+1][j][k+1].jy = cj[i+1][j][k+1].jy + p.q*xa*yb*za;
+            cj[i][j+1][k+1].jy = cj[i][j+1][k+1].jy + p.q*xb*ya*za;
+            cj[i+1][j+1][k+1].jy = cj[i+1][j+1][k+1].jy + p.q*xa*ya*za;
+        }
+        else if (p.cmr==0)
+        { // photons
+            cj[i][j][k].jz = cj[i][j][k].jz + p.q*xb*yb*zb;
+            cj[i+1][j][k].jz = cj[i+1][j][k].jz + p.q*xa*yb*zb;
+            cj[i][j+1][k].jz = cj[i][j+1][k].jz + p.q*xb*ya*zb;
+            cj[i][j][k+1].jz = cj[i][j][k+1].jz + p.q*xb*yb*za;
+            cj[i+1][j+1][k].jz = cj[i+1][j+1][k].jz + p.q*xa*ya*zb;
+            cj[i+1][j][k+1].jz = cj[i+1][j][k+1].jz + p.q*xa*yb*za;
+            cj[i][j+1][k+1].jz = cj[i][j+1][k+1].jz + p.q*xb*ya*za;
+            cj[i+1][j+1][k+1].jz = cj[i+1][j+1][k+1].jz + p.q*xa*ya*za;
+        }
+        else
+        {
+            int n;
+            n = 0;
+            while (n!=n_ion_populations)
+            {
+                if (p.cmr==icmr[n])
+                {
+                    irho[n][i][j][k] += p.q*xb*yb*zb;
+                    irho[n][i+1][j][k] += p.q*xa*yb*zb;
+                    irho[n][i][j+1][k] += p.q*xb*ya*zb;
+                    irho[n][i][j][k+1] += p.q*xb*yb*za;
+                    irho[n][i+1][j+1][k] += p.q*xa*ya*zb;
+                    irho[n][i+1][j][k+1] += p.q*xa*yb*za;
+                    irho[n][i][j+1][k+1] += p.q*xb*ya*za;
+                    irho[n][i+1][j+1][k+1] += p.q*xa*ya*za;
+                    n = n_ion_populations;
+                }
+                else
+                    n++;
+            }
+        }
     }
 }
 
