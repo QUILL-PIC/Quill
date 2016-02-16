@@ -183,7 +183,7 @@ def particles(name='phasespace',s=['x','y','g']):
 def t_data(name='energy',step=None):
     'Returns array of rows containing value of t and data from file\n\
     data_folder+*name*.'
-    print ('Fetching t_data from file: {0}'.format(name))
+    print ('Fetching t_data from file: {0}; data_folder = {1}'.format(name, data_folder))
     if step==None:
         step = dt
     f = open(data_folder+name)

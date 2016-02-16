@@ -548,3 +548,31 @@ def tracks2(space=['x', 'y'], tracks=None, save2='', data_folder=''):
         plt.show()
     else:
         plt.savefig(save2)
+
+def N(data_folder = '', particles = 'gep', save2 = ''):
+    'Plots number of particles over time. Ions are not currently supported'
+    resread.read_parameters();
+    a = resread.t_data('N')
+    t = a[:,0]
+    Ne = a[:,1]
+    Np = a[:,2]
+    Ng = a[:,3]
+
+    lw = 2 # linewidth
+    if 'e' in particles:
+        plt.plot(t, Ne, 'g--', linewidth = lw, label = r'$N_e$')
+    if 'p' in particles:
+        plt.plot(t, Np, 'r-', linewidth = lw, label = r'$N_p$')
+    if 'g' in particles:
+        plt.plot(t, Ng, 'b:', linewidth = lw, label = r'$N_g$')
+
+    plt.legend(loc = 'best')
+    plt.xlabel(r'$ct/\lambda$')
+    plt.ylabel(r'$N$')
+    plt.yscale('log')
+
+    if save2=='':
+        plt.show()
+    else:
+        plt.savefig(save2)
+
