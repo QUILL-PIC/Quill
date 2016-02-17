@@ -81,7 +81,7 @@ def density(t=0,plane='xy',max_w=0,max_e_density=0,max_p_density=0,max_g_density
     else:
         plt.savefig(save2)
 
-def particles(t=0,space=['x','y'],particles='geip',colors='bgmrcyk',r=5,alpha=0.01,cmap='jet',gamma=0,data_folder='',axis=[],save2=''):
+def particles(t=0,space=['x','y'],particles='geip',colors='bgmrcyk',r=5,alpha=0.01,cmap='jet',gamma=0,data_folder='',axis=[],save2='',vmin=None,vmax=None):
     'Plots particles as dots in (phase)*space*.\n\
     \n\
     Examples:\n\
@@ -117,8 +117,13 @@ def particles(t=0,space=['x','y'],particles='geip',colors='bgmrcyk',r=5,alpha=0.
     elif len(space)==3:
         cmap = tcmap.get(cmap,gamma=gamma)
         plt.title(space[2])
-        phspace = resread.particles('phasespace'+s[0],space)
-        plt.scatter(phspace[0,:],phspace[1,:],s=r*r,c=phspace[2,:],cmap=cmap,edgecolors='None')
+        phspace = resread.particles('phasespace'+s[0],space)  # 2 or more sorts of ions are not currently supported
+        if vmin == None:
+            vmin = np.min(phspace[2,:])
+        if vmax == None:
+            vmax = np.max(phspace[2,:])
+        print('Plotting {0}({1},{2}) for {3}; vmin = {4}, vmax = {5}'.format(space[2],space[0],space[1],particles[0],vmin,vmax))
+        plt.scatter(phspace[0,:],phspace[1,:],s=r*r,c=phspace[2,:],cmap=cmap,vmin=vmin,vmax=vmax,edgecolors='None')
         plt.colorbar()
     if save2=='':
         plt.show()
