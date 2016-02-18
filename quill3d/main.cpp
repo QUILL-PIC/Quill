@@ -1013,39 +1013,39 @@ int main()
             if ( xlflow >= 1 ) {
                 xlflow -= 1;
                 double n=nelflow/xnpic; // in n_{cr}
-            int_vector3d cell_pos, v_npic;
-            v_npic.i = 1; // с xnpic приходится обхоиться отдельно, см. ниже
-            v_npic.j = ynpic;
-            v_npic.k = znpic;
-            for (int j=0;j<int(ylength/dy);j++) {
-                for (int k=0;k<int(zlength/dz);k++) {
-                    cell_pos.j=j;
-                    cell_pos.k=k;
-                    for ( int ii=0; ii<xnpic; ii++ ) {
-                        double x0;
-                        x0 = xlflow - float(ii)/xnpic;
-                        if ( x0 >= 0 ) {
-                            cell_pos.i = 3;
-                        } else {
-                            cell_pos.i = 2;
-                            x0 += 1;
-                        }
-                        double tmp = (j * dy - ylength / 2) / (ylength / 2);
-                        tmp = cos(0.5 * PI * tmp * tmp);
-                        double tr_env = tmp * tmp;
-                        tmp =  (k * dz - zlength / 2) / (zlength / 2);
-                        tmp = cos(0.5 * PI * tmp * tmp);
-                        tr_env *= tmp * tmp;
-                        if (vlflow != 1) {
-                            psr[0].fill_cell_by_particles(-1,cell_pos,v_npic, n * tr_env, vlflow/sqrt(1-vlflow*vlflow),x0-0.5,Tlflow); // 0.5 - for a compensation in fill_cell... for xnpic = 1
-                            if (ions=="on")
-                                psr[0].fill_cell_by_particles(1/(proton_mass*mcrlflow),cell_pos,v_npic, n * tr_env, vlflow/sqrt(1-vlflow*vlflow),x0-0.5,Tlflow / (proton_mass * mcrlflow));
-                        } else {
-                            psr[0].fill_cell_by_particles(0, cell_pos, v_npic, n * tr_env, Tlflow, x0-0.5);
+                int_vector3d cell_pos, v_npic;
+                v_npic.i = 1; // с xnpic приходится обхоиться отдельно, см. ниже
+                v_npic.j = ynpic;
+                v_npic.k = znpic;
+                for (int j=0;j<int(ylength/dy);j++) {
+                    for (int k=0;k<int(zlength/dz);k++) {
+                        cell_pos.j=j;
+                        cell_pos.k=k;
+                        for ( int ii=0; ii<xnpic; ii++ ) {
+                            double x0;
+                            x0 = xlflow - float(ii)/xnpic;
+                            if ( x0 >= 0 ) {
+                                cell_pos.i = 3;
+                            } else {
+                                cell_pos.i = 2;
+                                x0 += 1;
+                            }
+                            double tmp = (j * dy - ylength / 2) / (ylength / 2);
+                            tmp = cos(0.5 * PI * tmp * tmp);
+                            double tr_env = tmp * tmp;
+                            tmp =  (k * dz - zlength / 2) / (zlength / 2);
+                            tmp = cos(0.5 * PI * tmp * tmp);
+                            tr_env *= tmp * tmp;
+                            if (vlflow != 1) {
+                                psr[0].fill_cell_by_particles(-1,cell_pos,v_npic, n * tr_env, vlflow/sqrt(1-vlflow*vlflow),x0-0.5,Tlflow); // 0.5 - for a compensation in fill_cell... for xnpic = 1
+                                if (ions=="on")
+                                    psr[0].fill_cell_by_particles(1/(proton_mass*mcrlflow),cell_pos,v_npic, n * tr_env, vlflow/sqrt(1-vlflow*vlflow),x0-0.5,Tlflow / (proton_mass * mcrlflow));
+                            } else {
+                                psr[0].fill_cell_by_particles(0, cell_pos, v_npic, n * tr_env, Tlflow, x0-0.5);
+                            }
                         }
                     }
                 }
-            }
             }
             xlflow += dt*vlflow/dx;
         }
@@ -1055,39 +1055,39 @@ int main()
             if ( xrflow >= 1 ) {
                 xrflow -= 1;
                 double n=nerflow/xnpic; // in n_{cr}
-            int_vector3d cell_pos, v_npic;
-            v_npic.i = 1; // с xnpic приходится обхоиться отдельно, см. ниже
-            v_npic.j = ynpic;
-            v_npic.k = znpic;
-            for (int j=0;j<int(ylength/dy);j++) {
-                for (int k=0;k<int(zlength/dz);k++) {
-                    cell_pos.j=j;
-                    cell_pos.k=k;
-                    for ( int ii=0; ii<xnpic; ii++ ) {
-                        double x0;
-                        x0 = xrflow - float(ii)/xnpic;
-                        if ( x0 >= 0 ) {
-                            cell_pos.i = nx_sr - 4;
-                        } else {
-                            cell_pos.i = nx_sr - 3;
-                            x0 += 1;
-                        }
-                        double tmp = (j * dy - ylength / 2) / (ylength / 2);
-                        tmp = cos(0.5 * PI * tmp * tmp);
-                        double tr_env = tmp * tmp;
-                        tmp =  (k * dz - zlength / 2) / (zlength / 2);
-                        tmp = cos(0.5 * PI * tmp * tmp);
-                        tr_env *= tmp * tmp;
-                        if (vrflow!=1) {
-                            psr[n_sr-1].fill_cell_by_particles(-1,cell_pos,v_npic, n * tr_env, -vrflow/sqrt(1-vrflow*vrflow),(1-x0)-0.5,Trflow);
-                            if (ions=="on")
-                                psr[n_sr-1].fill_cell_by_particles(1/(proton_mass*mcrrflow),cell_pos,v_npic, n * tr_env ,-vrflow/sqrt(1-vrflow*vrflow),(1-x0)-0.5,Trflow / (proton_mass * mcrrflow));
-                        } else {
-                            psr[n_sr-1].fill_cell_by_particles(0, cell_pos, v_npic, n * tr_env, -Trflow, (1-x0)-0.5);
+                int_vector3d cell_pos, v_npic;
+                v_npic.i = 1; // с xnpic приходится обхоиться отдельно, см. ниже
+                v_npic.j = ynpic;
+                v_npic.k = znpic;
+                for (int j=0;j<int(ylength/dy);j++) {
+                    for (int k=0;k<int(zlength/dz);k++) {
+                        cell_pos.j=j;
+                        cell_pos.k=k;
+                        for ( int ii=0; ii<xnpic; ii++ ) {
+                            double x0;
+                            x0 = xrflow - float(ii)/xnpic;
+                            if ( x0 >= 0 ) {
+                                cell_pos.i = nx_sr - 4;
+                            } else {
+                                cell_pos.i = nx_sr - 3;
+                                x0 += 1;
+                            }
+                            double tmp = (j * dy - ylength / 2) / (ylength / 2);
+                            tmp = cos(0.5 * PI * tmp * tmp);
+                            double tr_env = tmp * tmp;
+                            tmp =  (k * dz - zlength / 2) / (zlength / 2);
+                            tmp = cos(0.5 * PI * tmp * tmp);
+                            tr_env *= tmp * tmp;
+                            if (vrflow!=1) {
+                                psr[n_sr-1].fill_cell_by_particles(-1,cell_pos,v_npic, n * tr_env, -vrflow/sqrt(1-vrflow*vrflow),(1-x0)-0.5,Trflow);
+                                if (ions=="on")
+                                    psr[n_sr-1].fill_cell_by_particles(1/(proton_mass*mcrrflow),cell_pos,v_npic, n * tr_env ,-vrflow/sqrt(1-vrflow*vrflow),(1-x0)-0.5,Trflow / (proton_mass * mcrrflow));
+                            } else {
+                                psr[n_sr-1].fill_cell_by_particles(0, cell_pos, v_npic, n * tr_env, -Trflow, (1-x0)-0.5);
+                            }
                         }
                     }
                 }
-            }
             }
             xrflow += dt*vrflow/dx;
         }
