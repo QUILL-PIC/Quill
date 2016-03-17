@@ -2,6 +2,8 @@
 #include <numa.h>
 #include "main.h"
 
+extern bool catching_enabled;
+
 spatial_region::spatial_region()
 {
     nx = 0;
@@ -61,8 +63,9 @@ spatial_region::plist::plist()
     start=0;
 }
 
-void spatial_region::init(double dx0, double dy0, double dz0, double dt0, double e_s0, int xnpic0, int ynpic0, int znpic0, int node_number0, int n_ion_populations0, double* icmr0, std::string df)
+void spatial_region::init(int sr_id0, double dx0, double dy0, double dz0, double dt0, double e_s0, int xnpic0, int ynpic0, int znpic0, int node_number0, int n_ion_populations0, double* icmr0, std::string df)
 {
+    sr_id = sr_id0;
     dx = dx0;
     dy = dy0;
     dz = dz0;
@@ -383,6 +386,15 @@ spatial_region::plist::particle* spatial_region::new_particle()
 
 void spatial_region::delete_particle(plist::particle* a)
 {
+    if (catching_enabled)
+    {
+        if (!spatial_region::is_inside_global(a->x, a->y, a->z))
+        {
+            spatial_region::deleted_particle dparticle(a->cmr, a->q, a->x, a->y, a->z, a->ux, a->uy, a->uz, a->g, a->chi);
+            spatial_region::deleted_particles.push_back(dparticle);
+        }
+    }
+    
     if (n_f+1>npwpo*((int) page_size/pointer_size))
     {
         n_f++;

@@ -1,5 +1,7 @@
 #include "main.h"
 
+extern int n_sr;
+
 void spatial_region::place(spatial_region::plist::particle& p, int& ci, int& cj, int& ck)
 {
     // ci, cj, ck - cell there particle was
@@ -41,6 +43,20 @@ bool spatial_region::is_inside(int i,int j, int k)
         return 1;
     else
         return 0;
+}
+
+// Indicates if the point is inside the whole box (not only the current spatial region)
+bool spatial_region::is_inside_global(int i, int j, int k)
+{
+    if (sr_id == 0 && i<=0)
+        return 0;
+    if (sr_id == n_sr-1 && i>=nx-2)
+        return 0;
+        
+    if (j>0 && j<ny-2 && k>0 && k<nz-2)
+        return 1;
+    else
+        return 0;    
 }
 
 void spatial_region::p_boundary()

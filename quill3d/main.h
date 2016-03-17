@@ -1,4 +1,5 @@
 #include <fstream>
+#include <vector>
 
 using namespace std;
 
@@ -6,7 +7,6 @@ const double PI = 3.141592653589793;
 const double proton_mass = 1836.1526721; /* 1836... - отношение массы
                                             протона к массе электрона
                                           */
-
 class vector3d
 {
     public:
@@ -30,6 +30,7 @@ class spatial_region
     double* random;
     int n_random;
     int node_number;
+    int sr_id; // Current spatial region id
     //
     int n_ion_populations;
     double* icmr; // ion charge to mass ratios (=1/proton_mass for proton)
@@ -125,8 +126,17 @@ class spatial_region
     cellj*** cj;
     cellbe*** cbe;
     cellp*** cp;
+    class deleted_particle
+    {
+        public:
+            double cmr, q;
+            double x, y, z, ux, uy, uz, g, chi;
+            deleted_particle(double cmr, double q, double x, double y, double z, double ux, double uy, double uz, double g, double chi):
+                cmr(cmr), q(q), x(x), y(y), z(z), ux(ux), uy(uy), uz(uz), g(g), chi(chi) {};
+    };
+    vector<deleted_particle> deleted_particles;
     spatial_region();
-    void init(double,double,double,double,double,int,int,int,int,int,double*,std::string);
+    void init(int,double,double,double,double,double,int,int,int,int,int,double*,std::string);
     void create_arrays(int,int,int,int,int);
     ~spatial_region();
     void fout_ex(ofstream*,int,int, ios_base::openmode);
@@ -168,6 +178,7 @@ class spatial_region
     void place(plist::particle&);
     void p_boundary();
     bool is_inside(int,int,int);
+    bool is_inside_global(int, int, int);
     vector3d e_to_particle(double&,double&,double&);
     vector3d b_to_particle(double&,double&,double&);
     void moving_window(int,int,double);
