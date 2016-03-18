@@ -262,7 +262,7 @@ def tracks(space=['x','y'],particles='geip',t0=0,t1=0,colors='bgmrcyk',cmaps=['j
     else:
         plt.savefig(save2)
 
-def rpattern(t=None,particles='geip',colors='bgmrcyk',dphi=0.1,save2='',data_folder=''):
+def rpattern(t=None,particles='geip',colors='bgmrcyk',dphi=0.1,save2='',data_folder='',catching=False):
     'Plots radiation pattern of the emitted energy\n\
     Examples:\n\
     rpattern() # plots radiation patterns for all particles\n\
@@ -297,6 +297,19 @@ def rpattern(t=None,particles='geip',colors='bgmrcyk',dphi=0.1,save2='',data_fol
         for i in np.arange(len(qgphi[0,:])):
             j = np.floor((qgphi[2,i]+np.pi)/dphi)
             rp[j] += np.fabs(qgphi[0,i])*qgphi[1,i]
+        
+        # Including particles that have been deleted at boundaries
+        if catching:
+            #del_files = [f for f in os.listdir(resread.data_folder) if re.match('deleted'+suffix+'[0-9].*', f) != None]
+            t_files = ['%g'%t1 for t1 in np.arange(0, t+0.0001, resread.output_period)]
+            for t_file in t_files:
+                print ('Processing file: deleted' + suffix+ t_file)
+                resread.t = t_file
+                qgphi_del = resread.particles('deleted' + suffix, ['q','g','phi'])
+                for i in np.arange(len(qgphi_del[0,:])):
+                    j = np.floor((qgphi_del[2,i]+np.pi)/dphi)
+                    rp[j] += np.fabs(qgphi_del[0,i])*qgphi_del[1,i]
+
         rp[0] += rp[n-1]
         rp[n-1] = rp[0]
         phi[n-1] = phi[0]
@@ -310,10 +323,10 @@ def rpattern(t=None,particles='geip',colors='bgmrcyk',dphi=0.1,save2='',data_fol
         ci+=1
     #ax.set_theta_direction(-1)
     #ax.set_theta_offset(np.pi/2)
-    if save2=='':
-        plt.show()
-    else:
+    if save2 != '':
         plt.savefig(save2)
+    else:
+        plt.show()
 
 def spectrum(t=None,particles='geip',colors='bgmrcyk',sptype='simple',axis=[],save2='',data_folder=''):
     'spectrum() # plots spectrum for all particles\n\

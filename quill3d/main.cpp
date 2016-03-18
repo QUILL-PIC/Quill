@@ -1372,7 +1372,7 @@ void write_deleted_particles()
         } (p_current_ddi)/2/PI*file_name_accuracy
         )/file_name_accuracy);
     
-    file_name = data_folder + "/deleted_e" + file_num_pchar;
+    file_name = data_folder + "/deleted" + file_num_pchar;
     ofstream fout_deleted_e(file_name.c_str());
     
     file_name = data_folder + "/deleted_p" + file_num_pchar;
