@@ -3,6 +3,7 @@
 #include "main.h"
 
 extern bool catching_enabled;
+extern double lambda;
 
 spatial_region::spatial_region()
 {
@@ -201,6 +202,12 @@ void spatial_region::create_arrays(int nx0, int ny0, int nz0, int seed, int node
 
     pv = numa_alloc_onnode(sizeof(double)*n_ion_populations,node_number);
     ienergy = (double*) pv;
+    pv = numa_alloc_onnode(sizeof(double)*n_ion_populations,node_number);
+    ienergy_deleted = (double*) pv;
+    for (int i=0; i<n_ion_populations; ++i)
+    {
+        ienergy_deleted[i] = 0.0;
+    }
 
     pv = numa_alloc_onnode(sizeof(int)*n_ion_populations,node_number);
     N_qp_i = (int*) pv;
@@ -327,6 +334,8 @@ spatial_region::~spatial_region()
 
     pv = (void*) ienergy;
     numa_free(pv, sizeof(double*)*n_ion_populations);
+    pv = (void*) ienergy_deleted;
+    numa_free(pv, sizeof(double*)*n_ion_populations);
 
     pv = (void*) N_qp_i;
     numa_free(pv, sizeof(int*)*n_ion_populations);
@@ -392,6 +401,7 @@ void spatial_region::delete_particle(plist::particle* a)
         {
             spatial_region::deleted_particle dparticle(a->cmr, a->q, a->x, a->y, a->z, a->ux, a->uy, a->uz, a->g, a->chi);
             spatial_region::deleted_particles.push_back(dparticle);
+            update_energy_deleted(a);
         }
     }
     
@@ -413,6 +423,34 @@ void spatial_region::delete_particle(plist::particle* a)
         n_f++;
         pp_lfp++;
         *pp_lfp = a;
+    }
+}
+
+void spatial_region::update_energy_deleted(plist::particle* a)
+{
+    double norm = 8.2e-14*dx*dy*dz*1.11485e13*lambda/(8*PI*PI*PI); // energy in Joules
+    if (a->cmr == -1)
+    {
+        spatial_region::energy_e_deleted -= a->q * (a->g - 1) * norm; // energy should be positive in file
+    }
+    else if (a->cmr == 1)
+    {
+        spatial_region::energy_p_deleted += a->q * (a->g - 1) * norm;
+    }
+    else if (a->cmr == 0)
+    {
+        spatial_region::energy_ph_deleted += a->q * a->g * norm;
+    }
+    else
+    {
+        for (int j=0; j<n_ion_populations; ++j)
+        {
+            if (a->cmr == icmr[j])
+            {
+                spatial_region::ienergy_deleted[j] += a->q * (a->g - 1) * norm / icmr[j];
+                break;
+            }
+        }
     }
 }
 

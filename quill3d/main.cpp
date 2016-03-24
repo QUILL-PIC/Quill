@@ -60,7 +60,7 @@ std::string data_folder;
 bool catching_enabled;
 ios_base::openmode output_mode;
 int init();
-void write_deleted_particles();
+bool file_N_initialized, file_energy_initialized, file_energy_deleted_initialized;
 
 //------------------------------
 
@@ -184,6 +184,210 @@ void* thread_function(void* arg)
         pthread_mutex_unlock(&sr_mutex1[i]);
         pthread_mutex_lock(&sr_mutex2[i]);
     }
+}
+
+int write_N(ofstream& fout_N)
+{
+    double N_e,N_p,N_ph;
+    N_e = N_p = N_ph = 0;
+    
+    for (int i=0;i<n_sr;i++) 
+        N_e += psr[i].N_e;
+    for (int i=0;i<n_sr;i++) 
+        N_p += psr[i].N_p;
+    for (int i=0;i<n_sr;i++) 
+        N_ph += psr[i].N_ph;
+        
+    fout_N<<N_e<<'\t'<<N_p<<'\t'<<N_ph<<endl;
+    
+    return N_e + N_p; // for logging in "freezing"; delete when freezing is removed
+}
+
+void write_energy(ofstream& fout_energy)
+{
+    double energy_f,energy_e,energy_p,energy_ph;
+    double* ienergy = new double[n_ion_populations];
+    energy_f = energy_e = energy_p = energy_ph = 0;
+    for (int n=0;n<n_ion_populations;n++)
+        ienergy[n] = 0;
+
+    for (int i=0;i<n_sr;i++) 
+        energy_f += psr[i].energy_f;
+    for (int i=0;i<n_sr;i++) 
+        energy_e += psr[i].energy_e;
+    for (int i=0;i<n_sr;i++) 
+        energy_p += psr[i].energy_p;
+    for (int i=0;i<n_sr;i++) 
+        energy_ph += psr[i].energy_ph;
+    for (int i=0;i<n_sr;i++)
+    {
+        for (int n=0;n<n_ion_populations;n++)
+            ienergy[n] += psr[i].ienergy[n];
+    }
+    
+    fout_energy<<energy_f<<'\t'<<energy_e<<'\t'<<energy_p<<'\t'<<energy_ph;
+    for (int n=0;n<n_ion_populations;n++)
+        fout_energy<<'\t'<<ienergy[n];
+    fout_energy<<endl;
+    delete[] ienergy;
+}
+
+void write_deleted_particles(ofstream& fout_energy_deleted)
+{
+    //double deleted_e_energy = 0.0;
+    //double deleted_p_energy = 0.0;
+    //double deleted_ph_energy = 0.0;
+    //double deleted_i_energy = 0.0;
+
+    std::string file_name;
+    char file_num_pchar[20];
+    sprintf(file_num_pchar,"%g",
+        int([](ddi* a) 
+        {
+            double b=a->f*a->output_period; 
+            if(a->prev!=0) 
+                b+=(a->prev)->t_end; 
+            return b;
+        } (p_current_ddi)/2/PI*file_name_accuracy
+        )/file_name_accuracy);
+    
+    file_name = data_folder + "/deleted" + file_num_pchar;
+    ofstream fout_deleted_e(file_name.c_str());
+    
+    file_name = data_folder + "/deleted_p" + file_num_pchar;
+    ofstream fout_deleted_p(file_name.c_str());
+    
+    file_name = data_folder + "/deleted_ph" + file_num_pchar;
+    ofstream fout_deleted_ph(file_name.c_str());
+    
+    ofstream* fout_deleted_i = new ofstream[n_ion_populations];
+    for (int m=0; m<n_ion_populations; ++m)
+    {
+        char s_cmr[20];
+        sprintf(s_cmr,"%g",icmr[m]);
+        file_name = data_folder+"/phasespace_";
+        file_name += s_cmr;
+        file_name += "_";
+        file_name += file_num_pchar;
+        fout_deleted_i[m].open(file_name.c_str());
+    }
+    
+    for(int n=0; n<n_sr; n++)
+    {
+        vector<spatial_region::deleted_particle>& del_particles = psr[n].deleted_particles;
+        //cout << "Spatial region #" << n << "; count of deleted particles = " << del_particles.size() << "; count of inside particles = " << psr[n].deleted_inside << endl;
+        
+        double norm = 8.2e-14*dx*dy*dz*1.11485e13*lambda/(8*PI*PI*PI); // energy in Joules
+        for (auto it = del_particles.begin(); it != del_particles.end(); ++it)
+        {
+            if ((*it).cmr == -1)
+            {
+                i_particle++;
+                if(i_particle > enthp)
+                {
+                    i_particle = 0;
+                    fout_deleted_e << (*it).q << endl;
+                    fout_deleted_e << dx*((*it).x + n*(nx_sr-nx_ich))/(2*PI) << endl;
+                    fout_deleted_e << dy*((*it).y)/(2*PI) << endl << dz*((*it).z)/(2*PI) << endl;
+                    fout_deleted_e << (*it).ux << endl << (*it).uy << endl <<(*it).uz << endl;
+                    fout_deleted_e << (*it).g << endl << (*it).chi << endl;
+                }
+                //deleted_e_energy -= (*it).q * ((*it).g - 1) * norm; // energy should be positive in file
+            }
+            else if ((*it).cmr == 1)
+            {
+                i_particle_p++;
+                if(i_particle_p > enthp_p)
+                {
+                    i_particle_ph = 0;
+                    fout_deleted_p << (*it).q << endl;
+                    fout_deleted_p << dx*((*it).x + n*(nx_sr-nx_ich))/(2*PI) << endl;
+                    fout_deleted_p << dy*((*it).y)/(2*PI) << endl << dz*((*it).z)/(2*PI) << endl;
+                    fout_deleted_p << (*it).ux << endl << (*it).uy << endl <<(*it).uz << endl;
+                    fout_deleted_p << (*it).g << endl << (*it).chi << endl;
+                }
+                //deleted_p_energy += (*it).q * ((*it).g - 1) * norm;
+            }
+            else if ((*it).cmr == 0)
+            {
+                i_particle_ph++;
+                if(i_particle_ph > enthp_ph)
+                {
+                    i_particle_ph = 0;
+                    fout_deleted_ph << (*it).q << endl;
+                    fout_deleted_ph << dx*((*it).x + n*(nx_sr-nx_ich))/(2*PI) << endl;
+                    fout_deleted_ph << dy*((*it).y)/(2*PI) << endl << dz*((*it).z)/(2*PI) << endl;
+                    fout_deleted_ph << (*it).ux << endl << (*it).uy << endl <<(*it).uz << endl;
+                    fout_deleted_ph << (*it).g << endl << (*it).chi << endl;
+                }
+                //deleted_ph_energy += (*it).q * (*it).g * norm;
+            }
+            else
+            {
+                for (int j=0; j<n_ion_populations; ++j)
+                {
+                    if ((*it).cmr == icmr[j])
+                    {
+                        i_particle_i++;
+                        if(i_particle_i > enthp_i)
+                        {
+                            i_particle_i = 0;
+                            fout_deleted_i[j] << (*it).q << endl;
+                            fout_deleted_i[j] << dx*((*it).x + n*(nx_sr-nx_ich))/(2*PI) << endl;
+                            fout_deleted_i[j] << dy*((*it).y)/(2*PI) << endl << dz*((*it).z)/(2*PI) << endl;
+                            fout_deleted_i[j] << (*it).ux << endl << (*it).uy << endl <<(*it).uz << endl;
+                            fout_deleted_i[j] << (*it).g << endl << (*it).chi << endl;
+                        }
+                        //deleted_i_energy += (*it).q * ((*it).g - 1) * norm / icmr[j];
+                        break;
+                    }
+                }
+            }
+        }
+        del_particles.clear();
+        //cout << " After clear count = " << psr[n].deleted_particles.size() << endl;
+    }
+    //cout << "Deleted e energy = " << deleted_e_energy << endl;
+    //cout << "Deleted p energy = " << deleted_p_energy << endl;
+    //cout << "Deleted ph energy = " << deleted_ph_energy << endl;
+    //cout << "Deleted i energy = " << deleted_i_energy << endl;
+    //fout_energy_deleted << deleted_e_energy << '\t' << deleted_p_energy << '\t' << deleted_ph_energy
+     //   << '\t' << deleted_i_energy << endl;
+
+    fout_deleted_e.close();
+    fout_deleted_p.close();
+    fout_deleted_ph.close();
+    for (int m=0; m<n_ion_populations; ++m)
+    {
+        fout_deleted_i[m].close();
+    }
+}
+
+void write_energy_deleted(ofstream& fout_energy_deleted)
+{
+    double energy_e_deleted, energy_p_deleted, energy_ph_deleted;
+    double* ienergy_deleted = new double[n_ion_populations];
+    energy_e_deleted = energy_p_deleted = energy_ph_deleted = 0;
+    for (int n=0; n<n_ion_populations; n++)
+        ienergy_deleted[n] = 0;
+
+    for (int i=0; i<n_sr; i++) 
+        energy_e_deleted += psr[i].energy_e_deleted;
+    for (int i=0; i<n_sr; i++) 
+        energy_p_deleted += psr[i].energy_p_deleted;
+    for (int i=0; i<n_sr; i++) 
+        energy_ph_deleted += psr[i].energy_ph_deleted;
+    for (int i=0; i<n_sr; i++)
+    {
+        for (int n=0;n<n_ion_populations;n++)
+            ienergy_deleted[n] += psr[i].ienergy_deleted[n];
+    }
+    
+    fout_energy_deleted << energy_e_deleted << '\t' << energy_p_deleted << '\t' << energy_ph_deleted;
+    for (int n=0; n<n_ion_populations; n++)
+        fout_energy_deleted << '\t' << ienergy_deleted[n];
+    fout_energy_deleted << endl;
+    delete[] ienergy_deleted;
 }
 
 int main()
@@ -453,6 +657,11 @@ int main()
     l=0;
     ofstream fout_N(data_folder+"/N");
     ofstream fout_energy(data_folder+"/energy");
+    ofstream fout_energy_deleted;
+    if (catching_enabled)
+    {
+        fout_energy_deleted.open(data_folder+"/energy_deleted");
+    }
     
     while(l<p_last_ddi->t_end/dt)
     {
@@ -689,7 +898,7 @@ int main()
             
             if (catching_enabled)
             {
-                write_deleted_particles();
+                write_deleted_particles(fout_energy_deleted);
             }
             
             // spectrum = dN/deps [1/MeV]
@@ -886,37 +1095,12 @@ int main()
             }
         }
 
-        double N_e,N_p,N_ph;
-        N_e = 0;
-        N_p = 0;
-        N_ph = 0;
-        for (int i=0;i<n_sr;i++) N_e += psr[i].N_e;
-        for (int i=0;i<n_sr;i++) N_p += psr[i].N_p;
-        for (int i=0;i<n_sr;i++) N_ph += psr[i].N_ph;
-        fout_N<<N_e<<'\t'<<N_p<<'\t'<<N_ph<<endl;
-
-        double energy_f,energy_e,energy_p,energy_ph;
-        double* ienergy = new double[n_ion_populations];
-        energy_f = 0;
-        energy_e = 0;
-        energy_p = 0;
-        energy_ph = 0;
-        for (int n=0;n<n_ion_populations;n++)
-            ienergy[n] = 0;
-        for (int i=0;i<n_sr;i++) energy_f += psr[i].energy_f;
-        for (int i=0;i<n_sr;i++) energy_e += psr[i].energy_e;
-        for (int i=0;i<n_sr;i++) energy_p += psr[i].energy_p;
-        for (int i=0;i<n_sr;i++) energy_ph += psr[i].energy_ph;
-        for (int i=0;i<n_sr;i++)
+        int N_ep = write_N(fout_N);
+        write_energy(fout_energy);
+        if (catching_enabled)
         {
-            for (int n=0;n<n_ion_populations;n++)
-                ienergy[n] += psr[i].ienergy[n];
+            write_energy_deleted(fout_energy_deleted);
         }
-        fout_energy<<energy_f<<'\t'<<energy_e<<'\t'<<energy_p<<'\t'<<energy_ph;
-        for (int n=0;n<n_ion_populations;n++)
-            fout_energy<<'\t'<<ienergy[n];
-        fout_energy<<endl;
-        delete[] ienergy;
 
         cout<<"\033[33m"<<"ct/lambda = "<<l*dt/2/PI<<"\tstep# "<<l<<"\033[0m";
 
@@ -982,7 +1166,7 @@ int main()
             N_freezed = 0;
             for (int i=0;i<n_sr;i++) N_freezed += psr[i].N_freezed;
             if (N_freezed!=0)
-                cout<<"\t\033[36m"<<"N_f/N_c = "<<N_freezed*dx*dy*dz*1.11485e13*lambda/(8*PI*PI*PI)/(N_e+N_p)<<"\033[0m";
+                cout<<"\t\033[36m"<<"N_f/N_c = "<<N_freezed*dx*dy*dz*1.11485e13*lambda/(8*PI*PI*PI)/(N_ep)<<"\033[0m";
         }
 
         cout<<endl;
@@ -1331,9 +1515,12 @@ int main()
     delete[] icmr;
 
     delete[] ppd;
-
     fout_N.close();
     fout_energy.close();
+    if (fout_energy_deleted.is_open())
+    {
+        fout_energy_deleted.close();
+    }
 
     while(p_last_ddi!=0)
     {
@@ -1351,135 +1538,6 @@ int main()
 
     cout<<"\n\033[1mbye!\033[0m\n"<<endl;
     return 0;
-}
-
-void write_deleted_particles()
-{
-    double deleted_e_energy = 0.0;
-    double deleted_p_energy = 0.0;
-    double deleted_ph_energy = 0.0;
-    double deleted_i_energy = 0.0;
-
-    std::string file_name;
-    char file_num_pchar[20];
-    sprintf(file_num_pchar,"%g",
-        int([](ddi* a) 
-        {
-            double b=a->f*a->output_period; 
-            if(a->prev!=0) 
-                b+=(a->prev)->t_end; 
-            return b;
-        } (p_current_ddi)/2/PI*file_name_accuracy
-        )/file_name_accuracy);
-    
-    file_name = data_folder + "/deleted" + file_num_pchar;
-    ofstream fout_deleted_e(file_name.c_str());
-    
-    file_name = data_folder + "/deleted_p" + file_num_pchar;
-    ofstream fout_deleted_p(file_name.c_str());
-    
-    file_name = data_folder + "/deleted_ph" + file_num_pchar;
-    ofstream fout_deleted_ph(file_name.c_str());
-    
-    ofstream* fout_deleted_i = new ofstream[n_ion_populations];
-    for (int m=0; m<n_ion_populations; ++m)
-    {
-        char s_cmr[20];
-        sprintf(s_cmr,"%g",icmr[m]);
-        file_name = data_folder+"/phasespace_";
-        file_name += s_cmr;
-        file_name += "_";
-        file_name += file_num_pchar;
-        fout_deleted_i[m].open(file_name.c_str());
-    }
-    
-    for(int n=0; n<n_sr; n++)
-    {
-        vector<spatial_region::deleted_particle>& del_particles = psr[n].deleted_particles;
-        //cout << "Spatial region #" << n << "; count of deleted particles = " << del_particles.size() << "; count of inside particles = " << psr[n].deleted_inside << endl;
-        
-        double norm = 8.2e-14*dx*dy*dz*1.11485e13*lambda/(8*PI*PI*PI); // energy in Joules
-        for (auto it = del_particles.begin(); it != del_particles.end(); ++it)
-        {
-            if ((*it).cmr == -1)
-            {
-                i_particle++;
-                if(i_particle > enthp)
-                {
-                    i_particle = 0;
-                    fout_deleted_e << (*it).q << endl;
-                    fout_deleted_e << dx*((*it).x + n*(nx_sr-nx_ich))/(2*PI) << endl;
-                    fout_deleted_e << dy*((*it).y)/(2*PI) << endl << dz*((*it).z)/(2*PI) << endl;
-                    fout_deleted_e << (*it).ux << endl << (*it).uy << endl <<(*it).uz << endl;
-                    fout_deleted_e << (*it).g << endl << (*it).chi << endl;
-                }
-                deleted_e_energy += (*it).q * ((*it).g - 1) * norm;
-            }
-            else if ((*it).cmr == 1)
-            {
-                i_particle_p++;
-                if(i_particle_p > enthp_p)
-                {
-                    i_particle_ph = 0;
-                    fout_deleted_p << (*it).q << endl;
-                    fout_deleted_p << dx*((*it).x + n*(nx_sr-nx_ich))/(2*PI) << endl;
-                    fout_deleted_p << dy*((*it).y)/(2*PI) << endl << dz*((*it).z)/(2*PI) << endl;
-                    fout_deleted_p << (*it).ux << endl << (*it).uy << endl <<(*it).uz << endl;
-                    fout_deleted_p << (*it).g << endl << (*it).chi << endl;
-                }
-                deleted_p_energy += (*it).q * ((*it).g - 1) * norm;
-            }
-            else if ((*it).cmr == 0)
-            {
-                i_particle_ph++;
-                if(i_particle_ph > enthp_ph)
-                {
-                    i_particle_ph = 0;
-                    fout_deleted_ph << (*it).q << endl;
-                    fout_deleted_ph << dx*((*it).x + n*(nx_sr-nx_ich))/(2*PI) << endl;
-                    fout_deleted_ph << dy*((*it).y)/(2*PI) << endl << dz*((*it).z)/(2*PI) << endl;
-                    fout_deleted_ph << (*it).ux << endl << (*it).uy << endl <<(*it).uz << endl;
-                    fout_deleted_ph << (*it).g << endl << (*it).chi << endl;
-                }
-                deleted_ph_energy += (*it).q * (*it).g * norm;
-            }
-            else
-            {
-                for (int j=0; j<n_ion_populations; ++j)
-                {
-                    if ((*it).cmr == icmr[j])
-                    {
-                        i_particle_i++;
-                        if(i_particle_i > enthp_i)
-                        {
-                            i_particle_i = 0;
-                            fout_deleted_i[j] << (*it).q << endl;
-                            fout_deleted_i[j] << dx*((*it).x + n*(nx_sr-nx_ich))/(2*PI) << endl;
-                            fout_deleted_i[j] << dy*((*it).y)/(2*PI) << endl << dz*((*it).z)/(2*PI) << endl;
-                            fout_deleted_i[j] << (*it).ux << endl << (*it).uy << endl <<(*it).uz << endl;
-                            fout_deleted_i[j] << (*it).g << endl << (*it).chi << endl;
-                        }
-                        deleted_i_energy += (*it).q * ((*it).g - 1) * norm / icmr[j];
-                        break;
-                    }
-                }
-            }
-        }
-        del_particles.clear();
-        //cout << " After clear count = " << psr[n].deleted_particles.size() << endl;
-    }
-    cout << "Deleted e energy = " << deleted_e_energy << endl;
-    cout << "Deleted p energy = " << deleted_p_energy << endl;
-    cout << "Deleted ph energy = " << deleted_ph_energy << endl;
-    cout << "Deleted i energy = " << deleted_i_energy << endl;
-
-    fout_deleted_e.close();
-    fout_deleted_p.close();
-    fout_deleted_ph.close();
-    for (int m=0; m<n_ion_populations; ++m)
-    {
-        fout_deleted_i[m].close();
-    }
 }
 
 int init()

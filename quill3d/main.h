@@ -50,6 +50,8 @@ class spatial_region
     int* N_qp_i;
     double energy_f,energy_e,energy_p,energy_ph;
     double* ienergy; // energies of ion populations
+    double energy_e_deleted, energy_p_deleted, energy_ph_deleted; // for particles caught at boundaries
+    double* ienergy_deleted;
     double N_freezed;
     std::string data_folder;
     //
@@ -198,6 +200,9 @@ class spatial_region
     double mathcal_W(vector3d&,vector3d&);
     void pmerging(double*,string);
     double _ppd(double,double); // вспомогательная функция
+    
+    private:
+    void update_energy_deleted(plist::particle*);
 };
 
 class film
