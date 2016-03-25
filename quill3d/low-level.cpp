@@ -397,7 +397,7 @@ void spatial_region::delete_particle(plist::particle* a)
 {
     if (catching_enabled)
     {
-        if (!spatial_region::is_inside_global(a->x, a->y, a->z))
+        if (!spatial_region::is_inside_global(a->x, a->y, a->z) && !spatial_region::is_in_exchange_area(a->x, a->y, a->z))
         {
             spatial_region::deleted_particle dparticle(a->cmr, a->q, a->x, a->y, a->z, a->ux, a->uy, a->uz, a->g, a->chi);
             spatial_region::deleted_particles.push_back(dparticle);

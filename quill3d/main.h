@@ -181,6 +181,7 @@ class spatial_region
     void p_boundary();
     bool is_inside(int,int,int);
     bool is_inside_global(int, int, int);
+    bool is_in_exchange_area(int, int, int);
     vector3d e_to_particle(double&,double&,double&);
     vector3d b_to_particle(double&,double&,double&);
     void moving_window(int,int,double);

@@ -1,6 +1,7 @@
 #include "main.h"
 
 extern int n_sr;
+extern int nm;
 
 void spatial_region::place(spatial_region::plist::particle& p, int& ci, int& cj, int& ck)
 {
@@ -57,6 +58,15 @@ bool spatial_region::is_inside_global(int i, int j, int k)
         return 1;
     else
         return 0;    
+}
+
+bool spatial_region::is_in_exchange_area(int i, int j, int k)
+{
+    if (sr_id > 0 && i < nm)
+        return true;
+    if (sr_id < n_sr && i >= nx-nm)
+        return true;
+    return false;
 }
 
 void spatial_region::p_boundary()
