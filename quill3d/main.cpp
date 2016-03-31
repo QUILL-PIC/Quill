@@ -2473,6 +2473,13 @@ int init()
     fout_log<<"freezing\n";
     if (freezing==1) fout_log<<"on"; else fout_log<<"off";
     fout_log<<'\n';
+    
+    fout_log << "catching" << endl;
+    if (catching_enabled) 
+        fout_log << "on" << endl; 
+    else 
+        fout_log << "off" << endl;
+    
     if (output_mode == (ios_base::out | ios_base::binary))
         fout_log << "output_mode\n" << 1 << '\n';
     else if (output_mode == ios_base::out)

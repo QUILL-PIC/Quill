@@ -526,7 +526,7 @@ def field(t=0,field='ex',plane='xy',fmax=None,data_folder='',extent=None,axis=[]
     else:
         plt.savefig(save2)
 
-def energy(data_folder='',save2='',catching=False):
+def energy(data_folder='',save2=''):
     'Plots energy of electrons, ions, etc. vs time'
     #Important: several types of ions are not supported
     if data_folder != '':
@@ -543,15 +543,18 @@ def energy(data_folder='',save2='',catching=False):
     else:
         plt.plot(tmp[:,0],tmp[:,1]+tmp[:,2]+tmp[:,3]+tmp[:,4],'--k') # sum energy
         
-    if catching:
+    if resread.catching:
         #deleted energy
         tmp_del = resread.t_data('energy_deleted')
         plt.plot(tmp_del[:,0], tmp_del[:,1], '--g') # electrons
         plt.plot(tmp_del[:,0], tmp_del[:,2], '--r') # positrons
         plt.plot(tmp_del[:,0], tmp_del[:,3], '--b') # hard photons
-        plt.plot(tmp_del[:,0], tmp_del[:,4], '--m') # ions
         
-        total = tmp[:,1] + tmp[:,2] + tmp[:,3] + tmp[:,4] + tmp[:,5] + tmp_del[:,1] + tmp_del[:,2] + tmp_del[:,3] + tmp_del[:,4]
+        if (resread.n_ion_populations>0):
+            plt.plot(tmp_del[:,0], tmp_del[:,4], '--m') # ions
+            total = tmp[:,1] + tmp[:,2] + tmp[:,3] + tmp[:,4] + tmp[:,5] + tmp_del[:,1] + tmp_del[:,2] + tmp_del[:,3] + tmp_del[:,4]
+        else:
+            total = tmp[:,1] + tmp[:,2] + tmp[:,3] + tmp[:,4] + tmp_del[:,1] + tmp_del[:,2] + tmp_del[:,3]
         plt.plot(tmp[:,0],total,':k') # sum energy
     
     plt.xlabel('ct (wavelengths)')
