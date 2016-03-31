@@ -162,7 +162,7 @@ class spatial_region
     void fout_irho(int,ofstream*,int,int, ios_base::openmode);
     void fout_irho_yzplane(int,ofstream*,int, ios_base::openmode);
     void fout_tracks(double,int);
-    void f_init_cos(double,double,double,double,double,double,bool=0,bool=1,double=0,double=0,double=0,double=0,bool=1,double=0);
+    void f_init_cos(double,double,double,double,double,double,bool=0,bool=1,double=0,double=0,double=0,double=0,bool=1,double=0,double=0,double=0);
     void f_init_focused(double,double,double,double,double,double,bool=1,double=0,double=0,double=0,bool=1,double=0,bool=0, double = 1);
     void f_init_uniformB(double, double);
     void add_beam(double,double,double,double,double,double);
