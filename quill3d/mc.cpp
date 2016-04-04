@@ -10,7 +10,7 @@ double spatial_region::get_rand()
     a = random[n_random%55] - random[(n_random+31)%55]; // 55-24=31
     if (a<0) a = a + 1;
     random[n_random%55] = a;
-    n_random++;
+    n_random = n_random < 55 ? n_random + 1 : 0;
     return a;
 }
 
