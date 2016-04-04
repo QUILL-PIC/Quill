@@ -610,3 +610,59 @@ def N(data_folder = '', particles = 'gep', save2 = ''):
     else:
         plt.savefig(save2)
 
+def onaxis(t, particles = 'we', colors = 'rgbcmyk', norm = 'true',
+        data_folder = '', save2 = '', plotargs = {}, rrargs = {}):
+    'Plot of particle density, fields etc. along the x-axis.\n\
+    *norm* can be set to \'optimal\', \'true\' or to array of desired maximal values.\n\
+    For rrargs see help(qplot.resread.onaxis),\n\
+    for plotargs see help(plt.plot).\n\
+    \n\
+    Examples:\n\
+    qplot.onaxis(0, \'e\'),\n\
+    qplot.onaxis(0, \'ep\', norm = \'true\'),\n\
+    qplot.onaxis(0, \'we\', norm = [0.5, 1]),\n\
+    qplot.onaxis(15,[\'ey\', \'bz\', \'e\'], \'rgb\', plotargs = {linewidth: 1.2})\n\
+    qplot.onaxis(4, \'g\', rrargs = {\'av\': \'y\'}),\n\
+    qplot.onaxis(4, \'p\', rrargs = {\'sx\': 10, \'sz\': 3}).'
+    if data_folder != '':
+        resread.data_folder = data_folder
+    resread.read_parameters()
+    x = resread.onaxis('x', **rrargs)
+    a = []
+    for p in particles:
+        if p == 'e':
+            filename = 'rho'
+        elif p == 'g':
+            filename = 'rho_ph'
+        elif p == 'p':
+            filename = 'rho_p'
+        elif p == 'i':
+            filename = 'irho_' + str(resread.icmr[0]) + '_'
+        else:
+            filename = p
+        resread.t = '%g' % t
+        if p == 'e':
+            a.append(-resread.onaxis(filename, **rrargs))
+        else:
+            a.append(resread.onaxis(filename, **rrargs))
+    ma = 0
+    for i, b in enumerate(a):
+        mb = max(b)
+        print('max value for', particles[i], '=', mb)
+        if mb > ma:
+            ma = mb
+    if norm == 'optimal':
+        for i, b in enumerate(a):
+            mb = max(b)
+            if mb < ma / 4:
+                a[i] = a[i] / mb * ma / 4
+    elif norm != 'true':
+        for i, m in enumerate(norm):
+            a[i] = norm[i] * a[i] / max(a[i])
+    for i, b in enumerate(a):
+        plt.plot(x, b, color = colors[i % len(colors)], **plotargs)
+    plt.xlabel('x')
+    if save2=='':
+        plt.show()
+    else:
+        plt.savefig(save2)
