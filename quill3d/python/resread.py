@@ -234,3 +234,66 @@ def read_track(track_name):
     track['vy'] = track['uy'] / track['g']
     track['vz'] = track['uz'] / track['g']
     return track
+
+def smooth(xs, lr, squeeze = True):
+    'Returns smoothed array; *lr* >= len(xs) results no smoothing;\n\
+    if *squeze* == True, the length of resulting array is equal to *lr*,\n\
+    otherwise the length of the resulting array is equal to len(xs);\n\
+    for example, try\n\
+    squeeze(range(15), 5)'
+    n = len(xs)
+    if lr >= n:
+        return xs
+    else:
+        a = np.zeros(n)
+        sigma = 1.0 * n / lr
+        ns = int(np.ceil(sigma))
+        for i in np.arange(ns, n - ns):
+            for j in np.arange(-ns, ns + 1):
+                a[i] += xs[i+j] * np.cos(0.5 * np.pi * j / sigma)
+        tmp = 0
+        for j in np.arange(-ns, ns + 1):
+            tmp += np.cos(0.5 * np.pi * j / sigma)
+        a = a / tmp
+        for i in np.arange(ns):
+            tmp = 0
+            for j in np.arange(-i, i + 1):
+                a[i] += xs[i+j] * np.cos(0.5 * np.pi * j / sigma)
+                a[-(i + 1)] += xs[-(i+1)+j] * np.cos(0.5 * np.pi * j / sigma)
+                tmp += np.cos(0.5 * np.pi * j / sigma)
+            a[i] = a[i] / tmp
+            a[-(i+1)] = a[-(i+1)] / tmp
+        if squeeze == True:
+            b = np.zeros(lr)
+            b[0] = a[0]
+            b[-1] = a[-1]
+            for i in np.arange(1, lr - 1):
+                x = 1.0 * (n - 1) * i / (lr - 1)
+                j = int(np.floor(x))
+                x1 = x - j
+                x2 = 1 - x1
+                b[i] = a[j] * x2 + a[j+1] * x1
+            return b
+        else:
+            return a
+
+def onaxis(filename, sx = 1, sy = 1, sz = 1, av = 'None'):
+    'sx, sy, sz are the number of neighboring points using for averaging and smoothing.\n\
+    av == \'y\' or av == \'z\' results density integrated along y or z axis, respectively.\n\
+    WARNING: if sx != 1, the x-distance between points is alternating.'
+    lr = int(nx / sx)
+    if filename == 'x':
+        a = np.arange(nx) * dx
+    else:
+        if av == 'y':
+            a = np.sum(density(filename), 0) / ny
+        elif av == 'z':
+            a = np.sum(density(filename, 'xz'), 0) / nz
+        else:
+            a = np.zeros(nx)
+	    for i in np.linspace(1 - sy, sy - 1, 2 * sy - 1):
+		a += density(filename)[ny/2+i,:]
+	    for i in np.linspace(1 - sz, sz - 1, 2 * sz - 1):
+		a += density(filename,'xz')[nz/2+i,:]
+	    a = a / (2 * (sy + sz) - 2)
+    return smooth(a, lr)
