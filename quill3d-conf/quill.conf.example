@@ -42,7 +42,7 @@ output_period = 0.2
 t_end = 12
 output_period = 1
 
-# По умолчанию лазерные импульсы распространяются к центру области;
+# По умолчанию лазерные импульсы распространяются к центру области (если не заданы ytarget, ztarget);
 # величины, задающие лазерный импульс (например, a0y, a0z), относятся
 # к координатам x', y', z', где ось x' направлена по движению
 # лазерного импульса. Вектора x', y', z' образуют правую тройку, при
@@ -52,8 +52,8 @@ output_period = 1
 # тип огибающей лазерного импульса
 f_envelope = focused # default: cos, possible: focused, sscos, focussedSSC
 # по умолчанию лазерные импульсы распространяются к центру области
-# моделирования; b_sign = -1 меняет направление магнитного поля
-# импульсов и, следовательно, их направление распространения на
+# моделирования (если не заданы ytarget, ztarget); b_sign = -1 меняет направление 
+# магнитного поля импульсов и, следовательно, их направление распространения на
 # противоположное
 b_sign = 1 # default: 1, possible: -1
 # поляризация лазерного импульса; в случае эллиптической поляризации
@@ -67,14 +67,18 @@ ysigma = 2.8 # default: lambda; possible: um
 zsigma = 2.8 # default: lambda; possible: um
 # расстояние от центра лазерного импульса до правой границы области
 x0 = 13 # default: lambda; possible: um, fs
-# координаты центра лазерного импульса относительно центра области
+# координаты центра лазерного импульса относительно "цели" (или центра области, если не заданы ytarget, ztarget)
 y0 = 3 # default: 0; default units: lambda; possible: um
 z0 = 3 # default: 0; default units: lambda; possible: um
 # r0, theta - положение импульса в полярной сист.коорд. в пл. XY,
-# при этом r0 отсчитывается от центра области (должно быть больше 0),
+# при этом r0 отсчитывается от "цели" (должно быть больше 0),
 # вместо x0 - r0*cos(theta)+xlength/2, вместо y0 - r0*sin(theta),
 #r0 = 3.76      # default: lambda; possible: um
 #theta = 30 deg # default: 0; default units: rad, possible: deg
+# ytarget, ztarget - смещение (относительно центра) точки, в направлении которой распространяется лазерный импульс
+# Пример: если ytarget = 5, лазерный импульс будет располагаться "выше" центра на 5 lambda
+#ytarget = 0     # default: lambda; possible: um
+#ztarget = 0     # default: lambda; possible: um
 # абсолютная фаза импульса
 phase = 0 pi # default: 0; default units: rad, possible: pi
 # добавление лазерных импульсов - зеркальных отражений относительно
@@ -151,6 +155,12 @@ x0film = 9 # default: 0; default units: lambda, possible: um, fs
 filmwidth = 0.2 # default: lambda, possible: um, fs
 # толщина части плёнки с линейным ростом плотности от 0 до nfilm
 gradwidth = 0 # default units: lambda, possible: um, fs
+# координаты нижней и верхней границ плёнки
+#y0film = 10  # default: 0; default units: lambda, possible: um, fs
+#y1film = 30  # default: ylength; default units: lambda, possible: um, fs
+# то же для z
+#z0film = 10  # default: 0; default units: lambda, possible: um, fs
+#z1film = 20  # default: zlength; default units: lambda, possible: um, fs
 # концентрация электронов в плёнке
 nfilm = 0.5 ne # default: cm^{-3}; possible: ncr, ne
 # отношение массы (в массах протона) к заряду (в зарядах протона) для
@@ -206,6 +216,11 @@ deps_i = 0.5
 #neps_i = 800 # default = neps
 #enthp_i = 10 # default = enthp
 
+# "отлавливание" частиц, улетающих за границы расчетной области; с периодичностью output_period
+# данные о частицах, вылетевших с момента последнего вывода, отправляются в файлы
+# важно: не работает при включенном движущемся окне!
+catching = off # default: off; possible: on
+
 # число частиц каждого сорта для вывода их траекторий в файл
 n_tracks = 100 # default = 0
 # момент включения алгоритма вывода траекторий частиц
@@ -231,7 +246,7 @@ crpc = 2.0
 # алгоритм «заморозки» частиц в магнитном поле
 freezing = off # default: off; possible: on
 
-# имя папки для результатов; не забудьте создать её вручную!
+# имя папки для результатов
 data_folder = res_hb # default: results
 
 # режим вывода данных в файл (пока что только для плотности частиц и компонент

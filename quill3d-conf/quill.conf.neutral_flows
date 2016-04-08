@@ -3,7 +3,7 @@
 # Пробелы и части строк, следующие за '#', игнорируются
 
 # число вычислительных потоков
-n_sr = 16; # default: 8
+n_sr = 16 # default: 8
 # число NUMA-нодов
 n_numa_nodes = 4 # default: 2
 
@@ -12,10 +12,10 @@ n_numa_nodes = 4 # default: 2
 # дисперсию, но был устойчив; если dt не задан, то он вычисляется как
 # половина критического для данной плотности шага по времени, после dx
 # вычисляется автоматически по dt и ne, как написано выше
-dt = 0.05 # lambda
+dt = 0.06 # lambda
 #dx = 0.05130 # lambda
-dy = 0.12 # lambda
-dz = 0.12 # lambda
+dy = 0.14 # lambda
+dz = 0.14 # lambda
 
 # длина волны лазерного импульса
 lambda = 1.05e-6 cm # ncr = 4 * 2.4e24 cm^{-3} # default: cm; possible: um; lambda_p
@@ -26,16 +26,16 @@ lambda = 1.05e-6 cm # ncr = 4 * 2.4e24 cm^{-3} # default: cm; possible: um; lamb
 ne = 1 ncr # default: cm^{-3}; possible: ncr
 
 # размеры области моделирования
-xlength = 58 # default: lambda; possible: um, fs
+xlength = 54 # default: lambda; possible: um, fs
 ylength = 24 # default: lambda; possible: um
 zlength = 24 # default: lambda; possible: um
 
 # Можно задать несколько пар t_end, output_period, при этом на отрезке
 # [0,t_end_1] будет использоваться output_period_1 и т. д.
 # время моделирования
-t_end = 30 # default: lambda; possible: um, mm, cm
+t_end = 27 # default: lambda; possible: um, mm, cm
 # период вывода данных в файл
-output_period = 0.25 # default: lambda; possible: um, mm, cm, t_end
+output_period = 1 # default: lambda; possible: um, mm, cm, t_end
 
 # По умолчанию лазерные импульсы распространяются к центру области;
 # величины, задающие лазерный импульс (например, a0y, a0z), относятся
@@ -128,50 +128,50 @@ ions = on # default: off; possible: on
 # встретится film = on для следующей плёнки
 film = on # default: off; possible: on
 # расстояние от левой границы области до левой границы плёнки
-x0film = 2.5 dx # default: 0; default units: lambda, possible: um, fs, dx
+x0film = 0 # 2.5 dx # default: 0; default units: lambda, possible: um, fs, dx
 # полная толщина плёнки
-filmwidth = 28 # default: lambda, possible: um, fs
+filmwidth = 27 # default: lambda, possible: um, fs
 # толщина части плёнки с линейным ростом плотности от 0 до nfilm
 gradwidth = 0 # default units: lambda, possible: um, fs
 # концентрация электронов в плёнке
-nfilm = 0.25 ne # default: cm^{-3}; possible: ncr, ne
+nfilm = 1 ne # default: cm^{-3}; possible: ncr, ne
 # отношение массы (в массах протона) к заряду (в зарядах протона) для
 # иона плёнки
 mcr = 0.0054 # m_i = 10 m_e # default: 1
 # безразмерная температура электронов плёнки, f ~ e^(-(\gamma-1) / T)
 # для ионов T -> T * cmr (cmr = 1 для позитрона), хотя это не вполне корректно
-Tfilm = 200 # default: 0
+Tfilm = 20 # default: 0
 # начальная скорость плёнки
-vxfilm = 0.995 # gamma = 10
+vxfilm = 0.9992 # gamma = 25
 #
 film = on # default: off; possible: on
-x0film = 579.5 dx # default: 0; default units: lambda, possible: um, fs
-filmwidth = 28 # default: lambda, possible: um, fs
+x0film = 27 # default: 0; default units: lambda, possible: um, fs
+filmwidth = 27 # default: lambda, possible: um, fs
 gradwidth = 0 # default: 0; default units: lambda, possible: um, fs
-nfilm = 1 ne # default: cm^{-3}; possible: ncr, ne
+nfilm = 0.25 ne # default: cm^{-3}; possible: ncr, ne
 mcr = 0.0054 # default: 1
-Tfilm = 20 # default: 0
-vxfilm = -0.9992 # gamma = 25
+Tfilm = 200 # default: 0
+vxfilm = -0.995 # gamma = 10
 
 # neutral (elecrons+ions) flows, left and right
 # (neflow!=0 turns off mowing window)
 # (neflow!=0 makes film transversely profiled)
-nelflow = 0.25 ne # default units: ne
-vlflow = 0.995 # default: 0
+nelflow = 1 ne # default units: ne
+vlflow = 0.9992 # default: 0
 mcrlflow = 0.0054
 # безразмерная температура электронов в сопутствующей потоку системе отсчёта, f
 # ~ e^(-(\gamma-1) / T) для ионов T -> T * cmr, хотя это не вполне корректно
-Tlflow = 200 # default: 0
+Tlflow = 20 # default: 0
 #
-nerflow = 1 ne # default units: ne
-vrflow = 0.9992 # default: 0
+nerflow = 0.25 ne # default units: ne
+vrflow = 0.995 # default: 0
 mcrrflow = 0.0054
-Trflow = 20 # default: 0
+Trflow = 200 # default: 0
 
 # число рядов частиц в ячейке по координатам
-xnpic = 1
+xnpic = 2
 ynpic = 2
-znpic = 1
+znpic = 2
 
 # сорта частиц, данные о которых следует выводить в файл
 particles_for_output = epph # default: e; possible: e, ep, eph, epph
@@ -181,7 +181,7 @@ particles_for_output = epph # default: e; possible: e, ep, eph, epph
 # файл, для разных сортов частиц
 deps = 1 MeV # default: MeV; possible: mc^2
 neps = 1000
-enthp = 1000
+enthp = 4000
 #deps_p = 0.5 MeV # default value = deps; default units: MeV; possible: mc^2
 #neps_p = 140 # default = neps
 #enthp_p = 1 # default = enthp
@@ -193,6 +193,11 @@ deps_i = 120 MeV
 #neps_i = 800 # default = neps
 #enthp_i = 10 # default = enthp
 
+# "отлавливание" частиц, улетающих за границы расчетной области; с периодичностью output_period
+# данные о частицах, вылетевших с момента последнего вывода, отправляются в файлы
+# важно: не работает при включенном движущемся окне!
+catching = on # default: off; possible: on
+
 # число частиц каждого сорта для вывода их траекторий в файл
 n_tracks = 100 # default = 0
 # момент включения алгоритма вывода траекторий частиц
@@ -202,10 +207,10 @@ tr_init = volume # default: line; possible: volume
 # прямоугольного параллелепипеда (tr_init = volume), с которого в
 # момент времени tr_start берутся частицы для отслеживания траекторий;
 # default value = 0
-xtr1 = 23 # default: lambda; possible: um, fs
+xtr1 = 20 # default: lambda; possible: um, fs
 ytr1 = 6 # default: lambda; possible: um
 ztr1 = 6 # default: lambda; possible: um
-xtr2 = 23.1 # default: lambda; possible: um, fs
+xtr2 = 20.1 # default: lambda; possible: um, fs
 ytr2 = 18 # default: lambda; possible: um
 ztr2 = 18 # default: lambda; possible: um
 
@@ -213,7 +218,7 @@ ztr2 = 18 # default: lambda; possible: um
 # type-independently
 pmerging = nl # default: off; possible: nl, ti
 # критическое отношение числа квазичастиц одного сорта к числу ячеек
-crpc = 4.0
+crpc = 17.0
 
 # алгоритм «заморозки» частиц в магнитном поле
 freezing = off # default: off; possible: on

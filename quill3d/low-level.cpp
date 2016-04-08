@@ -2,6 +2,9 @@
 #include <numa.h>
 #include "main.h"
 
+extern bool catching_enabled;
+extern double lambda;
+
 spatial_region::spatial_region()
 {
     nx = 0;
@@ -68,8 +71,9 @@ spatial_region::plist::plist()
     start=0;
 }
 
-void spatial_region::init(double dx0, double dy0, double dz0, double dt0, double e_s0, int xnpic0, int ynpic0, int znpic0, int node_number0, int n_ion_populations0, double* icmr0, std::string df)
+void spatial_region::init(int sr_id0, double dx0, double dy0, double dz0, double dt0, double e_s0, int xnpic0, int ynpic0, int znpic0, int node_number0, int n_ion_populations0, double* icmr0, std::string df)
 {
+    sr_id = sr_id0;
     dx = dx0;
     dy = dy0;
     dz = dz0;
@@ -91,20 +95,20 @@ void spatial_region::create_arrays(int nx0, int ny0, int nz0, int seed, int node
     nz = nz0;
 
     void* pv;
-    
+
     pv = numa_alloc_onnode(sizeof(celle**)*nx,node_number);
     ce = (celle***) pv;
     pv = numa_alloc_onnode(sizeof(celle*)*nx*ny,node_number);
     for(int i=0;i<nx;i++)
     {
-	ce[i] = ((celle**) pv) + ny*i;
+        ce[i] = ((celle**) pv) + ny*i;
     }
     pv = numa_alloc_onnode(sizeof(celle)*nx*ny*nz,node_number);
     for(int i=0;i<nx;i++)
     {
         for(int j=0;j<ny;j++)
         {
-	    ce[i][j] = ((celle*) pv) + nz*ny*i + nz*j;
+            ce[i][j] = ((celle*) pv) + nz*ny*i + nz*j;
         }
     }
 
@@ -113,14 +117,14 @@ void spatial_region::create_arrays(int nx0, int ny0, int nz0, int seed, int node
     pv = numa_alloc_onnode(sizeof(cellb*)*nx*ny,node_number);
     for(int i=0;i<nx;i++)
     {
-	cb[i] = ((cellb**) pv) + ny*i;
+        cb[i] = ((cellb**) pv) + ny*i;
     }
     pv = numa_alloc_onnode(sizeof(cellb)*nx*ny*nz,node_number);
     for(int i=0;i<nx;i++)
     {
         for(int j=0;j<ny;j++)
         {
-	    cb[i][j] = ((cellb*) pv) + nz*ny*i + nz*j;
+            cb[i][j] = ((cellb*) pv) + nz*ny*i + nz*j;
         }
     }
 
@@ -129,14 +133,14 @@ void spatial_region::create_arrays(int nx0, int ny0, int nz0, int seed, int node
     pv = numa_alloc_onnode(sizeof(cellj*)*nx*ny,node_number);
     for(int i=0;i<nx;i++)
     {
-	cj[i] = ((cellj**) pv) + ny*i;
+        cj[i] = ((cellj**) pv) + ny*i;
     }
     pv = numa_alloc_onnode(sizeof(cellj)*nx*ny*nz,node_number);
     for(int i=0;i<nx;i++)
     {
         for(int j=0;j<ny;j++)
         {
-	    cj[i][j] = ((cellj*) pv) + nz*ny*i + nz*j;
+            cj[i][j] = ((cellj*) pv) + nz*ny*i + nz*j;
         }
     }
 
@@ -145,22 +149,22 @@ void spatial_region::create_arrays(int nx0, int ny0, int nz0, int seed, int node
     pv = numa_alloc_onnode(sizeof(double**)*n_ion_populations*nx,node_number);
     for (int n=0;n<n_ion_populations;n++)
     {
-	irho[n] = ((double***) pv) + n*nx;
+        irho[n] = ((double***) pv) + n*nx;
     }
     pv = numa_alloc_onnode(sizeof(double*)*n_ion_populations*nx*ny,node_number);
     for (int n=0;n<n_ion_populations;n++)
     {
-	for (int i=0;i<nx;i++)
-	    irho[n][i] = ((double**) pv) + n*nx*ny + i*ny;
+        for (int i=0;i<nx;i++)
+            irho[n][i] = ((double**) pv) + n*nx*ny + i*ny;
     }
     pv = numa_alloc_onnode(sizeof(double)*n_ion_populations*nx*ny*nz,node_number);
     for (int n=0;n<n_ion_populations;n++)
     {
-	for (int i=0;i<nx;i++)
-	{
-	    for (int j=0;j<ny;j++)
-		irho[n][i][j] = ((double*) pv) + n*nx*ny*nz + i*ny*nz + j*nz;
-	}
+        for (int i=0;i<nx;i++)
+        {
+            for (int j=0;j<ny;j++)
+                irho[n][i][j] = ((double*) pv) + n*nx*ny*nz + i*ny*nz + j*nz;
+        }
     }
 
     pv = numa_alloc_onnode(sizeof(cellbe**)*nx,node_number);
@@ -168,14 +172,14 @@ void spatial_region::create_arrays(int nx0, int ny0, int nz0, int seed, int node
     pv = numa_alloc_onnode(sizeof(cellbe*)*nx*ny,node_number);
     for(int i=0;i<nx;i++)
     {
-	cbe[i] = ((cellbe**) pv) + ny*i;
+        cbe[i] = ((cellbe**) pv) + ny*i;
     }
     pv = numa_alloc_onnode(sizeof(cellbe)*nx*ny*nz,node_number);
     for(int i=0;i<nx;i++)
     {
         for(int j=0;j<ny;j++)
         {
-	    cbe[i][j] = ((cellbe*) pv) + nz*ny*i + nz*j;
+            cbe[i][j] = ((cellbe*) pv) + nz*ny*i + nz*j;
         }
     }
 
@@ -184,14 +188,14 @@ void spatial_region::create_arrays(int nx0, int ny0, int nz0, int seed, int node
     pv = numa_alloc_onnode(sizeof(cellp*)*nx*ny,node_number);
     for(int i=0;i<nx;i++)
     {
-	cp[i] = ((cellp**) pv) + ny*i;
+        cp[i] = ((cellp**) pv) + ny*i;
     }
     pv = numa_alloc_onnode(sizeof(cellp)*nx*ny*nz,node_number);
     for(int i=0;i<nx;i++)
     {
         for(int j=0;j<ny;j++)
         {
-	    cp[i][j] = ((cellp*) pv) + nz*ny*i + nz*j;
+            cp[i][j] = ((cellp*) pv) + nz*ny*i + nz*j;
         }
     }
 
@@ -200,11 +204,17 @@ void spatial_region::create_arrays(int nx0, int ny0, int nz0, int seed, int node
     srand(seed);
     for(int i=0;i<55;i++)
     {
-	random[i] = (double)rand()/(double)RAND_MAX;
+        random[i] = (double)rand()/(double)RAND_MAX;
     }
 
     pv = numa_alloc_onnode(sizeof(double)*n_ion_populations,node_number);
     ienergy = (double*) pv;
+    pv = numa_alloc_onnode(sizeof(double)*n_ion_populations,node_number);
+    ienergy_deleted = (double*) pv;
+    for (int i=0; i<n_ion_populations; ++i)
+    {
+        ienergy_deleted[i] = 0.0;
+    }
 
     pv = numa_alloc_onnode(sizeof(int)*n_ion_populations,node_number);
     N_qp_i = (int*) pv;
@@ -213,115 +223,113 @@ void spatial_region::create_arrays(int nx0, int ny0, int nz0, int seed, int node
 spatial_region::~spatial_region()
 {
     // erasing of particles
-    while (p_lapwpo!=0)
-    {
-	pwpo* a;
-	a = p_lapwpo;
-	p_lapwpo = p_lapwpo->previous;
-	numa_free((void*) a->head,page_size);
-	//free(a->head);
-	delete a;
+    while (p_lapwpo!=0) {
+        pwpo* a;
+        a = p_lapwpo;
+        p_lapwpo = p_lapwpo->previous;
+        numa_free((void*) a->head,page_size);
+        //free(a->head);
+        delete a;
     }
-    while (p_lapwpa!=0)
-    {
-	pwpa* a;
-	a = p_lapwpa;
-	p_lapwpa = p_lapwpa->previous;
-	numa_free((void*) a->head,page_size);
-	//free(a->head);
-	delete a;
+    while (p_lapwpa!=0) {
+        pwpa* a;
+        a = p_lapwpa;
+        p_lapwpa = p_lapwpa->previous;
+        numa_free((void*) a->head,page_size);
+        //free(a->head);
+        delete a;
     }
 
     void* pv;
 
     for(int i=0;i<nx;i++)
     {
-	for(int j=0;j<ny;j++)
-	{
-	    pv = (void*) ce[i][j];
-	    numa_free(pv, sizeof(celle)*nz);
-	}
-	pv = (void*) ce[i];
-	numa_free(pv, sizeof(celle*)*ny);
+        for(int j=0;j<ny;j++)
+        {
+            pv = (void*) ce[i][j];
+            numa_free(pv, sizeof(celle)*nz);
+        }
+        pv = (void*) ce[i];
+        numa_free(pv, sizeof(celle*)*ny);
     }
     pv = (void*) ce;
     numa_free(pv, sizeof(celle**)*nx);
 
     for(int i=0;i<nx;i++)
     {
-	for(int j=0;j<ny;j++)
-	{
-	    pv = (void*) cb[i][j];
-	    numa_free(pv, sizeof(cellb)*nz);
-	}
-	pv = (void*) cb[i];
-	numa_free(pv, sizeof(cellb*)*ny);
+        for(int j=0;j<ny;j++)
+        {
+            pv = (void*) cb[i][j];
+            numa_free(pv, sizeof(cellb)*nz);
+        }
+        pv = (void*) cb[i];
+        numa_free(pv, sizeof(cellb*)*ny);
     }
     pv = (void*) cb;
     numa_free(pv, sizeof(cellb**)*nx);
 
     for(int i=0;i<nx;i++)
     {
-	for(int j=0;j<ny;j++)
-	{
-	    pv = (void*) cj[i][j];
-	    numa_free(pv, sizeof(cellj)*nz);
-	}
-	pv = (void*) cj[i];
-	numa_free(pv, sizeof(cellj*)*ny);
+        for(int j=0;j<ny;j++)
+        {
+            pv = (void*) cj[i][j];
+            numa_free(pv, sizeof(cellj)*nz);
+        }
+        pv = (void*) cj[i];
+        numa_free(pv, sizeof(cellj*)*ny);
     }
     pv = (void*) cj;
     numa_free(pv, sizeof(cellj**)*nx);
 
     for (int n=0;n<n_ion_populations;n++)
     {
-	for (int i=0;i<nx;i++)
-	{
-	    for (int j=0;j<ny;j++)
-	    {
-		pv = (void*) irho[n][i][j];
-		numa_free(pv, sizeof(double)*nz);
-	    }
-	}
+        for (int i=0;i<nx;i++)
+        {
+            for (int j=0;j<ny;j++)
+            {
+                pv = (void*) irho[n][i][j];
+                numa_free(pv, sizeof(double)*nz);
+            }
+        }
     }
     for (int n=0;n<n_ion_populations;n++)
     {
-	for (int i=0;i<nx;i++)
-	{
-	    pv = (void*) irho[n][i];
-	    numa_free(pv, sizeof(double*)*ny);
-	}
+        for (int i=0;i<nx;i++)
+        {
+            pv = (void*) irho[n][i];
+            numa_free(pv, sizeof(double*)*ny);
+        }
     }
     for (int n=0;n<n_ion_populations;n++)
     {
-	pv = (void*) irho[n];
-	numa_free(pv, sizeof(double**)*nx);
+        pv = (void*) irho[n];
+        numa_free(pv, sizeof(double**)*nx);
     }
     pv = (void*) irho;
     numa_free(pv, sizeof(double***)*n_ion_populations);
 
     for(int i=0;i<nx;i++)
     {
-	for(int j=0;j<ny;j++)
-	{
-	    pv = (void*) cbe[i][j];
-	    numa_free(pv, sizeof(cellbe)*nz);
-	}
-	pv = (void*) cbe[i];
-	numa_free(pv, sizeof(cellbe*)*ny);
+        for(int j=0;j<ny;j++)
+        {
+            pv = (void*) cbe[i][j];
+            numa_free(pv, sizeof(cellbe)*nz);
+        }
+        pv = (void*) cbe[i];
+        numa_free(pv, sizeof(cellbe*)*ny);
     }
     pv = (void*) cbe;
     numa_free(pv, sizeof(cellbe**)*nx);
 
     for(int i=0;i<nx;i++)
     {
-	for(int j=0;j<ny;j++)
-	{
-	    pv = (void*) cp[i][j];
-	    numa_free(pv, sizeof(cellp)*nz);
-	}
-	pv = (void*) cp[i];
-	numa_free(pv, sizeof(cellp*)*ny);
+        for(int j=0;j<ny;j++)
+        {
+            pv = (void*) cp[i][j];
+            numa_free(pv, sizeof(cellp)*nz);
+        }
+        pv = (void*) cp[i];
+        numa_free(pv, sizeof(cellp*)*ny);
     }
     pv = (void*) cp;
     numa_free(pv, sizeof(cellp**)*nx);
@@ -331,6 +339,8 @@ spatial_region::~spatial_region()
 
     pv = (void*) ienergy;
     numa_free(pv, sizeof(double*)*n_ion_populations);
+    pv = (void*) ienergy_deleted;
+    numa_free(pv, sizeof(double*)*n_ion_populations);
 
     pv = (void*) N_qp_i;
     numa_free(pv, sizeof(int*)*n_ion_populations);
@@ -339,75 +349,111 @@ spatial_region::~spatial_region()
 spatial_region::plist::particle* spatial_region::new_particle()
 {
     if (n_f==0) {
-	if (n_ap+1>npwpa*((int) page_size/particle_size))
-	{
-	    n_ap++;
-	    npwpa++;
-	    pwpa* a;
-	    a = new pwpa;
-	    a->previous = p_lapwpa;
-	    a->head = (plist::particle*) numa_alloc_onnode(page_size,node_number);
-	    //a->head = (plist::particle*) malloc(page_size);
-	    p_lapwpa = a;
-	    p_lap = a->head;
-	    return p_lap;
-	}
-	else
-	{
-	    n_ap++;
-	    p_lap++;
-	    return p_lap;
-	}
-    }
-    else
-    {
-	if (n_f-1==(npwpo-1)*((int) page_size/pointer_size))
-	{
-	    n_f--;
-	    npwpo--;
-	    plist::particle* b;
-	    b = *pp_lfp;
-	    numa_free((void*) pp_lfp,page_size);
-	    //free(pp_lfp);
-	    pwpo* a;
-	    a = p_lapwpo;
-	    p_lapwpo = p_lapwpo->previous;
-	    delete a;
-	    if (p_lapwpo!=0)
-		pp_lfp = p_lapwpo->head + (int) page_size/pointer_size - 1;
-	    else
-		pp_lfp = 0;
-	    return b;
-	}
-	else
-	{
-	    n_f--;
-	    pp_lfp--;
-	    return *(pp_lfp+1);
-	}
+        if (n_ap+1>npwpa*((int) page_size/particle_size))
+        {
+            n_ap++;
+            npwpa++;
+            pwpa* a;
+            a = new pwpa;
+            a->previous = p_lapwpa;
+            a->head = (plist::particle*) numa_alloc_onnode(page_size,node_number);
+            //a->head = (plist::particle*) malloc(page_size);
+            p_lapwpa = a;
+            p_lap = a->head;
+            return p_lap;
+        }
+        else
+        {
+            n_ap++;
+            p_lap++;
+            return p_lap;
+        }
+    } else {
+        if (n_f-1==(npwpo-1)*((int) page_size/pointer_size))
+        {
+            n_f--;
+            npwpo--;
+            plist::particle* b;
+            b = *pp_lfp;
+            numa_free((void*) pp_lfp,page_size);
+            //free(pp_lfp);
+            pwpo* a;
+            a = p_lapwpo;
+            p_lapwpo = p_lapwpo->previous;
+            delete a;
+            if (p_lapwpo!=0)
+                pp_lfp = p_lapwpo->head + (int) page_size/pointer_size - 1;
+            else
+                pp_lfp = 0;
+            return b;
+        }
+        else
+        {
+            n_f--;
+            pp_lfp--;
+            return *(pp_lfp+1);
+        }
     }
 }
 
 void spatial_region::delete_particle(plist::particle* a)
 {
+    if (catching_enabled)
+    {
+        if (!spatial_region::is_inside_global(a->x, a->y, a->z) && !spatial_region::is_in_exchange_area(a->x, a->y, a->z))
+        {
+            spatial_region::deleted_particle dparticle(a->cmr, a->q, a->x, a->y, a->z, a->ux, a->uy, a->uz, a->g, a->chi);
+            spatial_region::deleted_particles.push_back(dparticle);
+            update_energy_deleted(a);
+        }
+    }
+    
     if (n_f+1>npwpo*((int) page_size/pointer_size))
     {
-	n_f++;
-	npwpo++;
-	pwpo* b;
-	b = new pwpo;
-	b->previous = p_lapwpo;
-	b->head = (plist::particle**) numa_alloc_onnode(page_size,node_number);
-	//b->head = (plist::particle**) malloc(page_size);
-	p_lapwpo = b;
-	pp_lfp = b->head;
-	*pp_lfp = a;
+        n_f++;
+        npwpo++;
+        pwpo* b;
+        b = new pwpo;
+        b->previous = p_lapwpo;
+        b->head = (plist::particle**) numa_alloc_onnode(page_size,node_number);
+        //b->head = (plist::particle**) malloc(page_size);
+        p_lapwpo = b;
+        pp_lfp = b->head;
+        *pp_lfp = a;
     }
     else
     {
-	n_f++;
-	pp_lfp++;
-	*pp_lfp = a;
+        n_f++;
+        pp_lfp++;
+        *pp_lfp = a;
+    }
+}
+
+void spatial_region::update_energy_deleted(plist::particle* a)
+{
+    double norm = 8.2e-14*dx*dy*dz*1.11485e13*lambda/(8*PI*PI*PI); // energy in Joules
+    if (a->cmr == -1)
+    {
+        spatial_region::energy_e_deleted -= a->q * (a->g - 1) * norm; // energy should be positive in file
+    }
+    else if (a->cmr == 1)
+    {
+        spatial_region::energy_p_deleted += a->q * (a->g - 1) * norm;
+    }
+    else if (a->cmr == 0)
+    {
+        spatial_region::energy_ph_deleted += a->q * a->g * norm;
+    }
+    else
+    {
+        for (int j=0; j<n_ion_populations; ++j)
+        {
+            if (a->cmr == icmr[j])
+            {
+                spatial_region::ienergy_deleted[j] += a->q * (a->g - 1) * norm / icmr[j];
+                break;
+            }
+        }
     }
 }
 
@@ -492,28 +538,28 @@ int var::read()
     cin>>name;
     if (name!="$")
     {
-	cout<<name;
-	cin>>tmp;
-	value = atof(tmp);
-	cout<<"..."<<value;
-	cin>>units;
-	cout<<"..."<<units<<"...";
-	cin>>stmp;
-	if (stmp=="$")
-	{
-	    cout<<"\033[1m\033[32m"<<"ok"<<"\033[0m\n";
-	    return 0;
-	}
-	else
-	{
-	    cout<<"\033[1m\033[31m[!]\033[0m\n";
-	    return 1;
-	}
+        cout<<name;
+        cin>>tmp;
+        value = atof(tmp);
+        cout<<"..."<<value;
+        cin>>units;
+        cout<<"..."<<units<<"...";
+        cin>>stmp;
+        if (stmp=="$")
+        {
+            cout<<"\033[1m\033[32m"<<"ok"<<"\033[0m\n";
+            return 0;
+        }
+        else
+        {
+            cout<<"\033[1m\033[31m[!]\033[0m\n";
+            return 1;
+        }
     }
     else
     {
-	cout<<"...reading finished\n";
-	return 1;
+        cout<<"...reading finished\n";
+        return 1;
     }
 }
 
@@ -521,14 +567,14 @@ var* find(std::string a, var* b)
 {
     var* tmp = b;
     while (tmp->next!=0) /* последняя переменная — пустая, поэтому её
-			    проверять не нужно */
+                            проверять не нужно */
     {
-	if(tmp->name==a)
-	    return tmp;
-	tmp = tmp->next;
+        if(tmp->name==a)
+            return tmp;
+        tmp = tmp->next;
     }
     return tmp; /* «пустая» переменная в силу алгоритма чтения файла
-		 */
+                 */
 }
 
 film::film()

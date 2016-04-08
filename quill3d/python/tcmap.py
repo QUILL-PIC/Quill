@@ -67,11 +67,11 @@ def vary(cmap,N=256,gamma=1.0):
     # low out-of-range values) data
     v = np.linspace(0,1,m.N)
     if gamma==0:
-	m._lut[:-3,3] = 1
+        m._lut[:-3,3] = 1
     elif gamma>0:
-	m._lut[:-3,3] = v**gamma
+        m._lut[:-3,3] = v**gamma
     else:
-	m._lut[:-3,3] = 1-v**(-gamma)
+        m._lut[:-3,3] = 1-v**(-gamma)
     return m
 
 def get(name='jet',N=256,gamma=1.0):

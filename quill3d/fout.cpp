@@ -14,8 +14,8 @@ void spatial_region::compute_rho()
                 cj[i][j][k].jx = 0;
                 cj[i][j][k].jy = 0;
                 cj[i][j][k].jz = 0;
-		for (int n=0;n<n_ion_populations;n++)
-		    irho[n][i][j][k] = 0;
+                for (int n=0;n<n_ion_populations;n++)
+                    irho[n][i][j][k] = 0;
             }
         }
     }
@@ -30,9 +30,9 @@ void spatial_region::compute_rho()
                 {
                     rhodeposition(*current);
                     current = current->next;
-		}
-	    }
-	}
+                }
+            }
+        }
     }
 }
 
@@ -45,37 +45,37 @@ void spatial_region::compute_N(int n1, int n2, double a)
     N_qp_p = 0;
     N_qp_g = 0;
     for (int i=0;i<n_ion_populations;i++)
-	N_qp_i[i] = 0;
+        N_qp_i[i] = 0;
     plist::particle* current;
     for (int i=n1; i<nx-n2; i++)
     {
-	for (int j=0; j<ny; j++)
-	{
-	    for (int k=0; k<nz; k++)
-	    {
-		current = cp[i][j][k].pl.head;
-		while (current!=0)
-		{
-		    if (current->cmr==-1) {
-			N_e -= current->q;
-			N_qp_e += 1;
-		    }
-		    else if (current->cmr==1) {
-			N_p += current->q;
-			N_qp_p += 1;
-		    }
-		    else if (current->cmr==0) {
-			N_ph += current->q;
-			N_qp_g += 1;
-		    }
-		    for (int ii=0;ii<n_ion_populations;ii++) {
-			if (current->cmr==icmr[ii])
-			    N_qp_i[ii] += 1;
-		    }
-		    current = current->next;
-		}
-	    }
-	}
+        for (int j=0; j<ny; j++)
+        {
+            for (int k=0; k<nz; k++)
+            {
+                current = cp[i][j][k].pl.head;
+                while (current!=0)
+                {
+                    if (current->cmr==-1) {
+                        N_e -= current->q;
+                        N_qp_e += 1;
+                    }
+                    else if (current->cmr==1) {
+                        N_p += current->q;
+                        N_qp_p += 1;
+                    }
+                    else if (current->cmr==0) {
+                        N_ph += current->q;
+                        N_qp_g += 1;
+                    }
+                    for (int ii=0;ii<n_ion_populations;ii++) {
+                        if (current->cmr==icmr[ii])
+                            N_qp_i[ii] += 1;
+                    }
+                    current = current->next;
+                }
+            }
+        }
     }
     N_e = N_e*a;
     N_p = N_p*a;
@@ -89,50 +89,50 @@ void spatial_region::compute_energy(int n1, int n2, double a, double b)
     energy_p = 0;
     energy_ph = 0;
     for (int n=0;n<n_ion_populations;n++)
-	ienergy[n] = 0;
+        ienergy[n] = 0;
     plist::particle* current;
     for (int i=n1; i<nx-n2; i++)
     {
-	for (int j=0; j<ny; j++)
-	{
-	    for (int k=0; k<nz; k++)
-	    {
-		energy_f += ce[i][j][k].ex*ce[i][j][k].ex + ce[i][j][k].ey*ce[i][j][k].ey + ce[i][j][k].ez*ce[i][j][k].ez + cb[i][j][k].bx*cb[i][j][k].bx + cb[i][j][k].by*cb[i][j][k].by + cb[i][j][k].bz*cb[i][j][k].bz;
-		current = cp[i][j][k].pl.head;
-		while (current!=0)
-		{
-		    if (current->cmr==-1)
-			energy_e -= (current->g - 1)*current->q;
-		    else if (current->cmr==1)
-			energy_p += (current->g - 1)*current->q;
-		    else if (current->cmr==0)
-			energy_ph += current->g*current->q;
-		    else
-		    {
-			int n;
-			n = 0;
-			while (n!=n_ion_populations)
-			{
-			    if (current->cmr==icmr[n])
-			    {
-				ienergy[n] += (current->g-1)*current->q/icmr[n];
-				n = n_ion_populations;
-			    }
-			    else
-				n++;
-			}
-		    }
-		    current = current->next;
-		}
-	    }
-	}
+        for (int j=0; j<ny; j++)
+        {
+            for (int k=0; k<nz; k++)
+            {
+                energy_f += ce[i][j][k].ex*ce[i][j][k].ex + ce[i][j][k].ey*ce[i][j][k].ey + ce[i][j][k].ez*ce[i][j][k].ez + cb[i][j][k].bx*cb[i][j][k].bx + cb[i][j][k].by*cb[i][j][k].by + cb[i][j][k].bz*cb[i][j][k].bz;
+                current = cp[i][j][k].pl.head;
+                while (current!=0)
+                {
+                    if (current->cmr==-1)
+                        energy_e -= (current->g - 1)*current->q;
+                    else if (current->cmr==1)
+                        energy_p += (current->g - 1)*current->q;
+                    else if (current->cmr==0)
+                        energy_ph += current->g*current->q;
+                    else
+                    {
+                        int n;
+                        n = 0;
+                        while (n!=n_ion_populations)
+                        {
+                            if (current->cmr==icmr[n])
+                            {
+                                ienergy[n] += (current->g-1)*current->q/icmr[n];
+                                n = n_ion_populations;
+                            }
+                            else
+                                n++;
+                        }
+                    }
+                    current = current->next;
+                }
+            }
+        }
     }
     energy_f = energy_f*a;
     energy_e = energy_e*b;
     energy_p = energy_p*b;
     energy_ph = energy_ph*b;
     for (int n=0;n<n_ion_populations;n++)
-	ienergy[n] = ienergy[n]*b;
+        ienergy[n] = ienergy[n]*b;
 }
 
 double getjx(spatial_region::cellj*** cj, int i, int j, int k) {
@@ -176,7 +176,7 @@ double getbz(spatial_region::cellb*** cb, int i, int j, int k) {
 }
 
 template<typename T> void write_binary(ofstream* f, T*** data, double get(T***,
-        int, int, int), int n0, int n, int ny, int nz) {
+            int, int, int), int n0, int n, int ny, int nz) {
     double* a = new double[(n - n0) * (ny + nz)]; /* for values in xy and xz
                                                      planes */
     for (int i = n0; i < n; ++i) {
@@ -267,8 +267,8 @@ void spatial_region::fout_ey_yzplane(ofstream* pfout, int i, ios_base::openmode
 {
     if (mode == ios_base::out) {
         for(int j=0;j<ny;j++) {
-        for(int k=0;k<nz;k++)
-            (*pfout)<<ce[i][j][k].ey<<"\n";
+            for(int k=0;k<nz;k++)
+                (*pfout)<<ce[i][j][k].ey<<"\n";
         }
     } else if (mode == ios_base::out | ios_base::binary) {
         write_binary_yzplane<spatial_region::celle>(pfout, ce, getey, i, ny,
@@ -305,8 +305,8 @@ void spatial_region::fout_ez_yzplane(ofstream* pfout, int i, ios_base::openmode
 {
     if (mode == ios_base::out) {
         for(int j=0;j<ny;j++) {
-        for(int k=0;k<nz;k++)
-            (*pfout)<<ce[i][j][k].ez<<"\n";
+            for(int k=0;k<nz;k++)
+                (*pfout)<<ce[i][j][k].ez<<"\n";
         }
     } else if (mode == ios_base::out | ios_base::binary) {
         write_binary_yzplane<spatial_region::celle>(pfout, ce, getez, i, ny,
@@ -343,8 +343,8 @@ void spatial_region::fout_bx_yzplane(ofstream* pfout, int i, ios_base::openmode
 {
     if (mode == ios_base::out) {
         for(int j=0;j<ny;j++) {
-        for(int k=0;k<nz;k++)
-            (*pfout)<<cb[i][j][k].bx<<"\n";
+            for(int k=0;k<nz;k++)
+                (*pfout)<<cb[i][j][k].bx<<"\n";
         }
     } else if (mode == ios_base::out | ios_base::binary) {
         write_binary_yzplane<spatial_region::cellb>(pfout, cb, getbx, i, ny,
@@ -443,27 +443,27 @@ void spatial_region::fout_w(ofstream* pfout, int n0, int n, bool is_last_sr)
         int k=nz/2;
         for(int j=0;j<ny;j++)
         {
-	    x=i;
-	    y=j;
-	    z=k;
-	    if (is_last_sr==1&&x==n-1) x = x - 1;
-	    if(y==ny-1) y = y-1;
-	    e = e_to_particle(x,y,z);
-	    b = b_to_particle(x,y,z);
-	    w = e.x*e.x + e.y*e.y + e.z*e.z + b.x*b.x + b.y*b.y + b.z*b.z;
+            x=i;
+            y=j;
+            z=k;
+            if (is_last_sr==1&&x==n-1) x = x - 1;
+            if(y==ny-1) y = y-1;
+            e = e_to_particle(x,y,z);
+            b = b_to_particle(x,y,z);
+            w = e.x*e.x + e.y*e.y + e.z*e.z + b.x*b.x + b.y*b.y + b.z*b.z;
             (*pfout)<<w<<"\n";
         }
         int j=ny/2;
         for(int k=0;k<nz;k++)
         {
-	    x=i;
-	    y=j;
-	    z=k;
-	    if (is_last_sr==1&&x==n-1) x = x - 1;
-	    if(z==nz-1) z = z - 1;
-	    e = e_to_particle(x,y,z);
-	    b = b_to_particle(x,y,z);
-	    w = e.x*e.x + e.y*e.y + e.z*e.z + b.x*b.x + b.y*b.y + b.z*b.z;
+            x=i;
+            y=j;
+            z=k;
+            if (is_last_sr==1&&x==n-1) x = x - 1;
+            if(z==nz-1) z = z - 1;
+            e = e_to_particle(x,y,z);
+            b = b_to_particle(x,y,z);
+            w = e.x*e.x + e.y*e.y + e.z*e.z + b.x*b.x + b.y*b.y + b.z*b.z;
             (*pfout)<<w<<"\n";
         }
     }
@@ -479,15 +479,15 @@ void spatial_region::fout_w_yzplane(ofstream* pfout, int i)
     {
         for(int k=0;k<nz;k++)
         {
-	    x=i;
-	    y=j;
-	    z=k;
-	    if(x==nx-1) x = x-1;
-	    if(y==ny-1) y = y-1;
-	    if(z==nz-1) z = z-1;
-	    e = e_to_particle(x,y,z);
-	    b = b_to_particle(x,y,z);
-	    w = e.x*e.x + e.y*e.y + e.z*e.z + b.x*b.x + b.y*b.y + b.z*b.z;
+            x=i;
+            y=j;
+            z=k;
+            if(x==nx-1) x = x-1;
+            if(y==ny-1) y = y-1;
+            if(z==nz-1) z = z-1;
+            e = e_to_particle(x,y,z);
+            b = b_to_particle(x,y,z);
+            w = e.x*e.x + e.y*e.y + e.z*e.z + b.x*b.x + b.y*b.y + b.z*b.z;
             (*pfout)<<w<<"\n";
         }
     }
@@ -506,27 +506,27 @@ void spatial_region::fout_inv(ofstream* pfout, int n0, int n, bool is_last_sr)
         int k=nz/2;
         for(int j=0;j<ny;j++)
         {
-	    x=i;
-	    y=j;
-	    z=k;
-	    if (is_last_sr==1&&x==n-1) x = x - 1;
-	    if(y==ny-1) y = y - 1;
-	    e = e_to_particle(x,y,z);
-	    b = b_to_particle(x,y,z);
-	    inv = e.x*e.x + e.y*e.y + e.z*e.z - b.x*b.x - b.y*b.y - b.z*b.z;
+            x=i;
+            y=j;
+            z=k;
+            if (is_last_sr==1&&x==n-1) x = x - 1;
+            if(y==ny-1) y = y - 1;
+            e = e_to_particle(x,y,z);
+            b = b_to_particle(x,y,z);
+            inv = e.x*e.x + e.y*e.y + e.z*e.z - b.x*b.x - b.y*b.y - b.z*b.z;
             (*pfout)<<inv<<"\n";
         }
         int j=ny/2;
         for(int k=0;k<nz;k++)
         {
-	    x=i;
-	    y=j;
-	    z=k;
-	    if (is_last_sr==1&&x==n-1) x = x - 1;
-	    if(z==nz-1) z = z - 1;
-	    e = e_to_particle(x,y,z);
-	    b = b_to_particle(x,y,z);
-	    inv = e.x*e.x + e.y*e.y + e.z*e.z - b.x*b.x - b.y*b.y - b.z*b.z;
+            x=i;
+            y=j;
+            z=k;
+            if (is_last_sr==1&&x==n-1) x = x - 1;
+            if(z==nz-1) z = z - 1;
+            e = e_to_particle(x,y,z);
+            b = b_to_particle(x,y,z);
+            inv = e.x*e.x + e.y*e.y + e.z*e.z - b.x*b.x - b.y*b.y - b.z*b.z;
             (*pfout)<<inv<<"\n";
         }
     }
@@ -542,15 +542,15 @@ void spatial_region::fout_inv_yzplane(ofstream* pfout, int i)
     {
         for(int k=0;k<nz;k++)
         {
-	    x=i;
-	    y=j;
-	    z=k;
-	    if(x==nx-1) x = x - 1;
-	    if(y==ny-1) y = y - 1;
-	    if(z==nz-1) z = z - 1;
-	    e = e_to_particle(x,y,z);
-	    b = b_to_particle(x,y,z);
-	    inv = e.x*e.x + e.y*e.y + e.z*e.z - b.x*b.x - b.y*b.y - b.z*b.z;
+            x=i;
+            y=j;
+            z=k;
+            if(x==nx-1) x = x - 1;
+            if(y==ny-1) y = y - 1;
+            if(z==nz-1) z = z - 1;
+            e = e_to_particle(x,y,z);
+            b = b_to_particle(x,y,z);
+            inv = e.x*e.x + e.y*e.y + e.z*e.z - b.x*b.x - b.y*b.y - b.z*b.z;
             (*pfout)<<inv<<"\n";
         }
     }
@@ -576,35 +576,35 @@ void spatial_region::fout_rho(ofstream* pfout, ofstream* pfout_p, ofstream* pfou
         }
         if (pfout_p!=0)
         {
-        for(int i=n0;i<n;i++)
-        {
-            int k=nz/2;
-            for(int j=0;j<ny;j++)
+            for(int i=n0;i<n;i++)
             {
-            (*pfout_p)<<cj[i][j][k].jy<<"\n";
+                int k=nz/2;
+                for(int j=0;j<ny;j++)
+                {
+                    (*pfout_p)<<cj[i][j][k].jy<<"\n";
+                }
+                int j=ny/2;
+                for(int k=0;k<nz;k++)
+                {
+                    (*pfout_p)<<cj[i][j][k].jy<<"\n";
+                }
             }
-            int j=ny/2;
-            for(int k=0;k<nz;k++)
-            {
-            (*pfout_p)<<cj[i][j][k].jy<<"\n";
-            }
-        }
         }
         if (pfout_ph!=0)
         {
-        for(int i=n0;i<n;i++)
-        {
-            int k=nz/2;
-            for(int j=0;j<ny;j++)
+            for(int i=n0;i<n;i++)
             {
-            (*pfout_ph)<<cj[i][j][k].jz<<"\n";
+                int k=nz/2;
+                for(int j=0;j<ny;j++)
+                {
+                    (*pfout_ph)<<cj[i][j][k].jz<<"\n";
+                }
+                int j=ny/2;
+                for(int k=0;k<nz;k++)
+                {
+                    (*pfout_ph)<<cj[i][j][k].jz<<"\n";
+                }
             }
-            int j=ny/2;
-            for(int k=0;k<nz;k++)
-            {
-            (*pfout_ph)<<cj[i][j][k].jz<<"\n";
-            }
-        }
         }
     } else if (mode == ios_base::out | ios_base::binary) {
         // if (*pfout) ... --- TODO: check if file is ok
@@ -697,26 +697,26 @@ void spatial_region::fout_irho_yzplane(int ion_type, ofstream* pfout, int i,
 
 void spatial_region::fout_tracks(double a, int nm) {
     for (int i=0;i<nx;i++) {
-	for (int j=0;j<ny;j++) {
-	    for(int k=0;k<nz;k++) {
-		plist::particle* current;
-		current = cp[i][j][k].pl.head;
-		while (current!=0) {
-		    if (current->trn!=0 && current->x>=nm && current->x<nx-nm) {
-			std::string file_name;
-			char file_num_pchar[20];
-			file_name = spatial_region::data_folder+"/track_";
-			sprintf(file_num_pchar,"%g",current->cmr);
-			file_name = file_name + file_num_pchar;
-			file_name = file_name + "_";
-			sprintf(file_num_pchar,"%d",current->trn);
-			file_name = file_name + file_num_pchar;
-			ofstream fout(file_name.c_str(),ios::app);
-			fout<<current->q<<'\n'<<current->x*dx/2/PI+a<<'\n'<<current->y*dy/2/PI<<'\n'<<current->z*dz/2/PI<<'\n'<<current->ux<<'\n'<<current->uy<<'\n'<<current->uz<<'\n'<<current->g<<'\n'<<current->chi<<'\n';
-		    }
-		    current = current->next;
-		}
-	    }
-	}
+        for (int j=0;j<ny;j++) {
+            for(int k=0;k<nz;k++) {
+                plist::particle* current;
+                current = cp[i][j][k].pl.head;
+                while (current!=0) {
+                    if (current->trn!=0 && current->x>=nm && current->x<nx-nm) {
+                        std::string file_name;
+                        char file_num_pchar[20];
+                        file_name = spatial_region::data_folder+"/track_";
+                        sprintf(file_num_pchar,"%g",current->cmr);
+                        file_name = file_name + file_num_pchar;
+                        file_name = file_name + "_";
+                        sprintf(file_num_pchar,"%d",current->trn);
+                        file_name = file_name + file_num_pchar;
+                        ofstream fout(file_name.c_str(),ios::app);
+                        fout<<current->q<<'\n'<<current->x*dx/2/PI+a<<'\n'<<current->y*dy/2/PI<<'\n'<<current->z*dz/2/PI<<'\n'<<current->ux<<'\n'<<current->uy<<'\n'<<current->uz<<'\n'<<current->g<<'\n'<<current->chi<<'\n';
+                    }
+                    current = current->next;
+                }
+            }
+        }
     }
 }
