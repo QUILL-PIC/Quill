@@ -18,6 +18,7 @@ SEXP foo(SEXP i) {
 extern "C" void configure(char* charlog, bool flag = false);
 extern "C" double get(char* charname);
 extern "C" double* read2d(char* charfilename, char* charplane);
+extern "C" double* read1d(char* charfilename, int column);
 
 // bindings for R; "fr" stands for "from R"
 
@@ -90,3 +91,19 @@ SEXP read_fr(SEXP filename, SEXP plane) {
     delete[] a;
     return b;
 }
+
+extern "C"
+SEXP read1d_fr(SEXP filename, SEXP column) {
+    char charfilename[max_str_length];
+    sexpcpy(charfilename, filename);
+    double* a = read1d(charfilename, asInteger(column));
+    char nt[] = "nt";
+    long n = get(nt);
+    SEXP b = PROTECT(allocVector(REALSXP, n));
+    for (long i = 0; i < n; ++i)
+        REAL(b)[i] = a[i];
+    UNPROTECT(1);
+    delete[] a;
+    return b;
+}
+

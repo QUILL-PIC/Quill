@@ -1,7 +1,8 @@
 CPP := g++
 CPPOPTS := -O3 -std=c++11 -shared -fPIC
 # path for R.h and Rinternals.h
-RPATH := /usr/include/R
+#RPATH := /usr/include/R
+RPATH := /usr/share/R/include
 # directory of libchameleon, and linker options
 LOPTS := -L. -Wl,-rpath=.
 

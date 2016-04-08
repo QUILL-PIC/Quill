@@ -30,6 +30,12 @@ lmbda = 0
 ne = 0
 xsigma = 0
 filmwidth = 0
+nerflow = 0
+Tlflow = 0
+mcrlflow = 0
+vlflow = 0
+Trflow = 0
+vrflow = 0
 
 data_folder = '../results/'
 t = '0'
@@ -42,7 +48,8 @@ def xi( x, t ):
 def read_parameters(log=None):
     'Reads nx, ny, etc. from *log*.'
     global dx,dy,dz,dt,nx,ny,nz,output_period,n_ion_populations,icmr,t_end,tr_start,\
-    deps,deps_p,deps_ph,deps_i,a0y,a0z,lmbda,ne,xsigma,filmwidth
+    deps,deps_p,deps_ph,deps_i,a0y,a0z,lmbda,ne,xsigma,filmwidth,nerflow,\
+    Tlflow, mcrlflow, vlflow, Trflow, vrflow
     if log is None:
 	log = data_folder+'log'
     icmr = []
@@ -50,48 +57,60 @@ def read_parameters(log=None):
     for line in f:
 	if line=='dx\n':
 	    dx = float(f.next())
-	if line=='dy\n':
+	elif line=='dy\n':
 	    dy = float(f.next())
-	if line=='dz\n':
+	elif line=='dz\n':
 	    dz = float(f.next())
-	if line=='dt\n':
+	elif line=='dt\n':
 	    dt = float(f.next())
-	if line=='nx\n':
+	elif line=='nx\n':
 	    nx = int(f.next())
-	if line=='ny\n':
+	elif line=='ny\n':
 	    ny = int(f.next())
-	if line=='nz\n':
+	elif line=='nz\n':
 	    nz = int(f.next())
-	if line=='output_period\n':
+	elif line=='output_period\n':
 	    output_period = float(f.next())
-	if line=='n_ion_populations\n':
+	elif line=='n_ion_populations\n':
 	    n_ion_populations = int(f.next())
-	if line=='icmr\n':
+	elif line=='icmr\n':
 	    icmr.append(float(f.next()))
-	if line=='t_end\n':
+	elif line=='t_end\n':
 	    t_end = float(f.next())
-	if line=='tr_start\n':
+	elif line=='tr_start\n':
 	    tr_start = float(f.next())
-	if line=='deps\n':
+	elif line=='deps\n':
 	    deps = float(f.next())
-	if line=='deps_p\n':
+	elif line=='deps_p\n':
 	    deps_p = float(f.next())
-	if line=='deps_ph\n':
+	elif line=='deps_ph\n':
 	    deps_ph = float(f.next())
-	if line=='deps_i\n':
+	elif line=='deps_i\n':
 	    deps_i = float(f.next())
-	if line=='a0y\n':
+	elif line=='a0y\n':
 	    a0y = float(f.next())
-	if line=='a0z\n':
+	elif line=='a0z\n':
 	    a0z = float(f.next())
-	if line=='lambda\n':
+	elif line=='lambda\n':
 	    lmbda = float(f.next())
-	if line=='ne\n':
+	elif line=='ne\n':
 	    ne = float(f.next())
-	if line=='xsigma\n':
+	elif line=='xsigma\n':
 	    xsigma = float(f.next())
-	if line=='filmwidth\n':
+	elif line=='filmwidth\n':
 	    filmwidth = float(f.next())
+	elif line=='nerflow\n':
+	    nerflow = float(f.next())
+	elif line=='Tlflow\n':
+	    Tlflow = float(f.next())
+	elif line=='mcrlflow\n':
+	    mcrlflow = float(f.next())
+	elif line=='vlflow\n':
+	    vlflow = float(f.next())
+	elif line=='Trflow\n':
+	    Trflow = float(f.next())
+	elif line=='vrflow\n':
+	    vrflow = float(f.next())
     f.close()
 
 def density(name='rho',plane='xy'):

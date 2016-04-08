@@ -26,7 +26,14 @@ spatial_region::spatial_region()
     n_f = 0;
     npwpa = 0;
     npwpo = 0;
-    page_size = numa_pagesize();
+    //page_size = numa_pagesize();
+    // page_size should not be very small to avoid OS problems with allocation
+    const size_t PS = 64 * 1024 * 1024; // bytes
+    if (numa_pagesize() < PS) {
+        page_size = PS;
+    } else {
+        page_size = numa_pagesize();
+    }
     particle_size = sizeof(plist::particle);
     pointer_size = sizeof(plist::particle*);
     p_lap = 0;
@@ -211,8 +218,8 @@ spatial_region::~spatial_region()
 	pwpo* a;
 	a = p_lapwpo;
 	p_lapwpo = p_lapwpo->previous;
-	//numa_free((void*) a->head,page_size);
-	free(a->head);
+	numa_free((void*) a->head,page_size);
+	//free(a->head);
 	delete a;
     }
     while (p_lapwpa!=0)
@@ -220,8 +227,8 @@ spatial_region::~spatial_region()
 	pwpa* a;
 	a = p_lapwpa;
 	p_lapwpa = p_lapwpa->previous;
-	//numa_free((void*) a->head,page_size);
-	free(a->head);
+	numa_free((void*) a->head,page_size);
+	//free(a->head);
 	delete a;
     }
 
@@ -339,8 +346,8 @@ spatial_region::plist::particle* spatial_region::new_particle()
 	    pwpa* a;
 	    a = new pwpa;
 	    a->previous = p_lapwpa;
-	    //a->head = (plist::particle*) numa_alloc_onnode(page_size,node_number);
-	    a->head = (plist::particle*) malloc(page_size);
+	    a->head = (plist::particle*) numa_alloc_onnode(page_size,node_number);
+	    //a->head = (plist::particle*) malloc(page_size);
 	    p_lapwpa = a;
 	    p_lap = a->head;
 	    return p_lap;
@@ -360,8 +367,8 @@ spatial_region::plist::particle* spatial_region::new_particle()
 	    npwpo--;
 	    plist::particle* b;
 	    b = *pp_lfp;
-	    //numa_free((void*) pp_lfp,page_size);
-	    free(pp_lfp);
+	    numa_free((void*) pp_lfp,page_size);
+	    //free(pp_lfp);
 	    pwpo* a;
 	    a = p_lapwpo;
 	    p_lapwpo = p_lapwpo->previous;
@@ -390,8 +397,8 @@ void spatial_region::delete_particle(plist::particle* a)
 	pwpo* b;
 	b = new pwpo;
 	b->previous = p_lapwpo;
-	//b->head = (plist::particle**) numa_alloc_onnode(page_size,node_number);
-	b->head = (plist::particle**) malloc(page_size);
+	b->head = (plist::particle**) numa_alloc_onnode(page_size,node_number);
+	//b->head = (plist::particle**) malloc(page_size);
 	p_lapwpo = b;
 	pp_lfp = b->head;
 	*pp_lfp = a;

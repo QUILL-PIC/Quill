@@ -1,6 +1,8 @@
 #include <fstream>
 #include <iostream>
 #include <map>
+#include <vector>
+#include <sstream>
 
 using namespace std;
 
@@ -100,3 +102,48 @@ double* read2d(const char* charfilename, const char* charplane) {
     delete[] a;
     return b;
 }
+
+// reads 1D data, written in non-binary (text) mode only
+extern "C"
+double* read1d(const char* charfilename, int column) {
+    string filename(charfilename);
+    int ncolumns = 0;
+    fstream f(filename, ios_base::in);
+    if (f) {
+        string s;
+        getline(f, s);
+        stringstream ststr(s);
+        double a;
+        while (ststr >> a) {
+            ++ncolumns;
+        }
+    }
+    f.close();
+    //
+    vector<double> v;
+    fstream fs(filename, ios_base::in);
+    if (fs) {
+        long i = 0;
+        double a;
+        while (fs >> a) {
+            if (i % ncolumns == column) {
+                v.push_back(a);
+            }
+            ++i;
+        }
+        fs.close();
+        conf["nt"] = v.size();
+        double* b;
+        b = new double[v.size()];
+        for (long i = 0; i < v.size(); ++i) {
+            b[i] = v[i];
+        }
+        return b;
+    } else {
+        cerr << "libchameleon: read1d: ERROR: no such file, " << filename <<
+            endl;
+        fs.close();
+        return nullptr;
+    }
+}
+

@@ -33,3 +33,7 @@ read2d <- function(filename, plane) {
                  as.character(plane))
     return(a);
 }
+
+read1d <- function(filename, column) {
+    .Call("read1d_fr", filename = as.character(filename), column = as.integer(column))
+}

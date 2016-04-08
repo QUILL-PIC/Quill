@@ -943,7 +943,7 @@ int main()
 	    }
 	} else if (pmerging=="nl") {
 	    bool merge = (N_qp_e>crnp)||(N_qp_p>crnp)||(N_qp_g>crnp);
-	    for (int i;i<n_ion_populations;i++)
+	    for (int i = 0; i < n_ion_populations; ++i)
 		merge = merge || (N_qp_i[i]>crnp);
 	    if (merge) {
 		pmerging_now = "on";
