@@ -53,7 +53,8 @@ std::string f_envelope;
 bool sscos; // super-super cos
 std::string beam;
 std::string beam_particles;
-std::string particles_for_output;
+bool write_p;
+bool write_ph;
 std::string pmerging,pmerging_now;
 std::string lp_reflection,f_reflection;
 std::string ions;
@@ -234,11 +235,6 @@ void write_energy(ofstream& fout_energy)
 
 void write_deleted_particles(ofstream& fout_energy_deleted)
 {
-    //double deleted_e_energy = 0.0;
-    //double deleted_p_energy = 0.0;
-    //double deleted_ph_energy = 0.0;
-    //double deleted_i_energy = 0.0;
-
     std::string file_name;
     char file_num_pchar[20];
     sprintf(file_num_pchar,"%g",
@@ -275,7 +271,6 @@ void write_deleted_particles(ofstream& fout_energy_deleted)
     for(int n=0; n<n_sr; n++)
     {
         vector<spatial_region::deleted_particle>& del_particles = psr[n].deleted_particles;
-        //cout << "Spatial region #" << n << "; count of deleted particles = " << del_particles.size() << "; count of inside particles = " << psr[n].deleted_inside << endl;
         
         double norm = 8.2e-14*dx*dy*dz*1.11485e13*lambda/(8*PI*PI*PI); // energy in Joules
         for (auto it = del_particles.begin(); it != del_particles.end(); ++it)
@@ -292,7 +287,6 @@ void write_deleted_particles(ofstream& fout_energy_deleted)
                     fout_deleted_e << (*it).ux << endl << (*it).uy << endl <<(*it).uz << endl;
                     fout_deleted_e << (*it).g << endl << (*it).chi << endl;
                 }
-                //deleted_e_energy -= (*it).q * ((*it).g - 1) * norm; // energy should be positive in file
             }
             else if ((*it).cmr == 1)
             {
@@ -306,7 +300,6 @@ void write_deleted_particles(ofstream& fout_energy_deleted)
                     fout_deleted_p << (*it).ux << endl << (*it).uy << endl <<(*it).uz << endl;
                     fout_deleted_p << (*it).g << endl << (*it).chi << endl;
                 }
-                //deleted_p_energy += (*it).q * ((*it).g - 1) * norm;
             }
             else if ((*it).cmr == 0)
             {
@@ -320,7 +313,6 @@ void write_deleted_particles(ofstream& fout_energy_deleted)
                     fout_deleted_ph << (*it).ux << endl << (*it).uy << endl <<(*it).uz << endl;
                     fout_deleted_ph << (*it).g << endl << (*it).chi << endl;
                 }
-                //deleted_ph_energy += (*it).q * (*it).g * norm;
             }
             else
             {
@@ -338,21 +330,13 @@ void write_deleted_particles(ofstream& fout_energy_deleted)
                             fout_deleted_i[j] << (*it).ux << endl << (*it).uy << endl <<(*it).uz << endl;
                             fout_deleted_i[j] << (*it).g << endl << (*it).chi << endl;
                         }
-                        //deleted_i_energy += (*it).q * ((*it).g - 1) * norm / icmr[j];
                         break;
                     }
                 }
             }
         }
         del_particles.clear();
-        //cout << " After clear count = " << psr[n].deleted_particles.size() << endl;
     }
-    //cout << "Deleted e energy = " << deleted_e_energy << endl;
-    //cout << "Deleted p energy = " << deleted_p_energy << endl;
-    //cout << "Deleted ph energy = " << deleted_ph_energy << endl;
-    //cout << "Deleted i energy = " << deleted_i_energy << endl;
-    //fout_energy_deleted << deleted_e_energy << '\t' << deleted_p_energy << '\t' << deleted_ph_energy
-     //   << '\t' << deleted_i_energy << endl;
 
     fout_deleted_e.close();
     fout_deleted_p.close();
@@ -390,48 +374,308 @@ void write_energy_deleted(ofstream& fout_energy_deleted)
     delete[] ienergy_deleted;
 }
 
-int main()
+void write_rho(bool write_p, bool write_ph)
 {
-    cout<<"\n\033[1m"<<"hi!"<<"\033[0m\n"<<endl;
-    up_time = times(&tms_struct);
-    start_time = times(&tms_struct);
-    inaccurate_time = time(NULL);
+    std::string file_name;
+    char file_num_pchar[20];
+    ofstream* pof;
+    ofstream* pof_p = 0;
+    ofstream* pof_ph = 0;
 
-    nx_ich = 8;
-    nm = nx_ich/2;
-    file_name_accuracy = 100;
+    file_name = data_folder+"/rho";
+    sprintf(file_num_pchar,"%g",int([](ddi* a) {double b=a->f*a->output_period; if(a->prev!=0) b+=(a->prev)->t_end; return b;} (p_current_ddi)/2/PI*file_name_accuracy)/file_name_accuracy);
+    file_name = file_name + file_num_pchar;
+    ofstream fout_rho(file_name.c_str(), output_mode);
+    pof = &fout_rho;
 
-    if (init()==1) return 1;
-
-    ofstream fout_log(data_folder+"/log",ios::app); // ios:app mode - append to the file
-    fout_log<<"start time: "<<ctime(&inaccurate_time);
-
-    ppd = new double[3+n_ion_populations];
-
-    nx_sr = ( xlength/dx + nx_ich*(n_sr-1) )/n_sr; // nx = nx_sr*n_sr - nx_ich*(n_sr-1);
-    if(nx_ich*(n_sr-1)>=xlength/dx) {cout<<"\033[31m"<<"main: too many slices, aborting..."<<"\033[0m"<<endl; return 1;}
-
-    pthread_t* sr_thread = new pthread_t[n_sr];
-    sr_mutex_c = new pthread_mutex_t[n_sr];
-    sr_mutex1 = new pthread_mutex_t[n_sr];
-    sr_mutex2 = new pthread_mutex_t[n_sr];
-    sr_mutex_m = new pthread_mutex_t[n_sr];
-    sr_mutex_m2 = new pthread_mutex_t[n_sr];
-    sr_mutex_rho1 = new pthread_mutex_t[n_sr];
-    sr_mutex_rho2 = new pthread_mutex_t[n_sr];
-
-    main_thread_time = times(&tms_struct);
-    cout<<"Creating arrays..."<<flush;
-    psr = new spatial_region[n_sr];
-    int node;
-    for(int i=0;i<n_sr;i++) 
+    ofstream fout_rho_p;
+    ofstream fout_rho_ph;
+    if (write_p)
     {
-        node = i*n_numa_nodes/n_sr;
-        //
-        psr[i].init(i,dx,dy,dz,dt,lambda/2.4263086e-10,xnpic,ynpic,znpic,node,n_ion_populations,icmr,data_folder);
-        psr[i].create_arrays(nx_sr,int(ylength/dy),int(zlength/dz),i+times(&tms_struct),node);
-        //
+        file_name = data_folder+"/rho_p";
+        file_name = file_name + file_num_pchar;
+        fout_rho_p.open(file_name.c_str(), output_mode);
+        pof_p = &fout_rho_p;
     }
+    if (write_ph)
+    {
+        file_name = data_folder+"/rho_ph";
+        file_name = file_name + file_num_pchar;
+        fout_rho_ph.open(file_name.c_str(), output_mode);
+        pof_ph = &fout_rho_ph;
+    }
+    
+    int onx;
+    int onx0;
+    for(int i=0;i<n_sr;i++)
+    {
+        if(i==n_sr-1)
+            onx = nx_sr;
+        else
+            onx = nx_sr-nx_ich/2;
+        if(i==0)
+            onx0 = 0;
+        else
+            onx0 = nx_ich/2;
+        psr[i].fout_rho(pof,pof_p,pof_ph,onx0,onx, output_mode);
+    }
+    
+    int ii = int(((xlength-x0fout)/dx - nx_ich)/(nx_sr - nx_ich));
+    if(ii<0) ii = 0;
+    psr[ii].fout_rho_yzplane(pof,pof_p,pof_ph,int((xlength-x0fout)/dx)-ii*(nx_sr-nx_ich), output_mode);
+
+    if (ions=="on")
+    {
+        char s_cmr[20];
+        for (int n=0;n<n_ion_populations;n++)
+        {
+            sprintf(s_cmr,"%g",icmr[n]);
+            file_name = data_folder+"/irho_";
+            file_name += s_cmr;
+            file_name += "_";
+            file_name += file_num_pchar;
+            ofstream fout_irho(file_name.c_str());
+            for(int i=0;i<n_sr;i++)
+            {
+                if(i==n_sr-1)
+                    onx = nx_sr;
+                else
+                    onx = nx_sr-nx_ich/2;
+                if(i==0)
+                    onx0 = 0;
+                else
+                    onx0 = nx_ich/2;
+                psr[i].fout_irho(n,&fout_irho,onx0,onx, output_mode);
+            }
+            ii = int(((xlength-x0fout)/dx - nx_ich)/(nx_sr - nx_ich));
+            if(ii<0) ii = 0;
+            psr[ii].fout_irho_yzplane(n,&fout_irho,int((xlength-x0fout)/dx)-ii*(nx_sr-nx_ich), output_mode);
+            fout_irho.close();
+        }
+    }
+    
+    fout_rho.close();
+    if (fout_rho_p.is_open())
+        fout_rho_p.close();
+    if (fout_rho_ph.is_open())
+        fout_rho_ph.close();
+}
+
+void write_spectrum_phasespace(bool write_p, bool write_ph)
+{
+    std::string file_name;
+    char file_num_pchar[20];
+    
+    file_name = data_folder+"/spectrum";
+    sprintf(file_num_pchar,"%g",int([](ddi* a) {double b=a->f*a->output_period; if(a->prev!=0) b+=(a->prev)->t_end; return b;} (p_current_ddi)/2/PI*file_name_accuracy)/file_name_accuracy);
+    file_name = file_name + file_num_pchar;
+    ofstream fout_spectrum(file_name.c_str());
+    file_name = data_folder+"/spectrum_p";
+    file_name = file_name + file_num_pchar;
+    ofstream fout_spectrum_p(file_name.c_str());
+    file_name = data_folder+"/spectrum_ph";
+    file_name = file_name + file_num_pchar;
+    ofstream fout_spectrum_ph(file_name.c_str());
+    file_name = data_folder+"/phasespace";
+    sprintf(file_num_pchar,"%g",int([](ddi* a) {double b=a->f*a->output_period; if(a->prev!=0) b+=(a->prev)->t_end; return b;} (p_current_ddi)/2/PI*file_name_accuracy)/file_name_accuracy);
+    file_name = file_name + file_num_pchar;
+    ofstream fout_phasespace(file_name.c_str());
+    file_name = data_folder+"/phasespace_p";
+    file_name = file_name + file_num_pchar;
+    ofstream fout_phasespace_p(file_name.c_str());
+    file_name = data_folder+"/phasespace_ph";
+    file_name = file_name + file_num_pchar;
+    ofstream fout_phasespace_ph(file_name.c_str());
+    double* spectrum = new double[neps];
+    for(int i=0;i<neps;i++) spectrum[i] = 0;
+    double* spectrum_p = new double[neps_p];
+    for(int i=0;i<neps_p;i++) spectrum_p[i] = 0;
+    double* spectrum_ph = new double[neps_ph];
+    for(int i=0;i<neps_ph;i++) spectrum_ph[i] = 0;
+    int i_eps;
+    ofstream* fout_spectrum_i = new ofstream[n_ion_populations];
+    ofstream* fout_phasespace_i = new ofstream[n_ion_populations];
+    double** spectrum_i = new double*[n_ion_populations];
+    for (int m=0;m<n_ion_populations;m++)
+    {
+        char s_cmr[20];
+        sprintf(s_cmr,"%g",icmr[m]);
+        file_name = data_folder+"/spectrum_";
+        file_name += s_cmr;
+        file_name += "_";
+        file_name += file_num_pchar;
+        fout_spectrum_i[m].open(file_name.c_str());
+        file_name = data_folder+"/phasespace_";
+        file_name += s_cmr;
+        file_name += "_";
+        file_name += file_num_pchar;
+        fout_phasespace_i[m].open(file_name.c_str());
+        spectrum_i[m] = new double[neps_i];
+        for(int i=0;i<neps_i;i++)
+            spectrum_i[m][i] = 0;
+    }
+    spatial_region::plist::particle* current;
+    for(int n=0;n<n_sr;n++)
+    {
+        for(int i=nm*(n!=0);i<nx_sr-nm*(n!=n_sr-1);i++)
+        {
+            for(int j=0;j<int(ylength/dy);j++)
+            {
+                for(int k=0;k<int(zlength/dz);k++)
+                {
+                    current = psr[n].cp[i][j][k].pl.head;
+                    while(current!=0)
+                    {
+                        if (current->cmr==-1)
+                        { // electrons
+                            i_eps = (current->g-1)*0.511/deps;
+                            if((i_eps>-1)&&(i_eps<neps))
+                                spectrum[i_eps] = spectrum[i_eps] - current->q; // q<0 for electrons
+                            // phase space
+                            i_particle++;
+                            if(i_particle>enthp)
+                            {
+                                i_particle = 0;
+                                /* координаты выводятся
+                                 * нормированными на лазерную
+                                 * длину волны */
+                                fout_phasespace<<current->q<<"\n";
+                                fout_phasespace<<dx*(current->x+n*(nx_sr-nx_ich))/(2*PI)<<"\n";
+                                fout_phasespace<<dy*(current->y)/(2*PI)<<"\n"<<dz*(current->z)/(2*PI)<<"\n";
+                                fout_phasespace<<current->ux<<"\n"<<current->uy<<"\n"<<current->uz<<"\n";
+                                fout_phasespace<<current->g<<"\n";
+                                fout_phasespace<<current->chi<<"\n";
+                            }
+                        }
+                        else if (current->cmr==1 && write_p)
+                        { // positrons
+                            i_eps = (current->g-1)*0.511/deps_p;
+                            if((i_eps>-1)&&(i_eps<neps_p))
+                                spectrum_p[i_eps] = spectrum_p[i_eps] + current->q; // q>0 for positrons
+                            i_particle_p++;
+                            if(i_particle_p>enthp_p)
+                            {
+                                i_particle_p = 0;
+                                fout_phasespace_p<<current->q<<"\n";
+                                fout_phasespace_p<<dx*(current->x+n*(nx_sr-nx_ich))/(2*PI)<<"\n";
+                                fout_phasespace_p<<dy*(current->y)/(2*PI)<<"\n"<<dz*(current->z)/(2*PI)<<"\n";
+                                fout_phasespace_p<<current->ux<<"\n"<<current->uy<<"\n"<<current->uz<<"\n";
+                                fout_phasespace_p<<current->g<<"\n";
+                                fout_phasespace_p<<current->chi<<"\n";
+                            }
+                        }
+                        else if (current->cmr==0 && write_ph)
+                        { // photons
+                            i_eps = current->g*0.511/deps_ph;
+                            if((i_eps>-1)&&(i_eps<neps_ph))
+                                spectrum_ph[i_eps] = spectrum_ph[i_eps] + current->q; // q>0 for photons
+                            i_particle_ph++;
+                            if(i_particle_ph>enthp_ph)
+                            {
+                                i_particle_ph = 0;
+                                fout_phasespace_ph<<current->q<<"\n";
+                                fout_phasespace_ph<<dx*(current->x+n*(nx_sr-nx_ich))/(2*PI)<<"\n";
+                                fout_phasespace_ph<<dy*(current->y)/(2*PI)<<"\n"<<dz*(current->z)/(2*PI)<<"\n";
+                                fout_phasespace_ph<<current->ux<<"\n"<<current->uy<<"\n"<<current->uz<<"\n";
+                                fout_phasespace_ph<<current->g<<"\n";
+                                fout_phasespace_ph<<current->chi<<"\n";
+                            }
+                        }
+                        else
+                        { // ions
+                            int m;
+                            m = 0;
+                            while (m!=n_ion_populations)
+                            {
+                                if (current->cmr==icmr[m])
+                                {
+                                    i_eps = (current->g-1)*0.511*proton_mass/deps_i;
+                                    if((i_eps>-1)&&(i_eps<neps_i))
+                                        spectrum_i[m][i_eps] += current->q;
+                                    i_particle_i++;
+                                    if(i_particle_i>enthp_i)
+                                    {
+                                        i_particle_i = 0;
+                                        fout_phasespace_i[m]<<current->q<<"\n";
+                                        fout_phasespace_i[m]<<dx*(current->x+n*(nx_sr-nx_ich))/(2*PI)<<"\n";
+                                        fout_phasespace_i[m]<<dy*(current->y)/(2*PI)<<"\n"<<dz*(current->z)/(2*PI)<<"\n";
+                                        fout_phasespace_i[m]<<current->ux<<"\n"<<current->uy<<"\n"<<current->uz<<"\n";
+                                        fout_phasespace_i[m]<<current->g<<"\n";
+                                        fout_phasespace_i[m]<<current->chi<<"\n";
+                                    }
+                                    m = n_ion_populations;
+                                }
+                                else
+                                    m++;
+                            }
+                        }
+                        current = current->next;
+                    }
+                }
+            }
+        }
+    }
+
+    // spectrum = dN/deps [1/MeV]
+    double spectrum_norm = 1.11485e13*lambda*dx*dy*dz/(8*PI*PI*PI)/deps;
+    double spectrum_norm_p = 1.11485e13*lambda*dx*dy*dz/(8*PI*PI*PI)/deps_p;
+    double spectrum_norm_ph = 1.11485e13*lambda*dx*dy*dz/(8*PI*PI*PI)/deps_ph;
+    for(int i=0;i<neps;i++)
+    {
+        spectrum[i] = spectrum[i]*spectrum_norm;
+        fout_spectrum<<spectrum[i]<<"\n";
+    }
+    if (write_p)
+    {
+        for(int i=0;i<neps_p;i++)
+        {
+            spectrum_p[i] = spectrum_p[i]*spectrum_norm_p;
+            fout_spectrum_p<<spectrum_p[i]<<"\n";
+        }
+    }
+    if (write_ph)
+    {
+        for(int i=0;i<neps_ph;i++)
+        {
+            spectrum_ph[i] = spectrum_ph[i]*spectrum_norm_ph;
+            fout_spectrum_ph<<spectrum_ph[i]<<"\n";
+        }
+    }
+    // spectrum_i = dN/deps [1/MeV], but N is the number of nucleons, not ions
+    double spectrum_norm_i;
+    for (int m=0;m<n_ion_populations;m++)
+    {
+        spectrum_norm_i =  1.11485e13*lambda*dx*dy*dz/(8*PI*PI*PI)/(icmr[m]*deps_i);
+        for(int i=0;i<neps_i;i++)
+        {
+            spectrum_i[m][i] = spectrum_i[m][i]*spectrum_norm_ph;
+            fout_spectrum_i[m]<<spectrum_i[m][i]<<"\n";
+        }
+    }
+    delete[] spectrum;
+    delete[] spectrum_p;
+    delete[] spectrum_ph;
+    fout_spectrum.close();
+    fout_spectrum_p.close();
+    fout_spectrum_ph.close();
+    fout_phasespace.close();
+    fout_phasespace_p.close();
+    fout_phasespace_ph.close();
+    //
+    for (int m=0;m<n_ion_populations;m++)
+    {
+        fout_spectrum_i[m].close();
+        fout_phasespace_i[m].close();
+    }
+    delete[] fout_spectrum_i;
+    delete[] fout_phasespace_i;
+    for (int m=0;m<n_ion_populations;m++)
+        delete[] spectrum_i[m];
+    delete[] spectrum_i;
+}
+
+void init_fields()
+{
     if (f_envelope=="focused")
     {
         const char* tmpl = lp_reflection.c_str();
@@ -526,7 +770,7 @@ int main()
         for (int i = 0; i < n_sr; ++i)
             psr[i].f_init_uniformB(a0y, a0z);
     }
-    else
+    else // f_envelope == "cos"
     {
         const char* tmpl = lp_reflection.c_str();
         int lp_len = lp_reflection.size();
@@ -607,16 +851,22 @@ int main()
             for (int i=0;i<n_sr;i++) psr[i].f_init_cos((1-2*(f_reflection1=="y"))*a0y,(1-2*(f_reflection1=="z"))*a0z,xsigma,ysigma,zsigma,x0-dx*i*(nx_sr - nx_ich),-xlength/2+x0,sscos,b_sign,phase,y00,z00,1,0,ytarget,ztarget);
         }
     }
+    
     for(int i=0;i<n_sr;i++) psr[i].f_zeroing_on_boundaries();
-    if (beam=="on")
-    {
-        if (beam_particles=="p")
-            for(int i=0;i<n_sr;i++) psr[i].add_beam(1,Nb*1.061e-11/(xb*rb*rb*lambda),((epsb>0)-(epsb<0))*sqrt(epsb*epsb/(0.511*0.511)-1),xb,rb,xlength-x0b-dx*i*(nx_sr - nx_ich));
-        else if (beam_particles=="ph")
-            for(int i=0;i<n_sr;i++) psr[i].add_beam(0,Nb*1.061e-11/(xb*rb*rb*lambda),epsb/0.511,xb,rb,xlength-x0b-dx*i*(nx_sr - nx_ich));
-        else
-            for(int i=0;i<n_sr;i++) psr[i].add_beam(-1,Nb*1.061e-11/(xb*rb*rb*lambda),((epsb>0)-(epsb<0))*sqrt(epsb*epsb/(0.511*0.511)-1),xb,rb,xlength-x0b-dx*i*(nx_sr - nx_ich));
-    }
+}
+
+void init_beam()
+{
+    if (beam_particles=="p")
+        for(int i=0;i<n_sr;i++) psr[i].add_beam(1,Nb*1.061e-11/(xb*rb*rb*lambda),((epsb>0)-(epsb<0))*sqrt(epsb*epsb/(0.511*0.511)-1),xb,rb,xlength-x0b-dx*i*(nx_sr - nx_ich));
+    else if (beam_particles=="ph")
+        for(int i=0;i<n_sr;i++) psr[i].add_beam(0,Nb*1.061e-11/(xb*rb*rb*lambda),epsb/0.511,xb,rb,xlength-x0b-dx*i*(nx_sr - nx_ich));
+    else
+        for(int i=0;i<n_sr;i++) psr[i].add_beam(-1,Nb*1.061e-11/(xb*rb*rb*lambda),((epsb>0)-(epsb<0))*sqrt(epsb*epsb/(0.511*0.511)-1),xb,rb,xlength-x0b-dx*i*(nx_sr - nx_ich));
+}
+
+void init_films()
+{
     film* tmp_p_film = p_last_film;
     while (tmp_p_film!=0)
     {
@@ -626,6 +876,60 @@ int main()
         for(int i=0;i<n_sr;i++) psr[i].film(tmp_p_film->x0-dx*i*(nx_sr-nx_ich),tmp_p_film->x0+tmp_p_film->filmwidth-dx*i*(nx_sr-nx_ich),tmp_p_film->ne/(1.11485e+13/lambda/lambda),ions=="on",1/(proton_mass*tmp_p_film->mcr),tmp_p_film->gradwidth,tmp_p_film->y0,tmp_p_film->y1,tmp_p_film->z0,tmp_p_film->z1,tmp_p_film->T, tmp_p_film->vx, nelflow != 0 || nerflow != 0);
         tmp_p_film = tmp_p_film->prev;
     }
+}
+
+int main()
+{
+    cout<<"\n\033[1m"<<"hi!"<<"\033[0m\n"<<endl;
+    up_time = times(&tms_struct);
+    start_time = times(&tms_struct);
+    inaccurate_time = time(NULL);
+
+    nx_ich = 8;
+    nm = nx_ich/2;
+    file_name_accuracy = 100;
+
+    if (init()==1) return 1;
+
+    ofstream fout_log(data_folder+"/log",ios::app); // ios:app mode - append to the file
+    fout_log<<"start time: "<<ctime(&inaccurate_time);
+
+    ppd = new double[3+n_ion_populations];
+
+    nx_sr = ( xlength/dx + nx_ich*(n_sr-1) )/n_sr; // nx = nx_sr*n_sr - nx_ich*(n_sr-1);
+    if(nx_ich*(n_sr-1)>=xlength/dx) {cout<<"\033[31m"<<"main: too many slices, aborting..."<<"\033[0m"<<endl; return 1;}
+
+    pthread_t* sr_thread = new pthread_t[n_sr];
+    sr_mutex_c = new pthread_mutex_t[n_sr];
+    sr_mutex1 = new pthread_mutex_t[n_sr];
+    sr_mutex2 = new pthread_mutex_t[n_sr];
+    sr_mutex_m = new pthread_mutex_t[n_sr];
+    sr_mutex_m2 = new pthread_mutex_t[n_sr];
+    sr_mutex_rho1 = new pthread_mutex_t[n_sr];
+    sr_mutex_rho2 = new pthread_mutex_t[n_sr];
+
+    main_thread_time = times(&tms_struct);
+    cout<<"Creating arrays..."<<flush;
+    psr = new spatial_region[n_sr];
+    int node;
+    for(int i=0;i<n_sr;i++) 
+    {
+        node = i*n_numa_nodes/n_sr;
+        //
+        psr[i].init(i,dx,dy,dz,dt,lambda/2.4263086e-10,xnpic,ynpic,znpic,node,n_ion_populations,icmr,data_folder);
+        psr[i].create_arrays(nx_sr,int(ylength/dy),int(zlength/dz),i+times(&tms_struct),node);
+        //
+    }
+    
+    init_fields();
+    
+    if (beam=="on")
+    {
+        init_beam();
+    }
+
+    init_films();
+    
     main_thread_time = times(&tms_struct) - main_thread_time;
     seconds = main_thread_time/100.0;
     cout<<"done!\n"<<endl;
@@ -670,297 +974,15 @@ int main()
         if(l*dt >= [](ddi* a) {double b=a->f*a->output_period; if(a->prev!=0) b+=(a->prev)->t_end; return b;} (p_current_ddi))
         {
             for(int i=0;i<n_sr;i++) pthread_mutex_lock(&sr_mutex_rho1[i]);
-            std::string file_name;
-            char file_num_pchar[20];
-            ofstream* pof;
-            ofstream* pof_p;
-            ofstream* pof_ph;
-            int onx;
-            int onx0;
-            int ii;
-            //
-            file_name = data_folder+"/rho";
-            sprintf(file_num_pchar,"%g",int([](ddi* a) {double b=a->f*a->output_period; if(a->prev!=0) b+=(a->prev)->t_end; return b;} (p_current_ddi)/2/PI*file_name_accuracy)/file_name_accuracy);
-            file_name = file_name + file_num_pchar;
-            ofstream fout_rho(file_name.c_str(), output_mode);
-            pof = &fout_rho;
-            //
-            file_name = data_folder+"/rho_p";
-            file_name = file_name + file_num_pchar;
-            ofstream fout_rho_p(file_name.c_str(), output_mode);
-            //
-            file_name = data_folder+"/rho_ph";
-            file_name = file_name + file_num_pchar;
-            ofstream fout_rho_ph(file_name.c_str(), output_mode);
-            if (particles_for_output=="ep"||particles_for_output=="epph")
-                pof_p = &fout_rho_p;
-            else
-                pof_p = 0;
-            if (particles_for_output=="eph"||particles_for_output=="epph")
-                pof_ph = &fout_rho_ph;
-            else
-                pof_ph = 0;
-            for(int i=0;i<n_sr;i++)
-            {
-                if(i==n_sr-1)
-                    onx = nx_sr;
-                else
-                    onx = nx_sr-nx_ich/2;
-                if(i==0)
-                    onx0 = 0;
-                else
-                    onx0 = nx_ich/2;
-                psr[i].fout_rho(pof,pof_p,pof_ph,onx0,onx, output_mode);
-            }
-            ii = int(((xlength-x0fout)/dx - nx_ich)/(nx_sr - nx_ich));
-            if(ii<0) ii = 0;
-            psr[ii].fout_rho_yzplane(pof,pof_p,pof_ph,int((xlength-x0fout)/dx)-ii*(nx_sr-nx_ich), output_mode);
-            //
-            if (ions=="on")
-            {
-                char s_cmr[20];
-                for (int n=0;n<n_ion_populations;n++)
-                {
-                    sprintf(s_cmr,"%g",icmr[n]);
-                    file_name = data_folder+"/irho_";
-                    file_name += s_cmr;
-                    file_name += "_";
-                    file_name += file_num_pchar;
-                    ofstream fout_irho(file_name.c_str());
-                    for(int i=0;i<n_sr;i++)
-                    {
-                        if(i==n_sr-1)
-                            onx = nx_sr;
-                        else
-                            onx = nx_sr-nx_ich/2;
-                        if(i==0)
-                            onx0 = 0;
-                        else
-                            onx0 = nx_ich/2;
-                        psr[i].fout_irho(n,&fout_irho,onx0,onx, output_mode);
-                    }
-                    ii = int(((xlength-x0fout)/dx - nx_ich)/(nx_sr - nx_ich));
-                    if(ii<0) ii = 0;
-                    psr[ii].fout_irho_yzplane(n,&fout_irho,int((xlength-x0fout)/dx)-ii*(nx_sr-nx_ich), output_mode);
-                    fout_irho.close();
-                }
-            }
-            //
-            file_name = data_folder+"/spectrum";
-            sprintf(file_num_pchar,"%g",int([](ddi* a) {double b=a->f*a->output_period; if(a->prev!=0) b+=(a->prev)->t_end; return b;} (p_current_ddi)/2/PI*file_name_accuracy)/file_name_accuracy);
-            file_name = file_name + file_num_pchar;
-            ofstream fout_spectrum(file_name.c_str());
-            file_name = data_folder+"/spectrum_p";
-            file_name = file_name + file_num_pchar;
-            ofstream fout_spectrum_p(file_name.c_str());
-            file_name = data_folder+"/spectrum_ph";
-            file_name = file_name + file_num_pchar;
-            ofstream fout_spectrum_ph(file_name.c_str());
-            file_name = data_folder+"/phasespace";
-            sprintf(file_num_pchar,"%g",int([](ddi* a) {double b=a->f*a->output_period; if(a->prev!=0) b+=(a->prev)->t_end; return b;} (p_current_ddi)/2/PI*file_name_accuracy)/file_name_accuracy);
-            file_name = file_name + file_num_pchar;
-            ofstream fout_phasespace(file_name.c_str());
-            file_name = data_folder+"/phasespace_p";
-            file_name = file_name + file_num_pchar;
-            ofstream fout_phasespace_p(file_name.c_str());
-            file_name = data_folder+"/phasespace_ph";
-            file_name = file_name + file_num_pchar;
-            ofstream fout_phasespace_ph(file_name.c_str());
-            double* spectrum = new double[neps];
-            for(int i=0;i<neps;i++) spectrum[i] = 0;
-            double* spectrum_p = new double[neps_p];
-            for(int i=0;i<neps_p;i++) spectrum_p[i] = 0;
-            double* spectrum_ph = new double[neps_ph];
-            for(int i=0;i<neps_ph;i++) spectrum_ph[i] = 0;
-            int i_eps;
-            ofstream* fout_spectrum_i = new ofstream[n_ion_populations];
-            ofstream* fout_phasespace_i = new ofstream[n_ion_populations];
-            double** spectrum_i = new double*[n_ion_populations];
-            for (int m=0;m<n_ion_populations;m++)
-            {
-                char s_cmr[20];
-                sprintf(s_cmr,"%g",icmr[m]);
-                file_name = data_folder+"/spectrum_";
-                file_name += s_cmr;
-                file_name += "_";
-                file_name += file_num_pchar;
-                fout_spectrum_i[m].open(file_name.c_str());
-                file_name = data_folder+"/phasespace_";
-                file_name += s_cmr;
-                file_name += "_";
-                file_name += file_num_pchar;
-                fout_phasespace_i[m].open(file_name.c_str());
-                spectrum_i[m] = new double[neps_i];
-                for(int i=0;i<neps_i;i++)
-                    spectrum_i[m][i] = 0;
-            }
-            spatial_region::plist::particle* current;
-            for(int n=0;n<n_sr;n++)
-            {
-                for(int i=nm*(n!=0);i<nx_sr-nm*(n!=n_sr-1);i++)
-                {
-                    for(int j=0;j<int(ylength/dy);j++)
-                    {
-                        for(int k=0;k<int(zlength/dz);k++)
-                        {
-                            current = psr[n].cp[i][j][k].pl.head;
-                            while(current!=0)
-                            {
-                                if (current->cmr==-1)
-                                { // electrons
-                                    i_eps = (current->g-1)*0.511/deps;
-                                    if((i_eps>-1)&&(i_eps<neps))
-                                        spectrum[i_eps] = spectrum[i_eps] - current->q; // q<0 for electrons
-                                    // phase space
-                                    i_particle++;
-                                    if(i_particle>enthp)
-                                    {
-                                        i_particle = 0;
-                                        /* координаты выводятся
-                                         * нормированными на лазерную
-                                         * длину волны */
-                                        fout_phasespace<<current->q<<"\n";
-                                        fout_phasespace<<dx*(current->x+n*(nx_sr-nx_ich))/(2*PI)<<"\n";
-                                        fout_phasespace<<dy*(current->y)/(2*PI)<<"\n"<<dz*(current->z)/(2*PI)<<"\n";
-                                        fout_phasespace<<current->ux<<"\n"<<current->uy<<"\n"<<current->uz<<"\n";
-                                        fout_phasespace<<current->g<<"\n";
-                                        fout_phasespace<<current->chi<<"\n";
-                                    }
-                                }
-                                else if (current->cmr==1&&pof_p!=0)
-                                { // positrons
-                                    i_eps = (current->g-1)*0.511/deps_p;
-                                    if((i_eps>-1)&&(i_eps<neps_p))
-                                        spectrum_p[i_eps] = spectrum_p[i_eps] + current->q; // q>0 for positrons
-                                    i_particle_p++;
-                                    if(i_particle_p>enthp_p)
-                                    {
-                                        i_particle_p = 0;
-                                        fout_phasespace_p<<current->q<<"\n";
-                                        fout_phasespace_p<<dx*(current->x+n*(nx_sr-nx_ich))/(2*PI)<<"\n";
-                                        fout_phasespace_p<<dy*(current->y)/(2*PI)<<"\n"<<dz*(current->z)/(2*PI)<<"\n";
-                                        fout_phasespace_p<<current->ux<<"\n"<<current->uy<<"\n"<<current->uz<<"\n";
-                                        fout_phasespace_p<<current->g<<"\n";
-                                        fout_phasespace_p<<current->chi<<"\n";
-                                    }
-                                }
-                                else if (current->cmr==0&&pof_ph!=0)
-                                { // photons
-                                    i_eps = current->g*0.511/deps_ph;
-                                    if((i_eps>-1)&&(i_eps<neps_ph))
-                                        spectrum_ph[i_eps] = spectrum_ph[i_eps] + current->q; // q>0 for photons
-                                    i_particle_ph++;
-                                    if(i_particle_ph>enthp_ph)
-                                    {
-                                        i_particle_ph = 0;
-                                        fout_phasespace_ph<<current->q<<"\n";
-                                        fout_phasespace_ph<<dx*(current->x+n*(nx_sr-nx_ich))/(2*PI)<<"\n";
-                                        fout_phasespace_ph<<dy*(current->y)/(2*PI)<<"\n"<<dz*(current->z)/(2*PI)<<"\n";
-                                        fout_phasespace_ph<<current->ux<<"\n"<<current->uy<<"\n"<<current->uz<<"\n";
-                                        fout_phasespace_ph<<current->g<<"\n";
-                                        fout_phasespace_ph<<current->chi<<"\n";
-                                    }
-                                }
-                                else
-                                { // ions
-                                    int m;
-                                    m = 0;
-                                    while (m!=n_ion_populations)
-                                    {
-                                        if (current->cmr==icmr[m])
-                                        {
-                                            i_eps = (current->g-1)*0.511*proton_mass/deps_i;
-                                            if((i_eps>-1)&&(i_eps<neps_i))
-                                                spectrum_i[m][i_eps] += current->q;
-                                            i_particle_i++;
-                                            if(i_particle_i>enthp_i)
-                                            {
-                                                i_particle_i = 0;
-                                                fout_phasespace_i[m]<<current->q<<"\n";
-                                                fout_phasespace_i[m]<<dx*(current->x+n*(nx_sr-nx_ich))/(2*PI)<<"\n";
-                                                fout_phasespace_i[m]<<dy*(current->y)/(2*PI)<<"\n"<<dz*(current->z)/(2*PI)<<"\n";
-                                                fout_phasespace_i[m]<<current->ux<<"\n"<<current->uy<<"\n"<<current->uz<<"\n";
-                                                fout_phasespace_i[m]<<current->g<<"\n";
-                                                fout_phasespace_i[m]<<current->chi<<"\n";
-                                            }
-                                            m = n_ion_populations;
-                                        }
-                                        else
-                                            m++;
-                                    }
-                                }
-                                current = current->next;
-                            }
-                        }
-                    }
-                }
-            }
+            
+            write_rho(write_p, write_ph);
+            write_spectrum_phasespace(write_p, write_ph);            
             
             if (catching_enabled)
             {
                 write_deleted_particles(fout_energy_deleted);
             }
             
-            // spectrum = dN/deps [1/MeV]
-            double spectrum_norm = 1.11485e13*lambda*dx*dy*dz/(8*PI*PI*PI)/deps;
-            double spectrum_norm_p = 1.11485e13*lambda*dx*dy*dz/(8*PI*PI*PI)/deps_p;
-            double spectrum_norm_ph = 1.11485e13*lambda*dx*dy*dz/(8*PI*PI*PI)/deps_ph;
-            for(int i=0;i<neps;i++)
-            {
-                spectrum[i] = spectrum[i]*spectrum_norm;
-                fout_spectrum<<spectrum[i]<<"\n";
-            }
-            if (pof_p!=0)
-            {
-                for(int i=0;i<neps_p;i++)
-                {
-                    spectrum_p[i] = spectrum_p[i]*spectrum_norm_p;
-                    fout_spectrum_p<<spectrum_p[i]<<"\n";
-                }
-            }
-            if (pof_ph!=0)
-            {
-                for(int i=0;i<neps_ph;i++)
-                {
-                    spectrum_ph[i] = spectrum_ph[i]*spectrum_norm_ph;
-                    fout_spectrum_ph<<spectrum_ph[i]<<"\n";
-                }
-            }
-            // spectrum_i = dN/deps [1/MeV], but N is the number of nucleons, not ions
-            double spectrum_norm_i;
-            for (int m=0;m<n_ion_populations;m++)
-            {
-                spectrum_norm_i =  1.11485e13*lambda*dx*dy*dz/(8*PI*PI*PI)/(icmr[m]*deps_i);
-                for(int i=0;i<neps_i;i++)
-                {
-                    spectrum_i[m][i] = spectrum_i[m][i]*spectrum_norm_ph;
-                    fout_spectrum_i[m]<<spectrum_i[m][i]<<"\n";
-                }
-            }
-            delete[] spectrum;
-            delete[] spectrum_p;
-            delete[] spectrum_ph;
-            fout_rho.close();
-            fout_rho_p.close();
-            fout_rho_ph.close();
-            fout_spectrum.close();
-            fout_spectrum_p.close();
-            fout_spectrum_ph.close();
-            fout_phasespace.close();
-            fout_phasespace_p.close();
-            fout_phasespace_ph.close();
-            //
-            for (int m=0;m<n_ion_populations;m++)
-            {
-                fout_spectrum_i[m].close();
-                fout_phasespace_i[m].close();
-            }
-            delete[] fout_spectrum_i;
-            delete[] fout_phasespace_i;
-            for (int m=0;m<n_ion_populations;m++)
-                delete[] spectrum_i[m];
-            delete[] spectrum_i;
-            //
             for(int i=0;i<n_sr;i++) pthread_mutex_unlock(&sr_mutex_rho2[i]);
         }
 
@@ -2248,9 +2270,18 @@ int init()
     current = find("n_numa_nodes",first);
     n_numa_nodes = current->value;
     if (n_numa_nodes==0) n_numa_nodes = 2;
+    
+    std::string particles_for_output;
     current = find("particles_for_output",first);
     particles_for_output = current->units;
-    if(particles_for_output=="") particles_for_output = "e"; // default
+    if(particles_for_output=="") 
+        particles_for_output = "e"; // default; initialize so we could print it to log
+    
+    if (particles_for_output=="ep" || particles_for_output=="epph")
+        write_p = true;
+    if (particles_for_output=="eph" || particles_for_output=="epph")
+        write_ph = true;
+    
     current = find("pmerging",first);
     pmerging = current->units;
     if(pmerging=="") pmerging = "off"; // default

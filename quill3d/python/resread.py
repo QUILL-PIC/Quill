@@ -30,6 +30,7 @@ ne = 0
 xsigma = 0
 filmwidth = 0
 catching = False
+particles_for_output = 'e'
 
 data_folder = '../results/'
 t = '0'
@@ -42,7 +43,7 @@ def xi( x, t ):
 def read_parameters(log=None):
     'Reads nx, ny, etc. from *log*.'
     global dx,dy,dz,dt,nx,ny,nz,output_period,n_ion_populations,icmr,t_end,tr_start,\
-    deps,deps_p,deps_ph,deps_i,a0y,a0z,lmbda,ne,xsigma,filmwidth,catching
+    deps,deps_p,deps_ph,deps_i,a0y,a0z,lmbda,ne,xsigma,filmwidth,catching,particles_for_output
     if log is None:
         log = data_folder+'log'
     icmr = []
@@ -97,6 +98,8 @@ def read_parameters(log=None):
             xsigma = float(next(f))
         if line=='filmwidth\n':
             filmwidth = float(next(f))
+        if line.strip() == 'particles_for_output':
+            particles_for_output = next(f).strip().replace('ph','g')
     f.close()
 
 def density(name='rho',plane='xy'):
