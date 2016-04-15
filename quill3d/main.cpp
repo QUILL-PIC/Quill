@@ -1210,10 +1210,10 @@ int main()
                 {
                     for(int k=0;k<int(zlength/dz);k++)
                     {
-                    cell_pos.j=j;
-                    cell_pos.k=k;
-                    psr[n_sr-1].fill_cell_by_particles(-1,cell_pos,v_npic,n);
-                    //if (ions=="on")
+                        cell_pos.j=j;
+                        cell_pos.k=k;
+                        psr[n_sr-1].fill_cell_by_particles(-1,cell_pos,v_npic,n);
+                        //if (ions=="on")
                         // psr[n_sr-1].fill_cell_by_particles(-1,cell_pos,v_npic,n); // bug??! this adds electrons, not ions; qwe
                     }
                 }
@@ -1260,6 +1260,7 @@ int main()
                     }
                 }
             }
+            xlflow += dt*vlflow/dx;
         }
         if ( nerflow!=0 ) {
             //
