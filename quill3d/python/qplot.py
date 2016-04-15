@@ -61,7 +61,7 @@ def density(t=0,plane='xy',max_w=0,max_e_density=0,max_p_density=0,max_g_density
     elif extent == 'xi':
         extent = ( resread.xi( 0, t ), resread.xi( xlength, t ), 0, ylength )
 
-    if 'g' in particles:
+    if 'g' in particles and 'g' in resread.particles_for_output:
         plt.imshow(resread.density('rho_ph',plane),'tcmap_blue',interpolation='none',vmin=0,vmax=max_g_density,origin='lower',extent=extent)
 
     if 'w' in particles:
@@ -73,7 +73,7 @@ def density(t=0,plane='xy',max_w=0,max_e_density=0,max_p_density=0,max_g_density
     if 'e' in particles:
         plt.imshow(edensity,'tcmap_green',interpolation='none',vmin=0,vmax=max_e_density,origin='lower',extent=extent)
 
-    if 'p' in particles:
+    if 'p' in particles and 'p' in resread.particles_for_output:
         plt.imshow(resread.density('rho_p',plane),'tcmap_red',interpolation='none',vmin=0,vmax=max_p_density,origin='lower',extent=extent)
     #
     if save2=='':
