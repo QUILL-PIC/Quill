@@ -56,62 +56,62 @@ def read_parameters(log=None):
     icmr = []
     f = open(log)
     for line in f:
-	if line=='dx\n':
-	    dx = float(f.next())
-	elif line=='dy\n':
-	    dy = float(f.next())
-	elif line=='dz\n':
-	    dz = float(f.next())
-	elif line=='dt\n':
-	    dt = float(f.next())
-	elif line=='nx\n':
-	    nx = int(f.next())
-	elif line=='ny\n':
-	    ny = int(f.next())
-	elif line=='nz\n':
-	    nz = int(f.next())
-	elif line=='output_period\n':
-	    output_period = float(f.next())
-	elif line=='n_ion_populations\n':
-	    n_ion_populations = int(f.next())
-	elif line=='icmr\n':
-	    icmr.append(float(f.next()))
-	elif line=='t_end\n':
-	    t_end = float(f.next())
-	elif line=='tr_start\n':
-	    tr_start = float(f.next())
-	elif line=='deps\n':
-	    deps = float(f.next())
-	elif line=='deps_p\n':
-	    deps_p = float(f.next())
-	elif line=='deps_ph\n':
-	    deps_ph = float(f.next())
-	elif line=='deps_i\n':
-	    deps_i = float(f.next())
-	elif line=='a0y\n':
-	    a0y = float(f.next())
-	elif line=='a0z\n':
-	    a0z = float(f.next())
-	elif line=='lambda\n':
-	    lmbda = float(f.next())
-	elif line=='ne\n':
-	    ne = float(f.next())
-	elif line=='xsigma\n':
-	    xsigma = float(f.next())
-	elif line=='filmwidth\n':
-	    filmwidth = float(f.next())
-	elif line=='nerflow\n':
-	    nerflow = float(f.next())
-	elif line=='Tlflow\n':
-	    Tlflow = float(f.next())
-	elif line=='mcrlflow\n':
-	    mcrlflow = float(f.next())
-	elif line=='vlflow\n':
-	    vlflow = float(f.next())
-	elif line=='Trflow\n':
-	    Trflow = float(f.next())
-	elif line=='vrflow\n':
-	    vrflow = float(f.next())
+        if line=='dx\n':
+            dx = float(next(f))
+        elif line=='dy\n':
+            dy = float(next(f))
+        elif line=='dz\n':
+            dz = float(next(f))
+        elif line=='dt\n':
+            dt = float(next(f))
+        elif line=='nx\n':
+            nx = int(next(f))
+        elif line=='ny\n':
+            ny = int(next(f))
+        elif line=='nz\n':
+            nz = int(next(f))
+        elif line=='output_period\n':
+            output_period = float(next(f))
+        elif line=='n_ion_populations\n':
+            n_ion_populations = int(next(f))
+        elif line=='icmr\n':
+            icmr.append(float(next(f)))
+        elif line=='t_end\n':
+            t_end = float(next(f))
+        elif line=='tr_start\n':
+            tr_start = float(next(f))
+        elif line=='deps\n':
+            deps = float(next(f))
+        elif line=='deps_p\n':
+            deps_p = float(next(f))
+        elif line=='deps_ph\n':
+            deps_ph = float(next(f))
+        elif line=='deps_i\n':
+            deps_i = float(next(f))
+        elif line=='a0y\n':
+            a0y = float(next(f))
+        elif line=='a0z\n':
+            a0z = float(next(f))
+        elif line=='lambda\n':
+            lmbda = float(next(f))
+        elif line=='ne\n':
+            ne = float(next(f))
+        elif line=='xsigma\n':
+            xsigma = float(next(f))
+        elif line=='filmwidth\n':
+            filmwidth = float(next(f))
+        elif line=='nerflow\n':
+            nerflow = float(next(f))
+        elif line=='Tlflow\n':
+            Tlflow = float(next(f))
+        elif line=='mcrlflow\n':
+            mcrlflow = float(next(f))
+        elif line=='vlflow\n':
+            vlflow = float(next(f))
+        elif line=='Trflow\n':
+            Trflow = float(next(f))
+        elif line=='vrflow\n':
+            vrflow = float(next(f))
         elif line.strip() == 'catching':
             ss = next(f).strip()
             if ss == 'on':
@@ -194,12 +194,15 @@ def particles(name='phasespace',s=['x','y','g']):
         elif s[i]=='vz':
             for j in np.arange(0,n,1):
                 a[i][j] = float(data[9*j+6])/float(data[9*j+7])
-        elif s[i]=='phi': # measured in xy plane countercloclwise from x-axis, lies in (-pi,pi]
-            for j in np.arange(0,n,1):
-                a[i][j] = math.atan2(float(data[9*j+5]),float(data[9*j+4]))
-        elif s[i]=='theta': # measured from xy-plane, lies in [-pi/2,pi/2]
-            for j in np.arange(0,n,1):
-                a[i][j] = math.atan2(float(data[9*j+6]),np.sqrt(float(data[9*j+4])**2+float(data[9*j+5])**2))
+        # phi = 0, theta = 0 - direction of y axis
+        # theta = pi / 2 - direction of x axis
+        # phi = pi / 2, theta = 0 - direction of z axis
+        elif s[i]=='phi': # longitude, measured in yz plane from y to z axis, in (-pi,pi];
+            a[i,:] = np.arctan2(np.asfarray(data[6::9]), np.asfarray(data[5::9]))
+        elif s[i]=='theta': # latitude, measured from x axis, in [-pi/2,pi/2]
+            y = np.asfarray(data[5::9])
+            z = np.asfarray(data[6::9])
+            a[i,:] = np.arctan2(np.asfarray(data[4::9]), np.sqrt(y * y + z * z))
         else:
             print('resread.particles: warning: ambiguous value for s[{0}] - {1}, value \'x\' used instead'.format(i, s[i]))
             for j in np.arange(0,n,1):
@@ -309,9 +312,9 @@ def onaxis(filename, sx = 1, sy = 1, sz = 1, av = 'None'):
             a = np.sum(density(filename, 'xz'), 0) / nz
         else:
             a = np.zeros(nx)
-	    for i in np.linspace(1 - sy, sy - 1, 2 * sy - 1):
-		a += density(filename)[ny/2+i,:]
-	    for i in np.linspace(1 - sz, sz - 1, 2 * sz - 1):
-		a += density(filename,'xz')[nz/2+i,:]
-	    a = a / (2 * (sy + sz) - 2)
+            for i in np.linspace(1 - sy, sy - 1, 2 * sy - 1):
+                a += density(filename)[ny/2+i,:]
+            for i in np.linspace(1 - sz, sz - 1, 2 * sz - 1):
+                a += density(filename,'xz')[nz/2+i,:]
+            a = a / (2 * (sy + sz) - 2)
     return smooth(a, lr)

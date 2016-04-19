@@ -231,7 +231,7 @@ def tracks(space=['x','y'],particles='geip',t0=0,t1=0,colors='bgmrcyk',cmaps=['j
                                 tmp0.append(tracks[i][0,j])
                                 tmp1.append(tracks[i][1,j])
                                 tmp2.append(tracks[i][2,j])
-                    plt.scatter(tmp0,tmp1,c=tmp2,cmap=cmaps[cmr2int(m)],s=r*r,faceted=False)
+                    plt.scatter(tmp0,tmp1,c=tmp2,cmap=cmaps[cmr2int(m)],s=r*r,edgecolors='none')
         else:
             for i in np.arange(len(track_names)):
                 tmp0 = []
@@ -242,15 +242,15 @@ def tracks(space=['x','y'],particles='geip',t0=0,t1=0,colors='bgmrcyk',cmaps=['j
                     tmp1.append(tracks[i][1,j])
                     tmp2.append(tracks[i][2,j])
                 if particles.find('e')!=-1 and cmr[i]==-1:
-                    plt.scatter(tmp0,tmp1,c=tmp2,cmap=cmaps[cmr2int(cmr[i])],s=r*r,faceted=False)
+                    plt.scatter(tmp0,tmp1,c=tmp2,cmap=cmaps[cmr2int(cmr[i])],s=r*r,edgecolors='none')
                 if particles.find('p')!=-1 and cmr[i]==1:
-                    plt.scatter(tmp0,tmp1,c=tmp2,cmap=cmaps[cmr2int(cmr[i])],s=r*r,faceted=False)
+                    plt.scatter(tmp0,tmp1,c=tmp2,cmap=cmaps[cmr2int(cmr[i])],s=r*r,edgecolors='none')
                 if particles.find('g')!=-1 and cmr[i]==0:
-                    plt.scatter(tmp0,tmp1,c=tmp2,cmap=cmaps[cmr2int(cmr[i])],s=r*r,faceted=False)
+                    plt.scatter(tmp0,tmp1,c=tmp2,cmap=cmaps[cmr2int(cmr[i])],s=r*r,edgecolors='none')
                 if particles.find('i')!=-1:
                     for k in np.arange(len(resread.icmr)):
                         if cmr[i]==resread.icmr[k]:
-                            plt.scatter(tmp0,tmp1,c=tmp2,cmap=cmaps[cmr2int(cmr[i])],s=r*r,faceted=False)
+                            plt.scatter(tmp0,tmp1,c=tmp2,cmap=cmaps[cmr2int(cmr[i])],s=r*r,edgecolors='none')
     else:
         print('qplot.tracks: warning: ambiguous value for *space*')
     if axis!=[]:
