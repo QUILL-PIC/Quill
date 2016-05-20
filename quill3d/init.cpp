@@ -1,7 +1,7 @@
 #include <cmath>
 #include "main.h"
 
-void spatial_region::f_init_cos(double a0y, double a0z, double xsigma, double ysigma, double zsigma, double x0, bool sscos, bool b_sign, double x1, double phase, double y0, double z0, bool append, double phi, double ytarget, double ztarget)
+void spatial_region::f_init_cos(double a0y, double a0z, double xsigma, double ysigma, double zsigma, double x0, bool sscos, bool b_sign, double x1, double phase, double y0, double z0, bool append, double phi, double xtarget, double ytarget, double ztarget)
 {
     /* Для f_init_gauss xsigma, ysigma и zsigma имели смысл
      * половины масштабов лазерного импульса на уровне 1/e^2 (по
@@ -82,10 +82,10 @@ void spatial_region::f_init_cos(double a0y, double a0z, double xsigma, double ys
         {
             for(int k=0;k<nz;k++)
             {
-                x = r0x*(i*dx-x0) + r0y*(j*dy-y12-y0-ytarget) + r0z*(k*dz-z12-z0-ztarget);
+                x = r0x*(i*dx-x0-xtarget) + r0y*(j*dy-y12-y0-ytarget) + r0z*(k*dz-z12-z0-ztarget);
                 xi = x + phase;
-                y = y0x*(i*dx-x0) + y0y*(j*dy-y12-y0-ytarget) + y0z*(k*dz-z12-z0-ztarget);
-                z = z0x*(i*dx-x0) + z0y*(j*dy-y12-y0-ytarget) + z0z*(k*dz-z12-z0-ztarget);
+                y = y0x*(i*dx-x0-xtarget) + y0y*(j*dy-y12-y0-ytarget) + y0z*(k*dz-z12-z0-ztarget);
+                z = z0x*(i*dx-x0-xtarget) + z0y*(j*dy-y12-y0-ytarget) + z0z*(k*dz-z12-z0-ztarget);
                 // vector potential envelope = (cosx*cosy*cosz)^2;
                 if (x<xs&&x>-xs&&y<ys&&y>-ys&&z<zs&&z>-zs)
                 {
