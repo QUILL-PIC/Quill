@@ -35,7 +35,7 @@ void spatial_region::f_init_cos(double a0y, double a0z, double xsigma, double ys
     double cosx,cosy,cosz,sinx,siny,sinz,tr_envelope;
     double y12,z12;
     y12 = 0.5*ny*dy;
-    z12 = 0.5*nz*dy;
+    z12 = 0.5*nz*dz;
     double r0x,r0y,r0z;
     r0x = sqrt(x1*x1+y0*y0+z0*z0);
     r0y = -y0/r0x;
