@@ -3,6 +3,7 @@
 #include <cmath>
 #include <sys/times.h>
 #include <numa.h>
+#include <unistd.h>
 #include "main.h"
 
 using namespace std;
@@ -881,6 +882,7 @@ void init_films()
 int main()
 {
     cout<<"\n\033[1m"<<"hi!"<<"\033[0m\n"<<endl;
+    cout << "Quill process id = " << getpid() << endl;
     up_time = times(&tms_struct);
     start_time = times(&tms_struct);
     inaccurate_time = time(NULL);
