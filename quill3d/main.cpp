@@ -814,7 +814,8 @@ void init_fields()
                 f_reflection3 += tmpf[jj];
             }
         }
-        for (int i=0;i<n_sr;i++) psr[i].f_init_cos(a0y,a0z,xsigma,ysigma,zsigma,xlength/2-x0-dx*i*(nx_sr - nx_ich),sscos,b_sign,-x0,phase,y00,z00,true,0,xtarget,ytarget,ztarget);
+        for (int i=0;i<n_sr;i++) psr[i].f_init_cos(a0y,a0z,xsigma,ysigma,zsigma,xlength/2+x0-dx*i*(nx_sr - nx_ich),sscos,b_sign,x0,phase,y00,z00,true,0,xtarget,ytarget,ztarget);
+        // TODO: correct x0 - xlength/2 -> -x0
         if (phi!=0) {
             for (int i=0;i<n_sr;i++) psr[i].f_init_cos(a0y,a0z,xsigma,ysigma,zsigma,x0-dx*i*(nx_sr - nx_ich),sscos,b_sign,-xlength/2+x0,phase,-y00,-z00,1,phi,xtarget,ytarget,ztarget);
         }
@@ -1873,8 +1874,8 @@ int init()
             current->units="rad";
         }
         double theta = current->value;
-        x0 = r0*cos(theta) + 0.00001;  // Bug: Quill cannot create laser pulse exactly at xlength/2
-        y00 = r0*sin(theta);
+        x0 = -r0*cos(theta) + 0.00001;  // Bug: Quill cannot create laser pulse exactly at xlength/2
+        y00 = -r0*sin(theta);
     }
     
     // coordinates (relative to the center of the box) of the point which the laser pulse is proparating to
