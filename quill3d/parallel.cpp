@@ -42,6 +42,10 @@
 // Dmitry Serebryakov
 // v.1.1 - any parameter from config template can be used in parallel.ini (not only ne and a0)
 
+// 2016-06-10
+// Dmitry Serebryakov
+// Fixed bug - setting string "neps = 40000" was recognized as "ne ..." and replaced with "ne = 50"; using ./run.sh for quill task instead of ./parse.sh
+
 
 #include <iostream>
 #include <fstream>
@@ -54,6 +58,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <regex>
 
 #define N_THREADS_DEFAULT 6
 #define N_THREADS_MAX     64
@@ -157,9 +162,9 @@ int QuillTask::perform(int tid)
 
     string command;
     if (TheParallelizator->temp_config_folder.compare("../quill3d-conf/quill.conf.parallel/") != 0)
-        command = "./parse.sh " + TheParallelizator->temp_config_folder + config_name + " | ./quill";
+        command = "./run.sh " + TheParallelizator->temp_config_folder + config_name;
     else
-        command = "./parse.sh .parallel/" + config_name + " | ./quill";
+        command = "./run.sh .parallel/" + config_name;
 
     pthread_mutex_lock(&print_mutex);
     cout << "Begin QuillTask # " << task_id << ", thread id " << tid << ", config_name " << config_name << endl;
@@ -346,7 +351,7 @@ void Parallelizator::populateTaskQueue()
         bool param_y_found = false;
         while (getline(config_template, buffer))
         {
-            if (buffer.find(param_x.name) == 0)
+			if (regex_match(buffer, regex("^" + param_x.name + "\\s*=.*")))
             {
                 param_x_found = true;
                 int commentFrom = buffer.find_first_of('#');
@@ -354,7 +359,7 @@ void Parallelizator::populateTaskQueue()
                     param_x.comment = buffer.substr(commentFrom);
                 buffer = "$PARAM_X$";
             }
-            else if (buffer.find(param_y.name) == 0)
+            else if (regex_match(buffer, regex("^" + param_y.name + "\\s*=.*")))
             {
                 param_y_found = true;
                 int commentFrom = buffer.find_first_of('#');
