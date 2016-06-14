@@ -194,15 +194,15 @@ def particles(name='phasespace',s=['x','y','g']):
         elif s[i]=='vz':
             for j in np.arange(0,n,1):
                 a[i][j] = float(data[9*j+6])/float(data[9*j+7])
-        # phi = 0, theta = 0 - direction of y axis
-        # theta = pi / 2 - direction of x axis
-        # phi = pi / 2, theta = 0 - direction of z axis
-        elif s[i]=='phi': # longitude, measured in yz plane from y to z axis, in (-pi,pi];
-            a[i,:] = np.arctan2(np.asfarray(data[6::9]), np.asfarray(data[5::9]))
-        elif s[i]=='theta': # latitude, measured from x axis, in [-pi/2,pi/2]
+        # phi = 0, theta = 0 - direction of x axis
+        # theta = pi / 2 - direction of z axis
+        # phi = pi / 2, theta = 0 - direction of y axis
+        elif s[i]=='phi': 
+            a[i,:] = np.arctan2(np.asfarray(data[5::9]), np.asfarray(data[4::9]))
+        elif s[i]=='theta':
+            x = np.asfarray(data[4::9])
             y = np.asfarray(data[5::9])
-            z = np.asfarray(data[6::9])
-            a[i,:] = np.arctan2(np.asfarray(data[4::9]), np.sqrt(y * y + z * z))
+            a[i,:] = np.arctan2(np.asfarray(data[6::9]), np.sqrt(x * x + y * y))
         else:
             print('resread.particles: warning: ambiguous value for s[{0}] - {1}, value \'x\' used instead'.format(i, s[i]))
             for j in np.arange(0,n,1):
