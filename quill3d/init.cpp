@@ -159,7 +159,7 @@ void spatial_region::f_init_cos(double a0y, double a0z, double xsigma, double ys
     }
 }
 
-void spatial_region::f_init_focused(double a0y, double a0z, double xsigma, double sigma0, double x0, double x1, bool b_sign, double phase, double y0, double z0, bool append, double phi, bool sscos, double K)
+void spatial_region::f_init_focused(double a0y, double a0z, double xsigma, double sigma0, double x0, double x1, bool b_sign, double phase, double y0, double z0, bool append, double phi, bool sscos, double K, double xtarget, double ytarget, double ztarget)
 {
     /* sigma0 - поперечный размер в перетяжке (импульс
      * аксиально-симметричный), x0 - положение центра лазерного
@@ -240,8 +240,8 @@ void spatial_region::f_init_focused(double a0y, double a0z, double xsigma, doubl
         {
             for(int k=0;k<nz;k++)
             {
-                x = r0x*(i*dx-x0) + r0y*(j*dy-y12-y0) + r0z*(k*dz-z12-z0);
-                r = sqrt( (i*dx-x0)*(i*dx-x0) + (j*dy-y12-y0)*(j*dy-y12-y0) + (k*dz-z12-z0)*(k*dz-z12-z0) - x*x );
+                x = r0x*(i*dx-x0-xtarget) + r0y*(j*dy-y12-y0-ytarget) + r0z*(k*dz-z12-z0-ztarget);
+                r = sqrt( (i*dx-x0-xtarget)*(i*dx-x0-xtarget) + (j*dy-y12-y0-ytarget)*(j*dy-y12-y0-ytarget) + (k*dz-z12-z0-ztarget)*(k*dz-z12-z0-ztarget) - x*x );
                 xi = x + r*r/2*(x-x1)/((x-x1)*(x-x1)+xR*xR) - atan((x-x1)/xR) - atan(x1/xR);
                 slocal = s0*sqrt( 1 + (xi-x1+atan(x1/xR))*(xi-x1+atan(x1/xR))/(xR*xR) );
                 alocal = s/slocal * a_multiplier;
@@ -259,11 +259,11 @@ void spatial_region::f_init_focused(double a0y, double a0z, double xsigma, doubl
                         bz = ey;
                         by = -ez;
                         if (r!=0)
-                            ex = alocal*a0y / K * ( cosr*sinr*PI/slocal*((i*dx-x0)*y0x+(j*dy-y12-y0)*y0y+(k*dz-z12-z0)*y0z)/r*( K * sin(xxi)*cosx*cosx+4*PI*xi*xi*xi/(xs*xs*xs*xs)*cos(xxi)*cosx*sinx) + ((i*dx-x0)*y0x+(j*dy-y12-y0)*y0y+(k*dz-z12-z0)*y0z)*(x-x1)/((x-x1)*(x-x1)+xR*xR)*cosr*cosr*(cosx*cosx*(-K * cos(xxi))+4*PI*xi*xi*xi/(xs*xs*xs*xs)*cosx*sinx*sin(xxi)) ) - alocal*a0z / K * ( cosr*sinr*PI/slocal*((i*dx-x0)*z0x+(j*dy-y12-y0)*z0y+(k*dz-z12-z0)*z0z)/r*((-K * cos(xxi))*cosx*cosx-4*PI*xi*xi*xi/(xs*xs*xs*xs)*sin(xxi)*cosx*sinx) + ((i*dx-x0)*z0x+(j*dy-y12-y0)*z0y+(k*dz-z12-z0)*z0z)*(x-x1)/((x-x1)*(x-x1)+xR*xR)*cosr*cosr*(cosx*cosx*(-K * sin(xxi))-4*PI*xi*xi*xi/(xs*xs*xs*xs)*cosx*sinx*cos(xxi)) );
+                            ex = alocal*a0y / K * ( cosr*sinr*PI/slocal*((i*dx-x0-xtarget)*y0x+(j*dy-y12-y0-ytarget)*y0y+(k*dz-z12-z0-ztarget)*y0z)/r*( K * sin(xxi)*cosx*cosx+4*PI*xi*xi*xi/(xs*xs*xs*xs)*cos(xxi)*cosx*sinx) + ((i*dx-x0-xtarget)*y0x+(j*dy-y12-y0-ytarget)*y0y+(k*dz-z12-z0-ztarget)*y0z)*(x-x1)/((x-x1)*(x-x1)+xR*xR)*cosr*cosr*(cosx*cosx*(-K * cos(xxi))+4*PI*xi*xi*xi/(xs*xs*xs*xs)*cosx*sinx*sin(xxi)) ) - alocal*a0z / K * ( cosr*sinr*PI/slocal*((i*dx-x0-xtarget)*z0x+(j*dy-y12-y0-ytarget)*z0y+(k*dz-z12-z0-ztarget)*z0z)/r*((-K * cos(xxi))*cosx*cosx-4*PI*xi*xi*xi/(xs*xs*xs*xs)*sin(xxi)*cosx*sinx) + ((i*dx-x0-xtarget)*z0x+(j*dy-y12-y0-ytarget)*z0y+(k*dz-z12-z0-ztarget)*z0z)*(x-x1)/((x-x1)*(x-x1)+xR*xR)*cosr*cosr*(cosx*cosx*(-K * sin(xxi))-4*PI*xi*xi*xi/(xs*xs*xs*xs)*cosx*sinx*cos(xxi)) );
                         else
                             ex = 0;
                         if (r!=0)
-                            bx = alocal*a0y / K * ( cosr*sinr*PI/slocal*((i*dx-x0)*z0x+(j*dy-y12-y0)*z0y+(k*dz-z12-z0)*z0z)/r*(K * sin(xxi)*cosx*cosx+4*PI*xi*xi*xi/(xs*xs*xs*xs)*cos(xxi)*cosx*sinx) + ((i*dx-x0)*z0x+(j*dy-y12-y0)*z0y+(k*dz-z12-z0)*z0z)*(x-x1)/((x-x1)*(x-x1)+xR*xR)*cosr*cosr*(cosx*cosx*(-K * cos(xxi))+4*PI*xi*xi*xi/(xs*xs*xs*xs)*cosx*sinx*sin(xxi)) ) + alocal*a0z / K * ( cosr*sinr*PI/slocal*((i*dx-x0)*y0x+(j*dy-y12-y0)*y0y+(k*dz-z12-z0)*y0z)/r*((-K * cos(xxi))*cosx*cosx-4*PI*xi*xi*xi/(xs*xs*xs*xs)*sin(xxi)*cosx*sinx) + ((i*dx-x0)*y0x+(j*dy-y12-y0)*y0y+(k*dz-z12-z0)*y0z)*(x-x1)/((x-x1)*(x-x1)+xR*xR)*cosr*cosr*(cosx*cosx*(-K * sin(xxi))-4*PI*xi*xi*xi/(xs*xs*xs*xs)*cosx*sinx*cos(xxi)) );
+                            bx = alocal*a0y / K * ( cosr*sinr*PI/slocal*((i*dx-x0-xtarget)*z0x+(j*dy-y12-y0-ytarget)*z0y+(k*dz-z12-z0-ztarget)*z0z)/r*(K * sin(xxi)*cosx*cosx+4*PI*xi*xi*xi/(xs*xs*xs*xs)*cos(xxi)*cosx*sinx) + ((i*dx-x0-xtarget)*z0x+(j*dy-y12-y0-ytarget)*z0y+(k*dz-z12-z0-ztarget)*z0z)*(x-x1)/((x-x1)*(x-x1)+xR*xR)*cosr*cosr*(cosx*cosx*(-K * cos(xxi))+4*PI*xi*xi*xi/(xs*xs*xs*xs)*cosx*sinx*sin(xxi)) ) + alocal*a0z / K * ( cosr*sinr*PI/slocal*((i*dx-x0-xtarget)*y0x+(j*dy-y12-y0-ytarget)*y0y+(k*dz-z12-z0-ztarget)*y0z)/r*((-K * cos(xxi))*cosx*cosx-4*PI*xi*xi*xi/(xs*xs*xs*xs)*sin(xxi)*cosx*sinx) + ((i*dx-x0-xtarget)*y0x+(j*dy-y12-y0-ytarget)*y0y+(k*dz-z12-z0-ztarget)*y0z)*(x-x1)/((x-x1)*(x-x1)+xR*xR)*cosr*cosr*(cosx*cosx*(-K * sin(xxi))-4*PI*xi*xi*xi/(xs*xs*xs*xs)*cosx*sinx*cos(xxi)) );
                         else
                             bx = 0;
                     } else if (-2 * s0 * (x1 - x) / xR <= r && r <= 2 * s0 * (x1 - x) / xR) { // otherwise unphysical wings arise
@@ -278,11 +278,11 @@ void spatial_region::f_init_focused(double a0y, double a0z, double xsigma, doubl
                         bz = ey;
                         by = -ez;
                         if (r!=0)
-                            ex = alocal*a0y / K * ( cosr*sinr*PI/slocal*((i*dx-x0)*y0x+(j*dy-y12-y0)*y0y+(k*dz-z12-z0)*y0z)/r*(K * sin(xxi)*cosx*cosx+PI/xs*cos(xxi)*cosx*sinx) + ((i*dx-x0)*y0x+(j*dy-y12-y0)*y0y+(k*dz-z12-z0)*y0z)*(x-x1)/((x-x1)*(x-x1)+xR*xR)*cosr*cosr*(cosx*cosx*(-K * cos(xxi))+PI/xs*cosx*sinx*sin(xxi)) ) - alocal*a0z / K *( cosr*sinr*PI/slocal*((i*dx-x0)*z0x+(j*dy-y12-y0)*z0y+(k*dz-z12-z0)*z0z)/r*((-K * cos(xxi))*cosx*cosx-PI/xs*sin(xxi)*cosx*sinx) + ((i*dx-x0)*z0x+(j*dy-y12-y0)*z0y+(k*dz-z12-z0)*z0z)*(x-x1)/((x-x1)*(x-x1)+xR*xR)*cosr*cosr*(cosx*cosx*(-K * sin(xxi))-PI/xs*cosx*sinx*cos(xxi)) );
+                            ex = alocal*a0y / K * ( cosr*sinr*PI/slocal*((i*dx-x0-xtarget)*y0x+(j*dy-y12-y0-ytarget)*y0y+(k*dz-z12-z0-ztarget)*y0z)/r*(K * sin(xxi)*cosx*cosx+PI/xs*cos(xxi)*cosx*sinx) + ((i*dx-x0-xtarget)*y0x+(j*dy-y12-y0-ytarget)*y0y+(k*dz-z12-z0-ztarget)*y0z)*(x-x1)/((x-x1)*(x-x1)+xR*xR)*cosr*cosr*(cosx*cosx*(-K * cos(xxi))+PI/xs*cosx*sinx*sin(xxi)) ) - alocal*a0z / K *( cosr*sinr*PI/slocal*((i*dx-x0-xtarget)*z0x+(j*dy-y12-y0-ytarget)*z0y+(k*dz-z12-z0-ztarget)*z0z)/r*((-K * cos(xxi))*cosx*cosx-PI/xs*sin(xxi)*cosx*sinx) + ((i*dx-x0-xtarget)*z0x+(j*dy-y12-y0-ytarget)*z0y+(k*dz-z12-z0-ztarget)*z0z)*(x-x1)/((x-x1)*(x-x1)+xR*xR)*cosr*cosr*(cosx*cosx*(-K * sin(xxi))-PI/xs*cosx*sinx*cos(xxi)) );
                         else
                             ex = 0;
                         if (r!=0)
-                            bx = alocal*a0y / K * ( cosr*sinr*PI/slocal*((i*dx-x0)*z0x+(j*dy-y12-y0)*z0y+(k*dz-z12-z0)*z0z)/r*(K * sin(xxi)*cosx*cosx+PI/xs*cos(xxi)*cosx*sinx) + ((i*dx-x0)*z0x+(j*dy-y12-y0)*z0y+(k*dz-z12-z0)*z0z)*(x-x1)/((x-x1)*(x-x1)+xR*xR)*cosr*cosr*(cosx*cosx*(-K * cos(xxi))+PI/xs*cosx*sinx*sin(xxi)) ) + alocal*a0z / K *( cosr*sinr*PI/slocal*((i*dx-x0)*y0x+(j*dy-y12-y0)*y0y+(k*dz-z12-z0)*y0z)/r*((-K * cos(xxi))*cosx*cosx-PI/xs*sin(xxi)*cosx*sinx) + ((i*dx-x0)*y0x+(j*dy-y12-y0)*y0y+(k*dz-z12-z0)*y0z)*(x-x1)/((x-x1)*(x-x1)+xR*xR)*cosr*cosr*(cosx*cosx*(-K * sin(xxi))-PI/xs*cosx*sinx*cos(xxi)) );
+                            bx = alocal*a0y / K * ( cosr*sinr*PI/slocal*((i*dx-x0-xtarget)*z0x+(j*dy-y12-y0-ytarget)*z0y+(k*dz-z12-z0-ztarget)*z0z)/r*(K * sin(xxi)*cosx*cosx+PI/xs*cos(xxi)*cosx*sinx) + ((i*dx-x0-xtarget)*z0x+(j*dy-y12-y0-ytarget)*z0y+(k*dz-z12-z0-ztarget)*z0z)*(x-x1)/((x-x1)*(x-x1)+xR*xR)*cosr*cosr*(cosx*cosx*(-K * cos(xxi))+PI/xs*cosx*sinx*sin(xxi)) ) + alocal*a0z / K *( cosr*sinr*PI/slocal*((i*dx-x0-xtarget)*y0x+(j*dy-y12-y0-ytarget)*y0y+(k*dz-z12-z0-ztarget)*y0z)/r*((-K * cos(xxi))*cosx*cosx-PI/xs*sin(xxi)*cosx*sinx) + ((i*dx-x0-xtarget)*y0x+(j*dy-y12-y0-ytarget)*y0y+(k*dz-z12-z0-ztarget)*y0z)*(x-x1)/((x-x1)*(x-x1)+xR*xR)*cosr*cosr*(cosx*cosx*(-K * sin(xxi))-PI/xs*cosx*sinx*cos(xxi)) );
                         else
                             bx = 0;
                     } else {
