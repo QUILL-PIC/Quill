@@ -209,10 +209,11 @@ def particles(name='phasespace',s=['x','y','g']):
                 a[i][j] = float(data[9*j+1])
     return a
 
-def t_data(name='energy',step=None):
+def t_data(name='energy', step=None, silent=False):
     'Returns array of rows containing value of t and data from file\n\
     data_folder+*name*.'
-    print ('Fetching t_data from file: {0}; data_folder = {1}'.format(name, data_folder))
+    if not silent:
+        print ('Fetching t_data from file: {0}; data_folder = {1}'.format(name, data_folder))
     if step==None:
         step = dt
     f = open(data_folder+name)
@@ -224,6 +225,8 @@ def t_data(name='energy',step=None):
         i+=1
         for b in a:
             data.append(float(b))
+    if i == 0:
+        raise ValueError('The file is empty!')
     data = np.reshape(data,(i,len(data)//i))
     return data
 
