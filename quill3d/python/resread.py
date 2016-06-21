@@ -54,6 +54,7 @@ def read_parameters(log=None):
     if log is None:
         log = data_folder+'log'
     icmr = []
+    reset_globals()
     f = open(log)
     for line in f:
         if line=='dx\n':
@@ -321,3 +322,38 @@ def onaxis(filename, sx = 1, sy = 1, sz = 1, av = 'None'):
                 a += density(filename,'xz')[nz/2+i,:]
             a = a / (2 * (sy + sz) - 2)
     return smooth(a, lr)
+
+def reset_globals():
+    global dx,dy,dz,dt,nx,ny,nz,output_period,n_ion_populations,icmr,t_end,tr_start,\
+    deps,deps_p,deps_ph,deps_i,a0y,a0z,lmbda,ne,xsigma,filmwidth,nerflow,\
+    Tlflow, mcrlflow, vlflow, Trflow, vrflow, catching, particles_for_output
+    dx = 0
+    dy = 0
+    dz = 0
+    dt = 0
+    nx = 0
+    ny = 0
+    nz = 0
+    output_period = 0
+    n_ion_populations = 0
+    icmr = []
+    t_end = 0
+    tr_start = 0
+    deps = 0
+    deps_p = 0
+    deps_ph = 0
+    deps_i = 0
+    a0y = 0
+    a0z = 0
+    lmbda = 0
+    ne = 0
+    xsigma = 0
+    filmwidth = 0
+    nerflow = 0
+    Tlflow = 0
+    mcrlflow = 0
+    vlflow = 0
+    Trflow = 0
+    vrflow = 0
+    catching = False
+    particles_for_output = 'e'
