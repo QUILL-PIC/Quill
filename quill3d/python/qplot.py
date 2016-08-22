@@ -13,6 +13,22 @@ __name__ =\
 'qplot - provides functions for visualization of quill results'
 __doc__ = 'see source'
 
+def tex_format(space_item):
+    tmp = space_item
+    if space_item in ['ex','ey','ez','bx','by','bz']:
+        tmp = space_item[0].upper() + '_' + space_item[1]
+    elif space_item in ['ux','uy','uz']:
+        tmp = 'p_' + space_item[1]
+    elif space_item in ['vx','vy','vz']:
+        tmp = space_item[0] + '_' + space_item[1]
+    elif space_item in ['xi','chi','theta']:
+        tmp = '\\' + space_item
+    elif space_item == 'g':
+        tmp = '\\gamma'
+    elif space_item == 'phi':
+        tmp = '\\varphi'
+    return '$' + tmp + '$'
+
 def density(t=0,plane='xy',max_w=0,max_e_density=0,max_p_density=0,max_g_density=0,max_i_density=0,axis=[],extent=None,save2='',data_folder='',particles='geipw'):
     'Plots w and particle densities.'
     resread.t = '%g' % t
@@ -26,9 +42,9 @@ def density(t=0,plane='xy',max_w=0,max_e_density=0,max_p_density=0,max_g_density
     tcmap.orange()
     tcmap.purple()
     #
-    plt.title('Particle densities')
-    plt.xlabel(plane[0]+' (wavelengths)')
-    plt.ylabel(plane[1]+' (wavelengths)')
+    plt.gca().set_title('Particle densities',fontsize='medium')
+    plt.xlabel(tex_format(plane[0]) + '$/\lambda$')
+    plt.ylabel(tex_format(plane[1]) + '$/\lambda$')
     if plane=='xz':
         xlength = resread.nx*resread.dx
         ylength = resread.nz*resread.dz
@@ -78,21 +94,33 @@ def density(t=0,plane='xy',max_w=0,max_e_density=0,max_p_density=0,max_g_density
     #
     if save2=='':
         plt.show()
-    else:
+    elif save2!=None:
         plt.savefig(save2)
 
-def particles(t=0,space=['x','y'],particles='geip',colors='bgmrcyk',r=5,alpha=0.01,cmap='jet',gamma=0,data_folder='',axis=[],save2='',vmin=None,vmax=None):
+def particles(t=0,space=['x','y'],particles='geip',colors='bgmrcyk',r=5,alpha=0.01,cmap='jet',gamma=0,data_folder='',axis=[],save2='',vmin=None,vmax=None,xlim=None,ylim=None):
     'Plots particles as dots in (phase)*space*.\n\
     \n\
     Examples:\n\
     qplot.particles(10,[\'x\',\'y\']),\n\
     qplot.particles(15,[\'x\',\'y\',\'g\'],\'i\',gamma=1).'
+    
+    def particle_from_suffix(s):
+        if s=='':
+            return 'e'
+        elif s=='_p':
+            return 'p'
+        elif s=='_ph':
+            return 'g'
+        else:
+            return 'i'
+
     resread.t = '%g' % t
     if data_folder != '':
         resread.data_folder = data_folder
     resread.read_parameters()
-    plt.xlabel(space[0])
-    plt.ylabel(space[1])
+
+    plt.xlabel(tex_format(space[0]))
+    plt.ylabel(tex_format(space[1]))
     if axis!=[]:
         plt.axis(axis)
     lp = list(particles)
@@ -112,11 +140,17 @@ def particles(t=0,space=['x','y'],particles='geip',colors='bgmrcyk',r=5,alpha=0.
         i=0
         for suffix in s:
             phspace = resread.particles('phasespace'+suffix,space)
-            plt.scatter(phspace[0,:],phspace[1,:],s=r*r,color=c[i],alpha=alpha,edgecolors='None')
+            print('Plotting {0}({1}) for {2}; vmin = {3}, vmax = {4}'.format(space[1],space[0],particle_from_suffix(suffix),vmin,vmax))
+            plt.scatter(phspace[0,:],phspace[1,:],color=c[i],s=r*r,alpha=alpha,edgecolors='None')
+            if ylim: #we assume that either ylim is set or vmin / vmax are set
+                plt.ylim(ylim)
+            else:
+                plt.ylim(vmin,vmax)
+            plt.xlim(xlim)
             i+=1
     elif len(space)==3:
         cmap = tcmap.get(cmap,gamma=gamma)
-        plt.title(space[2])
+        plt.title(tex_format(space[2]))
         phspace = resread.particles('phasespace'+s[0],space)  # 2 or more sorts of ions are not currently supported
         if vmin == None:
             vmin = np.min(phspace[2,:])
@@ -124,6 +158,8 @@ def particles(t=0,space=['x','y'],particles='geip',colors='bgmrcyk',r=5,alpha=0.
             vmax = np.max(phspace[2,:])
         print('Plotting {0}({1},{2}) for {3}; vmin = {4}, vmax = {5}'.format(space[2],space[0],space[1],particles[0],vmin,vmax))
         plt.scatter(phspace[0,:],phspace[1,:],s=r*r,c=phspace[2,:],cmap=cmap,vmin=vmin,vmax=vmax,edgecolors='None')
+        plt.xlim(xlim)
+        plt.ylim(ylim)
         plt.colorbar()
     if save2=='':
         plt.show()
@@ -209,7 +245,7 @@ def tracks(space=['x','y'],particles='geip',t0=0,t1=0,colors='bgmrcyk',cmaps=['j
                         if cmr[i]==resread.icmr[j]:
                             plt.plot(tracks[i][0,:],tracks[i][1,:])
     elif len(space)==3:
-        plt.title(space[2])
+        plt.title(tex_format(space[2]))
         if clims2all==1:
             def pname(a):
                 if a==-1:
@@ -255,11 +291,11 @@ def tracks(space=['x','y'],particles='geip',t0=0,t1=0,colors='bgmrcyk',cmaps=['j
         print('qplot.tracks: warning: ambiguous value for *space*')
     if axis!=[]:
         plt.axis(axis)
-    plt.xlabel(space[0])
-    plt.ylabel(space[1])
+    plt.xlabel(tex_format(space[0]))
+    plt.ylabel(tex_format(space[1]))
     if save2=='':
         plt.show()
-    else:
+    elif save2!=None:
         plt.savefig(save2)
 
 def rpattern(t=None,particles='geip',colors='bgmrcyk',dphi=0.1,save2='',data_folder='',catching=False):
@@ -325,8 +361,9 @@ def rpattern(t=None,particles='geip',colors='bgmrcyk',dphi=0.1,save2='',data_fol
     #ax.set_theta_offset(np.pi/2)
     if save2 != '':
         plt.savefig(save2)
-    else:
+    elif save2!=None:
         plt.show()
+
 
 def spectrum(t=None,particles='geip',colors='bgmrcyk',sptype='simple',axis=[],save2='',data_folder=''):
     'spectrum() # plots spectrum for all particles\n\
@@ -386,11 +423,11 @@ def spectrum(t=None,particles='geip',colors='bgmrcyk',sptype='simple',axis=[],sa
             else:
                 sp[j,1] = 0
         plt.plot(sp[:,0],sp[:,1],colors[ci[i]])
-    if save2!=None:
-        if save2=='':
-            plt.show()
-        else:
-            plt.savefig(save2)
+
+    if save2=='':
+        plt.show()
+    elif save2!=None:
+        plt.savefig(save2)
 
 directivity = 0
 directivity_lat = 0
@@ -482,11 +519,10 @@ def mollweide(t=None,nlongitude=80,nlatitude=40,Nlevels=15,save2='',data_folder=
     #ax.contour(lng,lat,rp,Nlevels,cmap='jet',origin=None)
     ax.contour(lng,lat,rp,Nlevels,origin=None)
     #
-    if save2!=None:
-        if save2=='':
-            plt.show()
-        else:
-            plt.savefig(save2)
+    if save2=='':
+        plt.show()
+    elif save2!=None:
+        plt.savefig(save2)
 
 def field(t=0,field='ex',plane='xy',fmax=None,data_folder='',extent=None,axis=[],save2=''):
     'Plots fields.'
@@ -495,9 +531,9 @@ def field(t=0,field='ex',plane='xy',fmax=None,data_folder='',extent=None,axis=[]
         resread.data_folder = data_folder
     resread.read_parameters()
     #
-    plt.title(field)
-    plt.xlabel(plane[0]+' (wavelengths)')
-    plt.ylabel(plane[1]+' (wavelengths)')
+    plt.title(tex_format(field))
+    plt.xlabel(tex_format(plane[0]) + '$/\lambda$')
+    plt.ylabel(tex_format(plane[1]) + '$/\lambda$')
     if plane=='xz':
         xlength = resread.nx*resread.dx
         ylength = resread.nz*resread.dz
@@ -523,7 +559,7 @@ def field(t=0,field='ex',plane='xy',fmax=None,data_folder='',extent=None,axis=[]
     #
     if save2=='':
         plt.show()
-    else:
+    elif save2 != None:
         plt.savefig(save2)
 
 def energy(data_folder='',save2=''):
@@ -557,13 +593,13 @@ def energy(data_folder='',save2=''):
             total = tmp[:,1] + tmp[:,2] + tmp[:,3] + tmp[:,4] + tmp_del[:,1] + tmp_del[:,2] + tmp_del[:,3]
         plt.plot(tmp[:,0],total,':k') # sum energy
     
-    plt.xlabel('ct (wavelengths)')
+    plt.xlabel('$ct/\lambda$')
     plt.ylabel('Energy (arb. units)')
-    if save2!=None:
-        if save2=='':
-            plt.show()
-        else:
-            plt.savefig(save2)
+
+    if save2=='':
+        plt.show()
+    elif save2!=None:
+        plt.savefig(save2)
 
 def tracks2(space=['x', 'y'], tracks=None, save2='', data_folder=''):
     'Plots 2d tracks in the specified *space*'
@@ -574,8 +610,8 @@ def tracks2(space=['x', 'y'], tracks=None, save2='', data_folder=''):
     if len(space) == 2:
         x = space[0]
         y = space[1]
-        plt.xlabel(x)
-        plt.ylabel(y)
+        plt.xlabel(tex_format(x))
+        plt.ylabel(tex_format(y))
         for track in tracks:
             plt.plot(track[x], track[y])
     if not save2:
@@ -585,6 +621,8 @@ def tracks2(space=['x', 'y'], tracks=None, save2='', data_folder=''):
 
 def N(data_folder = '', particles = 'gep', save2 = ''):
     'Plots number of particles over time. Ions are not currently supported'
+    if data_folder != '':
+        resread.data_folder = data_folder
     resread.read_parameters();
     a = resread.t_data('N')
     t = a[:,0]
@@ -592,7 +630,7 @@ def N(data_folder = '', particles = 'gep', save2 = ''):
     Np = a[:,2]
     Ng = a[:,3]
 
-    lw = 2 # linewidth
+    lw = 1.5 # linewidth
     if 'e' in particles:
         plt.plot(t, Ne, 'g--', linewidth = lw, label = r'$N_e$')
     if 'p' in particles:
@@ -600,14 +638,14 @@ def N(data_folder = '', particles = 'gep', save2 = ''):
     if 'g' in particles:
         plt.plot(t, Ng, 'b:', linewidth = lw, label = r'$N_g$')
 
-    plt.legend(loc = 'best')
+    plt.legend(loc = 'best', fontsize = 'medium')
     plt.xlabel(r'$ct/\lambda$')
     plt.ylabel(r'$N$')
     plt.yscale('log')
 
     if save2=='':
         plt.show()
-    else:
+    elif save2!=None:
         plt.savefig(save2)
 
 def onaxis(t, particles = 'we', colors = 'rgbcmyk', norm = 'true',
@@ -661,8 +699,23 @@ def onaxis(t, particles = 'we', colors = 'rgbcmyk', norm = 'true',
             a[i] = norm[i] * a[i] / max(a[i])
     for i, b in enumerate(a):
         plt.plot(x, b, color = colors[i % len(colors)], **plotargs)
-    plt.xlabel('x')
+    plt.xlabel('$x$')
     if save2=='':
         plt.show()
-    else:
+    elif save2!=None:
         plt.savefig(save2)
+
+def reset_style():
+    mpl.rcParams.update(rc_backup) 
+
+lw = 0.7 # linewidth for border
+lwl = 1.0 # linewidth for lines in plots
+font = {'family' : 'Liberation Serif',
+        'weight' : 'normal',
+        'size'   : 9}
+rc_backup = mpl.rcParams.copy()
+mpl.rc('font', **font)
+mpl.rc('lines', linewidth=lw)
+mpl.rc('axes', linewidth=lw)
+mpl.rc('figure', figsize=(3.5,2.5), dpi=200, autolayout=True)
+mpl.rc('savefig',dpi=300)
