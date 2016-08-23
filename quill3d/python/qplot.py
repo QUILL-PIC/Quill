@@ -364,13 +364,46 @@ def rpattern(t=None,particles='geip',colors='bgmrcyk',dphi=0.1,save2='',data_fol
     elif save2!=None:
         plt.show()
 
-
-def spectrum(t=None,particles='geip',colors='bgmrcyk',sptype='simple',axis=[],save2='',data_folder=''):
+def spectrum(t=None,particles='geip',colors='bgmrcyk',sptype='simple',axis=[],save2='',data_folder='',\
+        smooth=True,smooth_start=20,smooth_max=1000,smooth_width=50,window_type='triangular'):
     'spectrum() # plots spectrum for all particles\n\
     at t_end\n\
     Examples:\n\
     spectrum(10,sptype=\'loglog\') # energy distr.\n\
     in log-log axes'
+
+    def window(i, width, type='square'):
+        'Window function with specified width'
+        if type=='square':
+            if i>width or i<-width:
+                return 0.0
+            else:
+                return 1.0 / (2*width + 1)
+        elif type=='triangular':
+            if i>width or i<-width:
+                return 0.0
+            elif i>=0:
+                return (1.0 - 1.0*i/(width+1)) / (width+1)
+            else:
+                return (1.0 + 1.0*i/(width+1)) / (width+1)
+
+    def smooth(x, smooth_start, smooth_max, max_width, wtype):
+        'Returnes smoothed array using specified window, starting from smooth_start.\n\
+        Window width linearly increases until x[i]==smooth_max and after that remains const=max_width'
+        result = np.zeros(len(x))
+        for i in np.arange(len(x)):
+            width = 0
+            
+            if i > smooth_start and i < smooth_max:
+                width = int(max_width * (i - smooth_start) * 1.0 / (smooth_max - smooth_start))
+            elif i > smooth_start:
+                width = max_width
+
+            for j in np.arange(-width, width+1):
+                if i+j>=0 and i+j<len(x):
+                    result[i] += x[i+j] * window(j, width, wtype) 
+        return result
+    
     plt.xlabel('kinetic energy, MeV')
     plt.ylabel('dN/deps, a.u.')
     if axis!=[]:
@@ -406,6 +439,10 @@ def spectrum(t=None,particles='geip',colors='bgmrcyk',sptype='simple',axis=[],sa
                 ci.append(i%len(colors))
     for i in np.arange(len(s)):
         sp = resread.t_data('spectrum'+s[i]+resread.t,deps[i])
+
+        if smooth:
+            sp[:,1] = smooth(sp[:,1], smooth_start, smooth_max, smooth_width, window_type)
+
         if sptype=='energy':
             for j in np.arange(len(sp[:,0])):
                 sp[j,1] = sp[j,0]*sp[j,1]
