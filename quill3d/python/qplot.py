@@ -562,9 +562,18 @@ def field(t=0,field='ex',plane='xy',fmax=None,data_folder='',extent=None,axis=[]
     elif save2 != None:
         plt.savefig(save2)
 
-def energy(data_folder='',save2=''):
+def energy(data_folder='',save2='',catching=True):
     'Plots energy of electrons, ions, etc. vs time'
     #Important: several types of ions are not supported
+
+    def safe_sum(a, b):
+        result = np.array([])
+        min_len = min(len(a), len(b))
+        print (min_len, len(a), len(b))
+        for i in np.arange(min_len):
+            result = np.append(result, a[i] + b[i])
+        return result, min_len
+
     if data_folder != '':
         resread.data_folder = data_folder
     resread.read_parameters()
@@ -579,19 +588,23 @@ def energy(data_folder='',save2=''):
     else:
         plt.plot(tmp[:,0],tmp[:,1]+tmp[:,2]+tmp[:,3]+tmp[:,4],'--k') # sum energy
         
-    if resread.catching:
+    if resread.catching and catching:
         #deleted energy
         tmp_del = resread.t_data('energy_deleted')
-        plt.plot(tmp_del[:,0], tmp_del[:,1], '--g') # electrons
-        plt.plot(tmp_del[:,0], tmp_del[:,2], '--r') # positrons
-        plt.plot(tmp_del[:,0], tmp_del[:,3], '--b') # hard photons
+        sum_e, min_len = safe_sum(tmp_del[:,1], tmp[:,2])
+        plt.plot(tmp_del[:min_len,0], sum_e, '--g') # electrons
+        sum_p, min_len = safe_sum(tmp_del[:,2], tmp[:,3])
+        plt.plot(tmp_del[:min_len,0], sum_p, '--r') # positrons
+        sum_g, min_len = safe_sum(tmp_del[:,3], tmp[:,4])
+        plt.plot(tmp_del[:min_len,0], sum_g, '--b') # hard photons
         
         if (resread.n_ion_populations>0):
-            plt.plot(tmp_del[:,0], tmp_del[:,4], '--m') # ions
-            total = tmp[:,1] + tmp[:,2] + tmp[:,3] + tmp[:,4] + tmp[:,5] + tmp_del[:,1] + tmp_del[:,2] + tmp_del[:,3] + tmp_del[:,4]
+            sum_i, min_len = safe_sum(tmp_del[:,4], tmp[:,5])
+            plt.plot(tmp_del[:min_len,0], sum_i, '--m') # ions
+            total, min_len = safe_sum(tmp[:,1] + tmp[:,2] + tmp[:,3] + tmp[:,4] + tmp[:,5], tmp_del[:,1] + tmp_del[:,2] + tmp_del[:,3] + tmp_del[:,4])
         else:
-            total = tmp[:,1] + tmp[:,2] + tmp[:,3] + tmp[:,4] + tmp_del[:,1] + tmp_del[:,2] + tmp_del[:,3]
-        plt.plot(tmp[:,0],total,':k') # sum energy
+            total, min_len = safe_sum(tmp[:,1] + tmp[:,2] + tmp[:,3] + tmp[:,4], tmp_del[:,1] + tmp_del[:,2] + tmp_del[:,3])
+        plt.plot(tmp[:min_len,0],total,':k') # sum energy
     
     plt.xlabel('$ct/\lambda$')
     plt.ylabel('Energy (arb. units)')
