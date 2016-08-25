@@ -7,7 +7,8 @@ conf
 *.gif
 *.swp
 *.pyc
-results*/
+res*/
 quill3d/file*.conf
 quill3d/a.out
 quill3d/job.sh.*
+quill3d/nohup.out

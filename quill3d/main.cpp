@@ -36,6 +36,7 @@ double phase,phi;
 double shenergy, shphase; // second harmonic relative energy and phase
 ddi* p_last_ddi; // ddi включает t_end, output_period и f - счётчик для вывода данных в файлы
 ddi* p_current_ddi;
+double t_add_mw;
 film* p_last_film;
 double x00,y00,z00;
 double sigma0,sigma; // sigma0 - радиус пучка в фокальной плоскости
@@ -1197,7 +1198,7 @@ int main()
         cout<<endl;
 
         // добавление частиц для движущегося окна (moving_window)
-        if (mwindow==1&&(l+1)*dt*mwspeed>nmw*dx)
+        if (mwindow == 1 && (l + 1) * dt * mwspeed > nmw * dx && (l + 1) * dt < t_add_mw)
         {
             nmw = nmw + 1;
             if (mwseed==1) {
@@ -1698,6 +1699,24 @@ int init()
         p_last_ddi->output_period = output_period;
         p_last_ddi->f = 0;
     } while(find("t_end",tmp_last_t_end)->value!=0);
+    //
+    current = find("t_add_mw", first);
+    if (current->units == "um") {
+        current->value = current->value * 1e-4 / lambda;
+        current->units = "lambda";
+    } else if (current->units == "mm") {
+        current->value = current->value / (10 * lambda);
+        current->units = "lambda";
+    } else if (current->units == "cm") {
+        current->value = current->value / lambda;
+        current->units="lambda";
+    }
+    if (current->value != 0) {
+        t_add_mw = current->value * 2 * PI;
+    } else {
+        t_add_mw = p_last_ddi->t_end;
+    }
+    //
     current = find("xsigma",first);
     if (current->units=="um")
     {
@@ -2439,6 +2458,7 @@ int init()
         p_current_ddi = tmp_ddi; // hence after the loop p_current_ddi points to the first ddi
         tmp_ddi = tmp_ddi->prev;
     }
+    fout_log << "t_add_mw\n" << t_add_mw / (2 * PI) << '\n';
     fout_log<<"xsigma\n"<<xsigma/2/PI<<"\n";
     fout_log<<"ysigma\n"<<ysigma/2/PI<<"\n";
     fout_log<<"zsigma\n"<<zsigma/2/PI<<"\n";
