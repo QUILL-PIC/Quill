@@ -1,7 +1,7 @@
 #include <cmath>
 #include "main.h"
 
-void spatial_region::f_init_cos(double a0y, double a0z, double xsigma, double ysigma, double zsigma, double x0, bool sscos, bool b_sign, double x1, double phase, double y0, double z0, bool append, double phi, double xtarget, double ytarget, double ztarget)
+void spatial_region::f_init_cos(double a0y, double a0z, double xsigma, double ysigma, double zsigma, double x0, int sscos, bool b_sign, double x1, double phase, double y0, double z0, bool append, double phi, double xtarget, double ytarget, double ztarget)
 {
     /* Для f_init_gauss xsigma, ysigma и zsigma имели смысл
      * половины масштабов лазерного импульса на уровне 1/e^2 (по
@@ -21,16 +21,25 @@ void spatial_region::f_init_cos(double a0y, double a0z, double xsigma, double ys
      * (при задании в конфиг-файле W) было верным, ширина импульса
      * вычисляется так, чтобы интеграл от квадрата его огибающей
      * совпадал с соответствующим интегралом от гауссова импульса */
+    /* Если sscos == 2 (pearl), то поперечная огибающая для поля имеет вид (sin
+     * r / r)^2, продольная - как для cos. zsigma не используется, ysigma -
+     * расстояние от оси до первого нуля интенсивности в поперечном
+     * распределении, xsigma - половина размера лазерного импульса на уровне
+     * 1/e^2 (по интенсивности). E_x не вычисляется, а полагается равным нулю. */
     double x,y,z,xi;
     double xs, ys, zs;
     if (sscos==0) {
         xs = xsigma*2*sqrt(2*PI)/3;
         ys = ysigma*2*sqrt(2*PI)/3;
         zs = zsigma*2*sqrt(2*PI)/3;
-    } else {
+    } else if (sscos == 1) {
         xs = 0.822*xsigma;
         ys = 0.822*ysigma;
         zs = 0.822*zsigma;
+    } else if (sscos == 2) {
+        xs = xsigma * 2 * sqrt(2 * PI) / 3;
+        ys = 1e2 * ysigma; // just >> ysigma
+        zs = 1e2 * ysigma; // just >> ysigma
     }
     double cosx,cosy,cosz,sinx,siny,sinz,tr_envelope;
     double y12,z12;
@@ -103,7 +112,7 @@ void spatial_region::f_init_cos(double a0y, double a0z, double xsigma, double ys
                         by = -ez;
                         ex = a0y*sin(xi)*cosx*cosx*cosz*cosz*PI/ys*cosy*siny - a0z*cos(xi)*cosx*cosx*cosy*cosy*PI/zs*cosz*sinz;
                         bx = a0z*cos(xi)*cosx*cosx*PI/ys*cosz*cosz*cosy*siny + a0y*sin(xi)*cosx*cosx*cosy*cosy*PI/zs*cosz*sinz;
-                    } else {
+                    } else if (sscos == 1) {
                         cosx = cos(PI*x*x*x*x/2/(xs*xs*xs*xs));
                         cosy = cos(PI*y*y*y*y/2/(ys*ys*ys*ys));
                         cosz = cos(PI*z*z*z*z/2/(zs*zs*zs*zs));
@@ -117,6 +126,21 @@ void spatial_region::f_init_cos(double a0y, double a0z, double xsigma, double ys
                         by = -ez;
                         ex = a0y*sin(xi)*4*PI*y*y*y/(ys*ys*ys*ys)*cosx*cosx*cosz*cosz*cosy*siny - a0z*cos(xi)*4*PI*z*z*z/(zs*zs*zs*zs)*cosx*cosx*cosy*cosy*cosz*sinz;
                         bx = a0z*cos(xi)*4*PI*y*y*y/(ys*ys*ys*ys)*cosx*cosx*cosz*cosz*cosy*siny + a0y*sin(xi)*4*PI*z*z*z/(zs*zs*zs*zs)*cosx*cosx*cosy*cosy*cosz*sinz;
+                    } else if (sscos == 2) {
+                        cosx = cos(PI*x/2/xs);
+                        sinx = sin(PI*x/2/xs);
+                        double r = sqrt(y * y + z * z);
+                        if (r != 0) {
+                            siny = sin(PI * r / ysigma) / (PI * r / ysigma);
+                        } else {
+                            siny = 1;
+                        }
+                        ey = a0y * siny * (cos(xi)*cosx*cosx - PI/xs*sin(xi)*cosx*sinx);
+                        ez = a0z * siny * (sin(xi)*cosx*cosx + PI/xs*cos(xi)*cosx*sinx);
+                        bz = ey;
+                        by = -ez;
+                        ex = 0;
+                        bx = 0;
                     }
                     if (b_sign==0)
                     {
@@ -159,7 +183,7 @@ void spatial_region::f_init_cos(double a0y, double a0z, double xsigma, double ys
     }
 }
 
-void spatial_region::f_init_focused(double a0y, double a0z, double xsigma, double sigma0, double x0, double x1, bool b_sign, double phase, double y0, double z0, bool append, double phi, bool sscos, double K, double xtarget, double ytarget, double ztarget)
+void spatial_region::f_init_focused(double a0y, double a0z, double xsigma, double sigma0, double x0, double x1, bool b_sign, double phase, double y0, double z0, bool append, double phi, int sscos, double K, double xtarget, double ytarget, double ztarget)
 {
     /* sigma0 - поперечный размер в перетяжке (импульс
      * аксиально-симметричный), x0 - положение центра лазерного

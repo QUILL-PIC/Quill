@@ -52,7 +52,7 @@ int i_particle, i_particle_p, i_particle_ph, i_particle_i;  // for "writing down
 std::string e_components_for_output;
 std::string b_components_for_output;
 std::string f_envelope;
-bool sscos; // super-super cos
+int sscos; // 0 - cos, 1 - super-super cos, 2 - pearl
 std::string beam;
 std::string beam_particles;
 bool write_p;
@@ -1846,11 +1846,15 @@ int init()
     }
     current = find("f_envelope",first);
     f_envelope = current->units;
-    if (f_envelope=="") f_envelope = "cos";
-    sscos = 0;
-    if (f_envelope=="sscos") {
+    if (f_envelope=="") {
+        f_envelope = "cos";
+        sscos = 0;
+    } else if (f_envelope == "sscos") {
         f_envelope = "cos";
         sscos = 1;
+    } else if (f_envelope == "pearl") {
+        f_envelope == "cos";
+        sscos = 2;
     }
     current = find("b_sign",first);
     if (current->value!=-1) b_sign = 1;
@@ -2475,10 +2479,15 @@ int init()
         fout_log<<"mwseed\n"<<"on"<<"\n";
     fout_log<<"e_components_for_output\n"<<e_components_for_output<<"\n";
     fout_log<<"b_components_for_output\n"<<b_components_for_output<<"\n";
-    if (sscos==0)
+    if (sscos==0) {
         fout_log<<"f_envelope\n"<<f_envelope<<"\n";
-    else
+    } else if (sscos == 1) {
         fout_log<<"f_envelope\n"<<"sscos"<<"\n";
+    } else if (sscos == 2) {
+        fout_log<<"f_envelope\n"<<"pearl"<<"\n";
+    } else {
+        fout_log<<"f_envelope\n"<<"not known type of envelope!"<<"\n";
+    }
     fout_log<<"b_sign\n"<<2.0*b_sign-1<<"\n";
     fout_log<<"x0\n"<<x0/2/PI<<"\n";
     fout_log<<"y0\n"<<y00/2/PI<<"\n";
