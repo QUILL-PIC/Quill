@@ -97,7 +97,7 @@ def density(t=0,plane='xy',max_w=0,max_e_density=0,max_p_density=0,max_g_density
     elif save2!=None:
         plt.savefig(save2)
 
-def particles(t=0,space=['x','y'],particles='geip',colors='bgmrcyk',r=5,alpha=0.01,cmap='jet',gamma=0,data_folder='',axis=[],save2='',vmin=None,vmax=None,xlim=None,ylim=None):
+def particles(t=0,space=['x','y'],particles='geip',colors='bgmrcyk',r=3,alpha=0.1,cmap='jet',gamma=0,data_folder='',axis=[],save2='',vmin=None,vmax=None,xlim=None,ylim=None):
     'Plots particles as dots in (phase)*space*.\n\
     \n\
     Examples:\n\
@@ -626,7 +626,6 @@ def energy(data_folder='',save2='',catching=True):
     def safe_sum(a, b):
         result = np.array([])
         min_len = min(len(a), len(b))
-        print (min_len, len(a), len(b))
         for i in np.arange(min_len):
             result = np.append(result, a[i] + b[i])
         return result, min_len
@@ -664,7 +663,7 @@ def energy(data_folder='',save2='',catching=True):
         plt.plot(tmp[:min_len,0],total,':k') # sum energy
     
     plt.xlabel('$ct/\lambda$')
-    plt.ylabel('Energy (arb. units)')
+    plt.ylabel('Energy, J')
 
     if save2=='':
         plt.show()
@@ -785,7 +784,7 @@ font = {'family' : 'Liberation Serif',
         'size'   : 9}
 rc_backup = mpl.rcParams.copy()
 mpl.rc('font', **font)
-mpl.rc('lines', linewidth=lw)
+mpl.rc('lines', linewidth=lwl)
 mpl.rc('axes', linewidth=lw)
 mpl.rc('figure', figsize=(3.5,2.5), dpi=200, autolayout=True)
 mpl.rc('savefig',dpi=300)
