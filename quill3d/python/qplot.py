@@ -407,7 +407,7 @@ def spectrum(t=None,particles='geip',colors='bgmrcyk',sptype='simple',axis=[],sa
             else:
                 return (1.0 + 1.0*i/(width+1)) / (width+1)
 
-    def smooth(x, smooth_start, smooth_max, max_width, wtype):
+    def smooth_array(x, smooth_start, smooth_max, max_width, wtype):
         'Returnes smoothed array using specified window, starting from smooth_start.\n\
         Window width linearly increases until x[i]==smooth_max and after that remains const=max_width'
         result = np.zeros(len(x))
@@ -461,7 +461,7 @@ def spectrum(t=None,particles='geip',colors='bgmrcyk',sptype='simple',axis=[],sa
         sp = resread.t_data('spectrum'+s[i]+resread.t,deps[i])
 
         if smooth:
-            sp[:,1] = smooth(sp[:,1], smooth_start, smooth_max, smooth_width, window_type)
+            sp[:,1] = smooth_array(sp[:,1], smooth_start, smooth_max, smooth_width, window_type)
 
         if sptype=='energy':
             for j in np.arange(len(sp[:,0])):
