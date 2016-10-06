@@ -36,6 +36,8 @@ zlength = 18 # default: lambda; possible: um
 t_end = 3 # default: lambda; possible: um, mm, cm
 # период вывода данных в файл
 output_period = 1 # default: lambda; possible: um, mm, cm, t_end
+# время, при котором добавление частиц (при mwindow == on) на передней границе прекращается
+t_add_mw = 60 # default = t_end, in lambda; possible: um, mm, cm
 #
 t_end = 7
 output_period = 0.2
