@@ -298,7 +298,7 @@ def tracks(space=['x','y'],particles='geip',t0=0,t1=0,colors='bgmrcyk',cmaps=['j
     elif save2!=None:
         plt.savefig(save2)
 
-def rpattern(t=None,particles='geip',colors='bgmrcyk',dphi=0.1,save2='',data_folder='',catching=False):
+def rpattern(t=None,particles='geip',colors='bgmrcyk',dphi=0.1,save2='',data_folder='',catching=True,polar=True):
     'Plots radiation pattern of the emitted energy\n\
     Examples:\n\
     rpattern() # plots radiation patterns for all particles\n\
@@ -311,6 +311,7 @@ def rpattern(t=None,particles='geip',colors='bgmrcyk',dphi=0.1,save2='',data_fol
     resread.t = '%g' % t
     lp = list(particles)
     s = []
+    suffix_mapping = {'':'e', '_p':'p', '_ph':'g'}
     for p in lp:
         if p=='e':
             s.append('')
@@ -321,11 +322,13 @@ def rpattern(t=None,particles='geip',colors='bgmrcyk',dphi=0.1,save2='',data_fol
         elif p=='i':
             for cmr in resread.icmr:
                 s.append('_'+str(cmr)+'_')
+                suffix_mapping[s[-1]] = 'i'
     c = list(colors)
     ci = 0
-    f = plt.figure()
-    ax = f.add_subplot(111,polar=True)
+    if polar:
+        plt.subplot(111, polar=True)
     for suffix in s:
+        print ('Building rpattern for ' + suffix_mapping[suffix] + ' ...')
         qgphi = resread.particles('phasespace'+suffix,['q','g','phi'])
         phi = np.arange(-np.pi,np.pi+dphi,dphi)
         n = len(phi)
@@ -335,34 +338,51 @@ def rpattern(t=None,particles='geip',colors='bgmrcyk',dphi=0.1,save2='',data_fol
             rp[j] += np.fabs(qgphi[0,i])*qgphi[1,i]
         
         # Including particles that have been deleted at boundaries
-        if catching:
-            #del_files = [f for f in os.listdir(resread.data_folder) if re.match('deleted'+suffix+'[0-9].*', f) != None]
+        rp_withcatching = None
+        if resread.catching and catching:
+            rp_withcatching = np.copy(rp)
+            print ('Processing files with deleted particles')
             t_files = ['%g'%t1 for t1 in np.arange(0, t+0.0001, resread.output_period)]
             for t_file in t_files:
-                print ('Processing file: deleted' + suffix+ t_file)
                 resread.t = t_file
-                qgphi_del = resread.particles('deleted' + suffix, ['q','g','phi'])
+                qgphi_del = np.zeros((3,1))
+                try:
+                    qgphi_del = resread.particles('deleted' + suffix, ['q','g','phi'])
+                except:
+                    print ('Unable to access the file [deleted{0}{1}]'.format(suffix, t_file))
                 for i in np.arange(len(qgphi_del[0,:])):
                     j = np.floor((qgphi_del[2,i]+np.pi)/dphi)
-                    rp[j] += np.fabs(qgphi_del[0,i])*qgphi_del[1,i]
+                    rp_withcatching[j] += np.fabs(qgphi_del[0,i])*qgphi_del[1,i]
 
         rp[0] += rp[n-1]
         rp[n-1] = rp[0]
-        phi[n-1] = phi[0]
+        if polar:
+            phi[n-1] = phi[0]
+
         rpint = 0
         for i in np.arange(n):
             rpint += rp[i]
+            if rp_withcatching is not None:
+                rpint += rp_withcatching[i]
         if rpint!=0:
             for i in np.arange(n):
                 rp[i] = rp[i]*2*np.pi/(dphi*rpint)
-        ax.plot(phi,rp,color=c[ci])
+                if rp_withcatching is not None:
+                    rp_withcatching[i] = rp_withcatching[i]*2*np.pi/(dphi*rpint)
+        
+        if not polar:
+            x_ticks = [-np.pi, -0.5*np.pi, 0, 0.5*np.pi, np.pi]
+            labels = [r'$-\pi$', r'$-\pi/2}{2}$',r'$0$',r'$\pi/2$',r'$\pi$']
+            plt.xticks(x_ticks, labels)
+        plt.plot(phi,rp,color=c[ci])
+        if rp_withcatching is not None:
+            plt.plot(phi,rp_withcatching,'--',color=c[ci])
         ci+=1
-    #ax.set_theta_direction(-1)
-    #ax.set_theta_offset(np.pi/2)
-    if save2 != '':
-        plt.savefig(save2)
-    elif save2!=None:
+
+    if save2 == '':
         plt.show()
+    elif save2 != None:
+        plt.savefig(save2)
 
 def spectrum(t=None,particles='geip',colors='bgmrcyk',sptype='simple',axis=[],save2='',data_folder='',\
         smooth=True,smooth_start=20,smooth_max=1000,smooth_width=50,window_type='triangular'):
@@ -387,7 +407,7 @@ def spectrum(t=None,particles='geip',colors='bgmrcyk',sptype='simple',axis=[],sa
             else:
                 return (1.0 + 1.0*i/(width+1)) / (width+1)
 
-    def smooth(x, smooth_start, smooth_max, max_width, wtype):
+    def smooth_array(x, smooth_start, smooth_max, max_width, wtype):
         'Returnes smoothed array using specified window, starting from smooth_start.\n\
         Window width linearly increases until x[i]==smooth_max and after that remains const=max_width'
         result = np.zeros(len(x))
@@ -441,7 +461,7 @@ def spectrum(t=None,particles='geip',colors='bgmrcyk',sptype='simple',axis=[],sa
         sp = resread.t_data('spectrum'+s[i]+resread.t,deps[i])
 
         if smooth:
-            sp[:,1] = smooth(sp[:,1], smooth_start, smooth_max, smooth_width, window_type)
+            sp[:,1] = smooth_array(sp[:,1], smooth_start, smooth_max, smooth_width, window_type)
 
         if sptype=='energy':
             for j in np.arange(len(sp[:,0])):
