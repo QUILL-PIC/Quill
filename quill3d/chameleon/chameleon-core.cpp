@@ -12,6 +12,7 @@ static map<string, double> conf;
 // prints variable name and value if flag is true
 extern "C"
 void configure(const char* charlog, bool flag = false) {
+    conf.clear();
     string log(charlog); // copies the null-terminated character sequence
     fstream fs(log, ios_base::in);
     if (fs) {
@@ -147,3 +148,57 @@ double* read1d(const char* charfilename, int column) {
     }
 }
 
+struct particle {
+    double q;
+    double x;
+    double y;
+    double z;
+    double ux;
+    double uy;
+    double uz;
+    double g;
+    double chi;
+};
+
+struct particles {
+    long n;
+    particle* p;
+};
+
+// reads phasespace data, text mode only
+extern "C"
+particles* read_particles(const char* charfilename) { // char* ptype?
+    string filename(charfilename);
+    fstream fs(filename, ios_base::in);
+    if (fs) {
+        double a;
+        std::vector<double> v;
+        while (fs >> a) {
+            v.push_back(a);
+        }
+        fs.close();
+        particles* p = new particles;
+        p -> n = v.size() / 9;
+        p -> p = new particle[p -> n];
+        for (long i = 0; i < v.size() / 9; ++i) {
+            (p -> p)[i].q = v[9 * i];
+            (p -> p)[i].x = v[9 * i + 1];
+            (p -> p)[i].y = v[9 * i + 2];
+            (p -> p)[i].z = v[9 * i + 3];
+            (p -> p)[i].ux = v[9 * i + 4];
+            (p -> p)[i].uy = v[9 * i + 5];
+            (p -> p)[i].uz = v[9 * i + 6];
+            (p -> p)[i].g = v[9 * i + 7];
+            (p -> p)[i].chi = v[9 * i + 8];
+        }
+        return p;
+    } else {
+        cerr << "libchameleon: read_particles: ERROR: no such file, " << filename <<
+            endl;
+        fs.close();
+        particles* p = new particles;
+        p -> n = 0;
+        p -> p = nullptr;
+        return p;
+    }
+}
