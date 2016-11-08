@@ -124,13 +124,11 @@ def read_parameters(log=None):
 def density(name='rho',plane='xy'):
     'Returns 2d data for plane *plane* from file\n\
     data_folder+*name*+t.'
-    f = open(data_folder+name+t)
-    data = f.readlines()
-    f.close()
+    with open(data_folder + name + t) as f:
+        density = np.array([float(x) for x in f])
     n = nx*ny + nx*nz + ny*nz
-    density = np.empty(n)
-    for i in np.arange(0,n,1):
-        density[i] = float(data[i])
+    if density.size != n:
+        raise Exception("The size of data in [%s] equal to %d doesn't match n=%d" % (name + t, density.size, n))
     if (plane!='xy') & (plane!='xz') & (plane!='yz'):
         print('resread.density: warning: ambiguous value for *plane* - {0}, value \'xy\' used instead'.format(plane))
         plane = 'xy'
