@@ -904,6 +904,7 @@ int main()
     if(nx_ich*(n_sr-1)>=xlength/dx) {cout<<"\033[31m"<<"main: too many slices, aborting..."<<"\033[0m"<<endl; return 1;}
 
     pthread_t* sr_thread = new pthread_t[n_sr];
+    pthread_t* listener_thread = new pthread_t;
     sr_mutex_c = new pthread_mutex_t[n_sr];
     sr_mutex1 = new pthread_mutex_t[n_sr];
     sr_mutex2 = new pthread_mutex_t[n_sr];
@@ -961,6 +962,8 @@ int main()
         pthread_create(&sr_thread[i],0,thread_function,p_i);
         pthread_mutex_lock(&sr_mutex_c[i]);
     }
+    
+    pthread_create(listener_thread, 0, listen_for_param_updates, 0);
 
     l=0;
     ofstream fout_N(data_folder+"/N");
@@ -1536,6 +1539,7 @@ int main()
     }
 
     delete[] sr_thread;
+    delete listener_thread;
     delete[] sr_mutex_c;
 
     delete[] icmr;

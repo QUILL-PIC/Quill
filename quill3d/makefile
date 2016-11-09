@@ -2,7 +2,7 @@ CXX := g++
 CXXFLAGS := -O3 -march=native -ffast-math -std=c++0x
 debug: CXXFLAGS := -g -std=c++0x
 CXXLIBS := -pthread -lnuma
-OBJECTS := advance.o deposition.o fout.o init.o low-level.o main.o mc.o plist.o
+OBJECTS := advance.o deposition.o fout.o init.o listener.o low-level.o main.o mc.o plist.o
 
 quill: $(OBJECTS)
 	$(CXX) -o quill $(CXXFLAGS) $(OBJECTS) $(CXXLIBS)
@@ -10,6 +10,7 @@ advance.o : main.h
 deposition.o : main.h
 fout.o : main.h
 init.o : main.h
+listener.o : main.h
 low-level.o : main.h
 main.o : main.h
 mc.o : main.h
