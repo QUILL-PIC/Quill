@@ -12,6 +12,7 @@
 
 #include "main.h"
 
+extern double dt;
 extern ddi* p_last_ddi;
 
 void* listen_for_param_updates(void*)
@@ -89,8 +90,8 @@ void* listen_for_param_updates(void*)
                 cout << "[listener] Parsed t_end: " << t_end_received << endl;
                 if (t_end_received > 0.0)
                 {
-                    cout << "[listener] Updating p_last_ddi->t_end: [" << p_last_ddi->t_end/2/PI << "] => [" << t_end_received << "]" << endl;
-                    p_last_ddi->t_end = t_end_received * 2 * PI; // need synchronization?
+                    cout << "[listener] Updating p_last_ddi->t_end: [" << p_last_ddi->t_end/2/PI << "] => [" << t_end_received + dt/2/PI << "]" << endl;
+                    p_last_ddi->t_end = t_end_received*2*PI + dt; // need synchronization?
                 }
             }
         }
