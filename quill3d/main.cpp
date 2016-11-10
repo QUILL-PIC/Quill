@@ -48,6 +48,8 @@ int n_tracks;
 bool tr_init;
 double tr_start,xtr1,ytr1,ztr1,xtr2,ytr2,ztr2;
 double mwspeed,nelflow,vlflow,mcrlflow,Tlflow,nerflow,vrflow,mcrrflow,Trflow;
+double mw_channel_radius;
+double mw_transition_length;
 int i_particle, i_particle_p, i_particle_ph, i_particle_i;  // for "writing down every i-th electron, positron, etc."
 std::string e_components_for_output;
 std::string b_components_for_output;
@@ -1207,6 +1209,8 @@ int main()
             if (mwseed==1) {
                 double n;
                 n=1/(k0*k0);
+                if (nmw * dx < mw_transition_length)
+                    n *= nmw * dx / mw_transition_length;
                 int_vector3d cell_pos;
                 cell_pos.i = nx_sr - 3;
                 int_vector3d v_npic;
@@ -1219,7 +1223,15 @@ int main()
                     {
                         cell_pos.j=j;
                         cell_pos.k=k;
-                        psr[n_sr-1].fill_cell_by_particles(-1,cell_pos,v_npic,n);
+                        double zcell = k * dz;
+                        double ycell = j * dy;
+                        double ycenter = ylength / 2.0;
+                        double zcenter = zlength / 2.0;
+                        double zrel = zcell - zcenter;
+                        double yrel = ycell - ycenter;
+                        double r = sqrt(zrel * zrel + yrel * yrel);
+                        if (r >= mw_channel_radius)
+			    psr[n_sr-1].fill_cell_by_particles(-1,cell_pos,v_npic,n);
                         //if (ions=="on")
                         // psr[n_sr-1].fill_cell_by_particles(-1,cell_pos,v_npic,n); // bug??! this adds electrons, not ions; qwe
                     }
@@ -1966,6 +1978,10 @@ int init()
     current = find("mwindow",first);
     mwindow = 1;
     if (current->units=="off") mwindow = 0;
+    current = find("mw_channel_radius", first);
+    mw_channel_radius = current->value * 2 * PI;
+    current = find("mw_transition_length", first);
+    mw_transition_length = current->value * 2 * PI;
     current = find("mwspeed",first);
     mwspeed = current->value;
     if (mwindow==1 && mwspeed==0)
