@@ -1210,7 +1210,9 @@ int main()
                 double n;
                 n=1/(k0*k0);
                 if (nmw * dx < mw_transition_length)
+                {
                     n *= nmw * dx / mw_transition_length;
+                }
                 int_vector3d cell_pos;
                 cell_pos.i = nx_sr - 3;
                 int_vector3d v_npic;
@@ -1231,7 +1233,9 @@ int main()
                         double yrel = ycell - ycenter;
                         double r = sqrt(zrel * zrel + yrel * yrel);
                         if (r >= mw_channel_radius)
-			    psr[n_sr-1].fill_cell_by_particles(-1,cell_pos,v_npic,n);
+                        {
+                            psr[n_sr-1].fill_cell_by_particles(-1,cell_pos,v_npic,n);
+                        }
                         //if (ions=="on")
                         // psr[n_sr-1].fill_cell_by_particles(-1,cell_pos,v_npic,n); // bug??! this adds electrons, not ions; qwe
                     }
