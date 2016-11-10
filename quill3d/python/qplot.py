@@ -1,17 +1,23 @@
 #!/usr/bin/python
 
 import matplotlib as mpl
-#mpl.use('Agg')
-#
 import matplotlib.pyplot as plt
 import numpy as np
 import os
 import resread
 import tcmap
 
-__name__ =\
-'qplot - provides functions for visualization of quill results'
 __doc__ = 'see source'
+
+
+def __get_data_folder(data_folder, kwargs_dict):
+    if data_folder is not None:
+        return data_folder
+    elif 'df' in kwargs_dict:
+        return kwargs_dict.pop('df')
+    else:
+        return None
+
 
 def tex_format(space_item):
     tmp = space_item
@@ -29,10 +35,13 @@ def tex_format(space_item):
         tmp = '\\varphi'
     return '$' + tmp + '$'
 
-def density(t=0,plane='xy',max_w=0,max_e_density=0,max_p_density=0,max_g_density=0,max_i_density=0,axis=[],extent=None,save2='',data_folder='',particles='geipw'):
+
+def density(t=0, plane='xy', max_w=0, max_e_density=0, max_p_density=0, max_g_density=0, max_i_density=0, axis=[],
+            extent=None, save2='', data_folder=None, particles='geipw', **kwargs):
     'Plots w and particle densities.'
     resread.t = '%g' % t
-    if data_folder != '':
+    data_folder = __get_data_folder(data_folder, kwargs)
+    if data_folder is not None:
         resread.data_folder = data_folder
     resread.read_parameters()
     #
@@ -94,10 +103,11 @@ def density(t=0,plane='xy',max_w=0,max_e_density=0,max_p_density=0,max_g_density
     #
     if save2=='':
         plt.show()
-    elif save2!=None:
+    elif save2 is not None:
         plt.savefig(save2)
 
-def particles(t=0,space=['x','y'],particles='geip',colors='bgmrcyk',r=3,alpha=0.1,cmap='jet',gamma=0,data_folder='',axis=[],save2='',vmin=None,vmax=None,xlim=None,ylim=None):
+
+def particles(t=0,space=['x','y'],particles='geip',colors='bgmrcyk',r=3,alpha=0.1,cmap='jet',gamma=0,data_folder=None,axis=[],save2='',vmin=None,vmax=None,xlim=None,ylim=None,**kwargs):
     'Plots particles as dots in (phase)*space*.\n\
     \n\
     Examples:\n\
@@ -115,7 +125,8 @@ def particles(t=0,space=['x','y'],particles='geip',colors='bgmrcyk',r=3,alpha=0.
             return 'i'
 
     resread.t = '%g' % t
-    if data_folder != '':
+    data_folder = __get_data_folder(data_folder, kwargs)
+    if data_folder is not None:
         resread.data_folder = data_folder
     resread.read_parameters()
 
@@ -163,10 +174,11 @@ def particles(t=0,space=['x','y'],particles='geip',colors='bgmrcyk',r=3,alpha=0.
         plt.colorbar()
     if save2=='':
         plt.show()
-    elif save2!=None:
+    elif save2 is not None:
         plt.savefig(save2)
 
-def tracks(space=['x','y'],particles='geip',t0=0,t1=0,colors='bgmrcyk',cmaps=['jet'],clims2all=1,axis=[],save2='',r=2,data_folder=''):
+
+def tracks(space=['x','y'],particles='geip',t0=0,t1=0,colors='bgmrcyk',cmaps=['jet'],clims2all=1,axis=[],save2='',r=2,data_folder=None,**kwargs):
     'Plots particle tracks as lines in 2D or dots in 3D (phase)*space*\n\
     at [tr_start+*t0*,tr_start+*t1*]\n\
     Examples:\n\
@@ -176,7 +188,8 @@ def tracks(space=['x','y'],particles='geip',t0=0,t1=0,colors='bgmrcyk',cmaps=['j
     '
     # clims2all=1 -> color limits for cmaps[i] (vmin,vmax) the same
     # for all particles (trajectories) of this type
-    if data_folder != '':
+    data_folder = __get_data_folder(data_folder, kwargs)
+    if data_folder is not None:
         resread.data_folder = data_folder
     resread.read_parameters()
     track_names = []
@@ -295,15 +308,17 @@ def tracks(space=['x','y'],particles='geip',t0=0,t1=0,colors='bgmrcyk',cmaps=['j
     plt.ylabel(tex_format(space[1]))
     if save2=='':
         plt.show()
-    elif save2!=None:
+    elif save2 is not None:
         plt.savefig(save2)
 
-def rpattern(t=None,particles='geip',colors='bgmrcyk',dphi=0.1,save2='',data_folder='',catching=True,polar=True):
+
+def rpattern(t=None,particles='geip',colors='bgmrcyk',dphi=0.1,save2='',data_folder=None,catching=True,polar=True,**kwargs):
     'Plots radiation pattern of the emitted energy\n\
     Examples:\n\
     rpattern() # plots radiation patterns for all particles\n\
     at t_end'
-    if data_folder != '':
+    data_folder = __get_data_folder(data_folder, kwargs)
+    if data_folder is not None:
         resread.data_folder = data_folder
     resread.read_parameters()
     if t==None:
@@ -381,11 +396,12 @@ def rpattern(t=None,particles='geip',colors='bgmrcyk',dphi=0.1,save2='',data_fol
 
     if save2 == '':
         plt.show()
-    elif save2 != None:
+    elif save2 is not None:
         plt.savefig(save2)
 
-def spectrum(t=None,particles='geip',colors='bgmrcyk',sptype='simple',axis=[],save2='',data_folder='',\
-        smooth=True,smooth_start=20,smooth_max=1000,smooth_width=50,window_type='triangular'):
+
+def spectrum(t=None,particles='geip',colors='bgmrcyk',sptype='simple',axis=[],save2='',data_folder=None,
+        smooth=True,smooth_start=20,smooth_max=1000,smooth_width=50,window_type='triangular',**kwargs):
     'spectrum() # plots spectrum for all particles\n\
     at t_end\n\
     Examples:\n\
@@ -428,7 +444,8 @@ def spectrum(t=None,particles='geip',colors='bgmrcyk',sptype='simple',axis=[],sa
     plt.ylabel('dN/deps, a.u.')
     if axis!=[]:
         plt.axis(axis)
-    if data_folder != '':
+    data_folder = __get_data_folder(data_folder, kwargs)
+    if data_folder is not None:
         resread.data_folder = data_folder
     resread.read_parameters()
     if t==None:
@@ -483,7 +500,7 @@ def spectrum(t=None,particles='geip',colors='bgmrcyk',sptype='simple',axis=[],sa
 
     if save2=='':
         plt.show()
-    elif save2!=None:
+    elif save2 is not None:
         plt.savefig(save2)
 
 directivity = 0
@@ -493,7 +510,7 @@ directivity_lat1 = 0
 directivity_lng1 = 0
 directivity_lat2 = 0
 directivity_lng2 = 0
-def mollweide(t=None,nlongitude=80,nlatitude=40,Nlevels=15,save2='',data_folder=''):
+def mollweide(t=None,nlongitude=80,nlatitude=40,Nlevels=15,save2='',data_folder=None,**kwargs):
     'Plots photon radiation pattern in Mollweide projection (z-axis\n\
     sticks out of the north pole and y-axis sticks out of the\n\
     projection center) and computes (antenna-like) directivity.\n\
@@ -502,7 +519,8 @@ def mollweide(t=None,nlongitude=80,nlatitude=40,Nlevels=15,save2='',data_folder=
     global directivity, directivity_lat, directivity_lng,\
     directivity_lat1, directivity_lng1, directivity_lat2,\
     directivity_lng2
-    if data_folder != '':
+    data_folder = __get_data_folder(data_folder, kwargs)
+    if data_folder is not None:
         resread.data_folder = data_folder
     resread.read_parameters()
     if t==None:
@@ -578,13 +596,15 @@ def mollweide(t=None,nlongitude=80,nlatitude=40,Nlevels=15,save2='',data_folder=
     #
     if save2=='':
         plt.show()
-    elif save2!=None:
+    elif save2 is not None:
         plt.savefig(save2)
 
-def field(t=0,field='ex',plane='xy',fmax=None,data_folder='',extent=None,axis=[],save2=''):
+
+def field(t=0,field='ex',plane='xy',fmax=None,data_folder=None,extent=None,axis=[],save2='',**kwargs):
     'Plots fields.'
     resread.t = '%g' % t
-    if data_folder != '':
+    data_folder = __get_data_folder(data_folder, kwargs)
+    if data_folder is not None:
         resread.data_folder = data_folder
     resread.read_parameters()
     #
@@ -616,10 +636,11 @@ def field(t=0,field='ex',plane='xy',fmax=None,data_folder='',extent=None,axis=[]
     #
     if save2=='':
         plt.show()
-    elif save2 != None:
+    elif save2 is not None:
         plt.savefig(save2)
 
-def energy(data_folder='',save2='',catching=True):
+
+def energy(data_folder=None,save2='',catching=True, **kwargs):
     'Plots energy of electrons, ions, etc. vs time'
     #Important: several types of ions are not supported
 
@@ -630,7 +651,8 @@ def energy(data_folder='',save2='',catching=True):
             result = np.append(result, a[i] + b[i])
         return result, min_len
 
-    if data_folder != '':
+    data_folder = __get_data_folder(data_folder, kwargs)
+    if data_folder is not None:
         resread.data_folder = data_folder
     resread.read_parameters()
     tmp = resread.t_data('energy')
@@ -667,12 +689,14 @@ def energy(data_folder='',save2='',catching=True):
 
     if save2=='':
         plt.show()
-    elif save2!=None:
+    elif save2 is not None:
         plt.savefig(save2)
 
-def tracks2(space=['x', 'y'], tracks=None, save2='', data_folder=''):
+
+def tracks2(space=['x', 'y'], tracks=None, save2='', data_folder=None, **kwargs):
     'Plots 2d tracks in the specified *space*'
-    if data_folder != '':
+    data_folder = __get_data_folder(data_folder, kwargs)
+    if data_folder is not None:
         resread.data_folder = data_folder
     if not tracks:
         tracks = resread.tracks()
@@ -688,9 +712,11 @@ def tracks2(space=['x', 'y'], tracks=None, save2='', data_folder=''):
     else:
         plt.savefig(save2)
 
-def N(data_folder = '', particles = 'gep', save2 = ''):
+
+def N(data_folder = None, particles = 'gep', save2 = '', **kwargs):
     'Plots number of particles over time. Ions are not currently supported'
-    if data_folder != '':
+    data_folder = __get_data_folder(data_folder, kwargs)
+    if data_folder is not None:
         resread.data_folder = data_folder
     resread.read_parameters();
     a = resread.t_data('N')
@@ -714,11 +740,12 @@ def N(data_folder = '', particles = 'gep', save2 = ''):
 
     if save2=='':
         plt.show()
-    elif save2!=None:
+    elif save2 is not None:
         plt.savefig(save2)
 
+
 def onaxis(t, particles = 'we', colors = 'rgbcmyk', norm = 'true',
-        data_folder = '', save2 = '', plotargs = {}, rrargs = {}):
+        data_folder = None, save2 = '', plotargs = {}, rrargs = {}, **kwargs):
     'Plot of particle density, fields etc. along the x-axis.\n\
     *norm* can be set to \'optimal\', \'true\' or to array of desired maximal values.\n\
     For rrargs see help(qplot.resread.onaxis),\n\
@@ -731,7 +758,8 @@ def onaxis(t, particles = 'we', colors = 'rgbcmyk', norm = 'true',
     qplot.onaxis(15,[\'ey\', \'bz\', \'e\'], \'rgb\', plotargs = {linewidth: 1.2})\n\
     qplot.onaxis(4, \'g\', rrargs = {\'av\': \'y\'}),\n\
     qplot.onaxis(4, \'p\', rrargs = {\'sx\': 10, \'sz\': 3}).'
-    if data_folder != '':
+    data_folder = __get_data_folder(data_folder, kwargs)
+    if data_folder is not None:
         resread.data_folder = data_folder
     resread.read_parameters()
     x = resread.onaxis('x', **rrargs)
@@ -771,8 +799,9 @@ def onaxis(t, particles = 'we', colors = 'rgbcmyk', norm = 'true',
     plt.xlabel('$x$')
     if save2=='':
         plt.show()
-    elif save2!=None:
+    elif save2 is not None:
         plt.savefig(save2)
+
 
 def reset_style():
     mpl.rcParams.update(rc_backup) 
