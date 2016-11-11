@@ -36,72 +36,97 @@ def tex_format(space_item):
     return '$' + tmp + '$'
 
 
-def density(t=0, plane='xy', max_w=0, max_e_density=0, max_p_density=0, max_g_density=0, max_i_density=0, axis=[],
-            extent=None, save2='', data_folder=None, particles='geipw', **kwargs):
-    'Plots w and particle densities.'
+def density(t=0, plane='xy', max_w=0, max_e_density=0, max_p_density=0, max_g_density=0, max_i_density=0, axis=None,
+            extent=None, save2='', data_folder=None, particles='geipw', cmaps={}, **kwargs):
+    """
+    Plots density distributions of particles and the electromagnetic field w.
+
+    Parameters
+    ----------
+    plane : {'xy', 'xz', 'yz'}
+    axis
+        is passed to plt.axis method.
+    extent
+        Passed to imshow if not None or 'xi'. If None, extent is calculated automatically.
+        If 'xi', will use xi = x - vt instead of x.
+    save2 : string
+        File to save the image to. If empty (default), plt.show() is always invoked in the end. If None, does nothing.
+    data_folder : string
+        E.g. '../results/'. Use 'df' for shortcut.
+    particles : string
+        String of particles to plot (e.g. 'gie', 'we'). Possible values are: g, e, i, p, w.
+        The order determines the plot order (e.g. 'ew' and 'we' have different plot orders).
+    cmaps : dict
+        Dictionary of particle-colormap pairs to be used instead of defaults. E.g. {'e': 'Blues', 'w': 'tcmap_green'}.
+    kwargs
+        parameters to be passed to the underlying 'imshow' methods.
+    """
     resread.t = '%g' % t
     data_folder = __get_data_folder(data_folder, kwargs)
     if data_folder is not None:
         resread.data_folder = data_folder
     resread.read_parameters()
-    #
-    tcmap.red()
-    tcmap.green()
-    tcmap.blue()
-    tcmap.orange()
-    tcmap.purple()
-    #
-    plt.gca().set_title('Particle densities',fontsize='medium')
-    plt.xlabel(tex_format(plane[0]) + '$/\lambda$')
-    plt.ylabel(tex_format(plane[1]) + '$/\lambda$')
-    if plane=='xz':
-        xlength = resread.nx*resread.dx
-        ylength = resread.nz*resread.dz
-    elif plane=='yz':
-        xlength = resread.ny*resread.dy
-        ylength = resread.nz*resread.dz
+
+    plt.gca().set_title('Particle densities', fontsize='medium')
+    plt.xlabel(tex_format(plane[0])[:-1] + '/\lambda$')
+    plt.ylabel(tex_format(plane[1])[:-1] + '/\lambda$')
+    if plane == 'xz':
+        xlength = resread.nx * resread.dx
+        ylength = resread.nz * resread.dz
+    elif plane == 'yz':
+        xlength = resread.ny * resread.dy
+        ylength = resread.nz * resread.dz
     else:
-        xlength = resread.nx*resread.dx
-        ylength = resread.ny*resread.dy
-    if axis!=[]:
+        xlength = resread.nx * resread.dx
+        ylength = resread.ny * resread.dy
+    if axis is not None:
         plt.axis(axis)
-    #
-    edensity = np.multiply(resread.density('rho',plane),-1)
-    w = resread.density('w',plane)
-    if max_e_density==0:
+
+    edensity = - resread.density('rho', plane)
+    w = resread.density('w', plane)
+    if max_e_density == 0:
         max_e_density = edensity.max()
         print('qplot.density: max_e_density = {0}'.format(max_e_density))
-    if max_w==0:
+    if max_w == 0:
         max_w = w.max()
         print('qplot.density: max_w = {0}'.format(max_w))
-    if max_p_density==0:
+    if max_p_density == 0:
         max_p_density = max_e_density
-    if max_g_density==0:
+    if max_g_density == 0:
         max_g_density = max_e_density
-    if max_i_density==0:
+    if max_i_density == 0:
         max_i_density = max_e_density
-    #
-    if extent == None:
-        extent = (0,xlength,0,ylength)
+
+    if extent is None:
+        extent = (0, xlength, 0, ylength)
     elif extent == 'xi':
-        extent = ( resread.xi( 0, t ), resread.xi( xlength, t ), 0, ylength )
+        extent = (resread.xi(0, t), resread.xi(xlength, t), 0, ylength)
 
-    if 'g' in particles and 'g' in resread.particles_for_output:
-        plt.imshow(resread.density('rho_ph',plane),'tcmap_blue',interpolation='none',vmin=0,vmax=max_g_density,origin='lower',extent=extent)
+    tmp_kwargs = {'extent': extent, 'vmin': 0,  'origin': 'lower', 'interpolation': 'none'}
+    tmp_kwargs.update(kwargs)
+    kwargs = tmp_kwargs
 
-    if 'w' in particles:
-        plt.imshow(w,'tcmap_orange',interpolation='none',vmin=0,vmax=max_w,origin='lower',extent=extent)
+    tmp_cmaps = {'g': 'tcmap_blue', 'w': 'tcmap_orange', 'i': 'tcmap_purple', 'e': 'tcmap_green', 'p': 'tcmap_red'}
+    tmp_cmaps.update(cmaps)
+    cmaps = tmp_cmaps
 
-    if resread.icmr!=[] and 'i' in particles:
-        plt.imshow(resread.density('irho_'+str(resread.icmr[0])+'_',plane),'tcmap_purple',interpolation='none',vmin=0,vmax=max_i_density,origin='lower',extent=extent)
+    for p in particles:
+        if p == 'g' and 'g' in resread.particles_for_output:
+            plt.imshow(resread.density('rho_ph', plane), cmap=cmaps['g'], vmax=max_g_density, **kwargs)
+        elif p == 'w':
+            plt.imshow(w, cmap=cmaps['w'], vmax=max_w, **kwargs)
+        elif p == 'i' and resread.icmr != []:
+            plt.imshow(resread.density('irho_' + str(resread.icmr[0]) + '_', plane), cmap=cmaps['i'],
+                       vmax=max_i_density, **kwargs)
+        elif p == 'e' and 'e' in resread.particles_for_output:
+            plt.imshow(edensity, cmap=cmaps['e'], vmax=max_e_density, **kwargs)
+        elif p == 'p' and 'p' in resread.particles_for_output:
+            plt.imshow(resread.density('rho_p', plane), cmap=cmaps['p'], vmax=max_p_density, **kwargs)
+        else:
+            if p not in 'gwiep':
+                print("Warning: Particle '%c' is not a valid option. Possible options are: gwiep." % p)
 
-    if 'e' in particles:
-        plt.imshow(edensity,'tcmap_green',interpolation='none',vmin=0,vmax=max_e_density,origin='lower',extent=extent)
-
-    if 'p' in particles and 'p' in resread.particles_for_output:
-        plt.imshow(resread.density('rho_p',plane),'tcmap_red',interpolation='none',vmin=0,vmax=max_p_density,origin='lower',extent=extent)
-    #
-    if save2=='':
+    if save2 == '':
         plt.show()
     elif save2 is not None:
         plt.savefig(save2)
@@ -817,3 +842,9 @@ mpl.rc('lines', linewidth=lwl)
 mpl.rc('axes', linewidth=lw)
 mpl.rc('figure', figsize=(3.5,2.5), dpi=200, autolayout=True)
 mpl.rc('savefig',dpi=300)
+
+tcmap.red()
+tcmap.green()
+tcmap.blue()
+tcmap.orange()
+tcmap.purple()
