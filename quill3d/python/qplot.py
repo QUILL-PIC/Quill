@@ -82,14 +82,18 @@ def density(t=0, plane='xy', max_w=0, max_e_density=0, max_p_density=0, max_g_de
     if axis is not None:
         plt.axis(axis)
 
-    edensity = - resread.density('rho', plane)
-    w = resread.density('w', plane)
-    if max_e_density == 0:
-        max_e_density = edensity.max()
-        print('qplot.density: max_e_density = {0}'.format(max_e_density))
-    if max_w == 0:
-        max_w = w.max()
-        print('qplot.density: max_w = {0}'.format(max_w))
+    if 'e' in particles:
+        edensity = - resread.density('rho', plane)
+        if max_e_density == 0:
+            max_e_density = edensity.max()
+            print('qplot.density: max_e_density = {0}'.format(max_e_density))
+
+    if 'w' in particles:
+        w = resread.density('w', plane)
+        if max_w == 0:
+            max_w = w.max()
+            print('qplot.density: max_w = {0}'.format(max_w))
+
     if max_p_density == 0:
         max_p_density = max_e_density
     if max_g_density == 0:
