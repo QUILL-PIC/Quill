@@ -53,12 +53,14 @@ double mw_transition_length;
 int i_particle, i_particle_p, i_particle_ph, i_particle_i;  // for "writing down every i-th electron, positron, etc."
 std::string e_components_for_output;
 std::string b_components_for_output;
+std::string j_components_for_output;
 std::string f_envelope;
 int sscos; // 0 - cos, 1 - super-super cos, 2 - pearl
 std::string beam;
 std::string beam_particles;
 bool write_p;
 bool write_ph;
+bool write_jx = false, write_jy = false, write_jz = false;
 std::string pmerging,pmerging_now;
 std::string lp_reflection,f_reflection;
 std::string ions;
@@ -79,6 +81,8 @@ pthread_mutex_t* sr_mutex_m; // ich - interchange; mutex используетс�
 pthread_mutex_t* sr_mutex_m2;
 pthread_mutex_t* sr_mutex_rho1;
 pthread_mutex_t* sr_mutex_rho2;
+pthread_mutex_t* sr_mutex_j1;
+pthread_mutex_t* sr_mutex_j2; // mutex для вывода токов
 
 spatial_region* psr; // указатель на массив областей, на которые разбита область вычислений
 
@@ -180,7 +184,10 @@ void* thread_function(void* arg)
         }
         //
         if(l*dt >= [](ddi* a) {double b=a->f*a->output_period; if(a->prev!=0) b+=(a->prev)->t_end; return b;} (p_current_ddi))
-        { // подсчёт плотности частиц
+        {
+            pthread_mutex_unlock(&sr_mutex_j1[i]);
+            pthread_mutex_lock(&sr_mutex_j2[i]);
+            // подсчёт плотности частиц
             psr[i].compute_rho();
             pthread_mutex_unlock(&sr_mutex_rho1[i]);
             pthread_mutex_lock(&sr_mutex_rho2[i]);
@@ -378,35 +385,30 @@ void write_energy_deleted(ofstream& fout_energy_deleted)
     delete[] ienergy_deleted;
 }
 
-void write_rho(bool write_p, bool write_ph)
+void write_density(bool write_x, bool write_y, bool write_z,
+        std::string x_folder, std::string y_folder, std::string z_folder,
+        bool write_ions = false)
 {
     std::string file_name;
     char file_num_pchar[20];
-    ofstream* pof;
-    ofstream* pof_p = 0;
-    ofstream* pof_ph = 0;
+    ofstream* pof_x = 0;
+    ofstream* pof_y = 0;
+    ofstream* pof_z = 0;
 
-    file_name = data_folder+"/rho";
     sprintf(file_num_pchar,"%g",int([](ddi* a) {double b=a->f*a->output_period; if(a->prev!=0) b+=(a->prev)->t_end; return b;} (p_current_ddi)/2/PI*file_name_accuracy)/file_name_accuracy);
-    file_name = file_name + file_num_pchar;
-    ofstream fout_rho(file_name.c_str(), output_mode);
-    pof = &fout_rho;
 
-    ofstream fout_rho_p;
-    ofstream fout_rho_ph;
-    if (write_p)
-    {
-        file_name = data_folder+"/rho_p";
-        file_name = file_name + file_num_pchar;
-        fout_rho_p.open(file_name.c_str(), output_mode);
-        pof_p = &fout_rho_p;
+    if (write_x) {
+        file_name = data_folder + "/" + x_folder + file_num_pchar;
+        pof_x = new ofstream(file_name.c_str(), output_mode);
     }
-    if (write_ph)
-    {
-        file_name = data_folder+"/rho_ph";
-        file_name = file_name + file_num_pchar;
-        fout_rho_ph.open(file_name.c_str(), output_mode);
-        pof_ph = &fout_rho_ph;
+
+    if (write_y) {
+        file_name = data_folder + "/" + y_folder + file_num_pchar;
+        pof_y = new ofstream(file_name.c_str(), output_mode);
+    }
+    if (write_z) {
+        file_name = data_folder + "/" + z_folder + file_num_pchar;
+        pof_z = new ofstream(file_name.c_str(), output_mode);
     }
     
     int onx;
@@ -421,14 +423,14 @@ void write_rho(bool write_p, bool write_ph)
             onx0 = 0;
         else
             onx0 = nx_ich/2;
-        psr[i].fout_rho(pof,pof_p,pof_ph,onx0,onx, output_mode);
+        psr[i].fout_rho(pof_x,pof_y,pof_z,onx0,onx, output_mode);
     }
     
     int ii = int(((xlength-x0fout)/dx - nx_ich)/(nx_sr - nx_ich));
     if(ii<0) ii = 0;
-    psr[ii].fout_rho_yzplane(pof,pof_p,pof_ph,int((xlength-x0fout)/dx)-ii*(nx_sr-nx_ich), output_mode);
+    psr[ii].fout_rho_yzplane(pof_x,pof_y,pof_z,int((xlength-x0fout)/dx)-ii*(nx_sr-nx_ich), output_mode);
 
-    if (ions=="on")
+    if (write_ions && (ions=="on"))
     {
         char s_cmr[20];
         for (int n=0;n<n_ion_populations;n++)
@@ -458,11 +460,9 @@ void write_rho(bool write_p, bool write_ph)
         }
     }
     
-    fout_rho.close();
-    if (fout_rho_p.is_open())
-        fout_rho_p.close();
-    if (fout_rho_ph.is_open())
-        fout_rho_ph.close();
+    if (pof_x) delete pof_x;
+    if (pof_y) delete pof_y;
+    if (pof_z) delete pof_z;
 }
 
 void write_spectrum_phasespace(bool write_p, bool write_ph)
@@ -914,6 +914,8 @@ int main()
     sr_mutex_m2 = new pthread_mutex_t[n_sr];
     sr_mutex_rho1 = new pthread_mutex_t[n_sr];
     sr_mutex_rho2 = new pthread_mutex_t[n_sr];
+    sr_mutex_j1 = new pthread_mutex_t[n_sr];
+    sr_mutex_j2 = new pthread_mutex_t[n_sr];
 
     main_thread_time = times(&tms_struct);
     cout<<"Creating arrays..."<<flush;
@@ -939,7 +941,7 @@ int main()
     
     main_thread_time = times(&tms_struct) - main_thread_time;
     seconds = main_thread_time/100.0;
-    cout<<"done!\n"<<endl;
+    cout<<"done!"<<endl;
     fout_log<<"fill arrays: "<<seconds<<"s"<<endl;
 
     for(int i=0;i<n_sr;i++) pthread_mutex_init(&sr_mutex_c[i], 0);
@@ -956,6 +958,10 @@ int main()
     for(int i=0;i<n_sr;i++) pthread_mutex_lock(&sr_mutex_rho1[i]);
     for(int i=0;i<n_sr;i++) pthread_mutex_init(&sr_mutex_rho2[i], 0);
     for(int i=0;i<n_sr;i++) pthread_mutex_lock(&sr_mutex_rho2[i]);
+    for(int i=0;i<n_sr;i++) pthread_mutex_init(&sr_mutex_j1[i], 0);
+    for(int i=0;i<n_sr;i++) pthread_mutex_lock(&sr_mutex_j1[i]);
+    for(int i=0;i<n_sr;i++) pthread_mutex_init(&sr_mutex_j2[i], 0);
+    for(int i=0;i<n_sr;i++) pthread_mutex_lock(&sr_mutex_j2[i]);
 
     for(int i=0;i<n_sr;i++)
     {
@@ -982,9 +988,15 @@ int main()
            электронов и позитронов в файлы */
         if(l*dt >= [](ddi* a) {double b=a->f*a->output_period; if(a->prev!=0) b+=(a->prev)->t_end; return b;} (p_current_ddi))
         {
+            for (int i=0; i<n_sr; i++) pthread_mutex_lock(&sr_mutex_j1[i]);
+
+            if (write_jx || write_jy || write_jz)
+                write_density(write_jx, write_jy, write_jz, "jx", "jy", "jz");
+
+            for (int i=0; i<n_sr; i++) pthread_mutex_unlock(&sr_mutex_j2[i]);
             for(int i=0;i<n_sr;i++) pthread_mutex_lock(&sr_mutex_rho1[i]);
             
-            write_rho(write_p, write_ph);
+            write_density(true, write_p, write_ph, "rho", "rho_p", "rho_ph", true);
             write_spectrum_phasespace(write_p, write_ph);            
             
             if (catching_enabled)
@@ -1557,7 +1569,14 @@ int main()
     delete[] sr_thread;
     delete listener_thread;
     delete[] sr_mutex_c;
-
+    delete[] sr_mutex1;
+    delete[] sr_mutex2;
+    delete[] sr_mutex_m;
+    delete[] sr_mutex_m2;
+    delete[] sr_mutex_rho1;
+    delete[] sr_mutex_rho2;
+    delete[] sr_mutex_j1;
+    delete[] sr_mutex_j2;
     delete[] icmr;
 
     delete[] ppd;
@@ -1993,12 +2012,35 @@ int init()
     current = find("mwseed",first);
     mwseed = 1;
     if (current->units=="off") mwseed = 0;
-    current = find("e_components_for_output",first);
+    current = find("e_components_for_output", first);
     e_components_for_output = current->units;
-    current = find("b_components_for_output",first);
+    current = find("b_components_for_output", first);
     b_components_for_output = current->units;
-    if (e_components_for_output=="") e_components_for_output = "none"; // default
-    if (b_components_for_output=="") b_components_for_output = "none"; // default
+    current = find("j_components_for_output", first);
+    j_components_for_output = current->units;
+    if (e_components_for_output == "")
+        e_components_for_output = "none"; // default
+    if (b_components_for_output == "")
+        b_components_for_output = "none"; // default
+    if (j_components_for_output == "")
+        j_components_for_output = "none";
+
+    if (j_components_for_output.find_first_of('x') != string::npos) {
+        write_jx = true;
+    }
+    if (j_components_for_output.find_first_of('y') != string::npos) {
+        write_jy = true;
+    }
+    if (j_components_for_output.find_first_of('z') != string::npos) {
+        write_jz = true;
+    }
+    if ((j_components_for_output.find_first_not_of("xyz") != string::npos)
+            and (j_components_for_output != "none")) {
+        cerr << "WARNING: j_components_for_output=[" << j_components_for_output
+                << "] is not a valid option, only x, y, z chars are possible"
+                << endl;
+    }
+
     current = find("beam",first);
     beam = current->units;
     if (beam=="") beam = "off";
