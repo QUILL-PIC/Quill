@@ -132,6 +132,8 @@ mwindow = off # default: on; possible: on, off
 # компоненты полей для вывода в файл
 e_components_for_output = xyz # default: none; possible: x, y, z, xy, xz, yz, xyz
 b_components_for_output = xyz # default: none; possible: x, y, z, xy, xz, yz, xyz
+# компоненты тока для вывода в файл
+j_components_for_output = xyz # default: none; possible: x, y, z, xy, xz, yz, xyz
 # расстояние от правой границы области до плоскости yz, данные в
 # которой выводятся в файл;
 #x0fout = 9 # default value: xlength/2; default units: lambda; possible: um, fs

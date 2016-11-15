@@ -556,96 +556,106 @@ void spatial_region::fout_inv_yzplane(ofstream* pfout, int i)
     }
 }
 
-void spatial_region::fout_rho(ofstream* pfout, ofstream* pfout_p, ofstream* pfout_ph, int n0, int n, ios_base::openmode mode)
+void spatial_region::fout_rho(ofstream* pfout_x, ofstream* pfout_y,
+        ofstream* pfout_z, int n0, int n, ios_base::openmode mode)
 {
     /* n-n0 - длина массива по x (для данного spatial_region'а) для
      * вывода сечения плоскостью xy и плоскостью xz */
     if (mode == ios_base::out) {
-        for(int i=n0;i<n;i++)
-        {
-            int k=nz/2;
-            for(int j=0;j<ny;j++)
-            {
-                (*pfout)<<cj[i][j][k].jx<<"\n";
-            }
-            int j=ny/2;
-            for(int k=0;k<nz;k++)
-            {
-                (*pfout)<<cj[i][j][k].jx<<"\n";
+        if (pfout_x != 0) {
+            for (int i = n0; i < n; i++) {
+                int k = nz / 2;
+                for (int j = 0; j < ny; j++) {
+                    (*pfout_x) << cj[i][j][k].jx << "\n";
+                }
+                int j = ny / 2;
+                for (int k = 0; k < nz; k++) {
+                    (*pfout_x) << cj[i][j][k].jx << "\n";
+                }
             }
         }
-        if (pfout_p!=0)
+        if (pfout_y!=0)
         {
             for(int i=n0;i<n;i++)
             {
                 int k=nz/2;
                 for(int j=0;j<ny;j++)
                 {
-                    (*pfout_p)<<cj[i][j][k].jy<<"\n";
+                    (*pfout_y)<<cj[i][j][k].jy<<"\n";
                 }
                 int j=ny/2;
                 for(int k=0;k<nz;k++)
                 {
-                    (*pfout_p)<<cj[i][j][k].jy<<"\n";
+                    (*pfout_y)<<cj[i][j][k].jy<<"\n";
                 }
             }
         }
-        if (pfout_ph!=0)
+        if (pfout_z!=0)
         {
             for(int i=n0;i<n;i++)
             {
                 int k=nz/2;
                 for(int j=0;j<ny;j++)
                 {
-                    (*pfout_ph)<<cj[i][j][k].jz<<"\n";
+                    (*pfout_z)<<cj[i][j][k].jz<<"\n";
                 }
                 int j=ny/2;
                 for(int k=0;k<nz;k++)
                 {
-                    (*pfout_ph)<<cj[i][j][k].jz<<"\n";
+                    (*pfout_z)<<cj[i][j][k].jz<<"\n";
                 }
             }
         }
     } else if (mode == ios_base::out | ios_base::binary) {
-        // if (*pfout) ... --- TODO: check if file is ok
-        write_binary<spatial_region::cellj>(pfout, cj, getjx, n0, n, ny, nz);
-        write_binary<spatial_region::cellj>(pfout_p, cj, getjy, n0, n, ny, nz);
-        write_binary<spatial_region::cellj>(pfout_ph, cj, getjz, n0, n, ny, nz);
+        if (pfout_x != 0)
+            write_binary<spatial_region::cellj>(pfout_x, cj, getjx, n0, n, ny,
+                    nz);
+        if (pfout_y != 0)
+            write_binary<spatial_region::cellj>(pfout_y, cj, getjy, n0, n, ny,
+                    nz);
+        if (pfout_z != 0)
+            write_binary<spatial_region::cellj>(pfout_z, cj, getjz, n0, n, ny,
+                    nz);
     } else {
         cerr << "fout_rho: ERROR: wrong mode" << endl;
     }
 }
 
-void spatial_region::fout_rho_yzplane(ofstream* pfout, ofstream* pfout_p, ofstream* pfout_ph, int i, ios_base::openmode
-        mode)
+void spatial_region::fout_rho_yzplane(ofstream* pfout_x, ofstream* pfout_y,
+        ofstream* pfout_z, int i, ios_base::openmode mode)
 {
     if (mode == ios_base::out) {
-        for(int j=0;j<ny;j++) {
-            for(int k=0;k<nz;k++) {
-                (*pfout)<<cj[i][j][k].jx<<"\n";
-            }
-        }
-        if (pfout_p!=0) {
-            for(int j=0;j<ny;j++) {
-                for(int k=0;k<nz;k++) {
-                    (*pfout_p)<<cj[i][j][k].jy<<"\n";
+        if (pfout_x != 0) {
+            for (int j = 0; j < ny; j++) {
+                for (int k = 0; k < nz; k++) {
+                    (*pfout_x) << cj[i][j][k].jx << "\n";
                 }
             }
         }
-        if (pfout_ph!=0) {
-            for(int j=0;j<ny;j++) {
-                for(int k=0;k<nz;k++) {
-                    (*pfout_ph)<<cj[i][j][k].jz<<"\n";
+        if (pfout_y != 0) {
+            for (int j = 0; j < ny; j++) {
+                for (int k = 0; k < nz; k++) {
+                    (*pfout_y) << cj[i][j][k].jy << "\n";
+                }
+            }
+        }
+        if (pfout_z != 0) {
+            for (int j = 0; j < ny; j++) {
+                for (int k = 0; k < nz; k++) {
+                    (*pfout_z) << cj[i][j][k].jz << "\n";
                 }
             }
         }
     } else if (mode == ios_base::out | ios_base::binary) {
-        write_binary_yzplane<spatial_region::cellj>(pfout, cj, getjx, i, ny,
-                nz);
-        write_binary_yzplane<spatial_region::cellj>(pfout_p, cj, getjy, i, ny,
-                nz);
-        write_binary_yzplane<spatial_region::cellj>(pfout_ph, cj, getjz, i, ny,
-                nz);
+        if (pfout_x != 0)
+            write_binary_yzplane<spatial_region::cellj>(pfout_x, cj, getjx, i,
+                    ny, nz);
+        if (pfout_y != 0)
+            write_binary_yzplane<spatial_region::cellj>(pfout_y, cj, getjy, i,
+                    ny, nz);
+        if (pfout_z != 0)
+            write_binary_yzplane<spatial_region::cellj>(pfout_z, cj, getjz, i,
+                    ny, nz);
     } else {
         cerr << "fout_rho_yzplane: ERROR: wrong mode" << endl;
     }
