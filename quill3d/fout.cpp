@@ -607,10 +607,15 @@ void spatial_region::fout_rho(ofstream* pfout_x, ofstream* pfout_y,
             }
         }
     } else if (mode == ios_base::out | ios_base::binary) {
-        // if (*pfout) ... --- TODO: check if file is ok
-        write_binary<spatial_region::cellj>(pfout_x, cj, getjx, n0, n, ny, nz);
-        write_binary<spatial_region::cellj>(pfout_y, cj, getjy, n0, n, ny, nz);
-        write_binary<spatial_region::cellj>(pfout_z, cj, getjz, n0, n, ny, nz);
+        if (pfout_x != 0)
+            write_binary<spatial_region::cellj>(pfout_x, cj, getjx, n0, n, ny,
+                    nz);
+        if (pfout_y != 0)
+            write_binary<spatial_region::cellj>(pfout_y, cj, getjy, n0, n, ny,
+                    nz);
+        if (pfout_z != 0)
+            write_binary<spatial_region::cellj>(pfout_z, cj, getjz, n0, n, ny,
+                    nz);
     } else {
         cerr << "fout_rho: ERROR: wrong mode" << endl;
     }
@@ -642,12 +647,15 @@ void spatial_region::fout_rho_yzplane(ofstream* pfout_x, ofstream* pfout_y,
             }
         }
     } else if (mode == ios_base::out | ios_base::binary) {
-        write_binary_yzplane<spatial_region::cellj>(pfout_x, cj, getjx, i, ny,
-                nz);
-        write_binary_yzplane<spatial_region::cellj>(pfout_y, cj, getjy, i, ny,
-                nz);
-        write_binary_yzplane<spatial_region::cellj>(pfout_z, cj, getjz, i, ny,
-                nz);
+        if (pfout_x != 0)
+            write_binary_yzplane<spatial_region::cellj>(pfout_x, cj, getjx, i,
+                    ny, nz);
+        if (pfout_y != 0)
+            write_binary_yzplane<spatial_region::cellj>(pfout_y, cj, getjy, i,
+                    ny, nz);
+        if (pfout_z != 0)
+            write_binary_yzplane<spatial_region::cellj>(pfout_z, cj, getjz, i,
+                    ny, nz);
     } else {
         cerr << "fout_rho_yzplane: ERROR: wrong mode" << endl;
     }
