@@ -1,10 +1,9 @@
 #!/usr/bin/python
 
 import numpy as np
-import math
+import sys
+import os
 
-__name__ = 'resread - provides functions for extractind data arrays\n\
-from quill output files'
 __doc__ = 'see source'
 
 dx = 0
@@ -37,6 +36,7 @@ Trflow = 0
 vrflow = 0
 catching = False
 particles_for_output = 'e'
+output_mode = 0
 
 data_folder = '../results/'
 t = '0'
@@ -50,7 +50,7 @@ def read_parameters(log=None):
     'Reads nx, ny, etc. from *log*.'
     global dx,dy,dz,dt,nx,ny,nz,output_period,n_ion_populations,icmr,t_end,tr_start,\
     deps,deps_p,deps_ph,deps_i,a0y,a0z,lmbda,ne,xsigma,filmwidth,nerflow,\
-    Tlflow, mcrlflow, vlflow, Trflow, vrflow, catching, particles_for_output
+    Tlflow, mcrlflow, vlflow, Trflow, vrflow, catching, particles_for_output, output_mode
     if log is None:
         log = data_folder+'log'
     icmr = []
@@ -119,27 +119,39 @@ def read_parameters(log=None):
                 catching = True
         elif line.strip() == 'particles_for_output':
             particles_for_output = next(f).strip().replace('ph','g')
+        elif line.strip() == 'output_mode':
+            output_mode = int(next(f))
     f.close()
 
-def density(name='rho',plane='xy'):
+def density(name='rho',plane='xy', log=None):
     'Returns 2d data for plane *plane* from file\n\
     data_folder+*name*+t.'
-    with open(data_folder + name + t) as f:
-        density = np.array([float(x) for x in f])
-    n = nx*ny + nx*nz + ny*nz
-    if density.size != n:
-        raise Exception("The size of data in [%s] equal to %d doesn't match n=%d" % (name + t, density.size, n))
-    if (plane!='xy') & (plane!='xz') & (plane!='yz'):
-        print('resread.density: warning: ambiguous value for *plane* - {0}, value \'xy\' used instead'.format(plane))
-        plane = 'xy'
-    if plane=='xy':
-        density = np.reshape(density[:-ny*nz],(nx,ny+nz))[:,:-nz]
-    elif plane=='xz':
-        density = np.reshape(density[:-ny*nz],(nx,ny+nz))[:,ny:]
+    filename = data_folder + name + t
+    if output_mode == 1 and name != 'w':
+        sys.path.append(os.path.join('..', 'chameleon'))
+        try:
+            import chameleon
+        except Exception as e:
+            raise ImportError('Chameleon cannot be imported. Check if it is compiled. Error: ' + str(e))
+        chameleon.configure(log if log is not None else data_folder + 'log')
+        return chameleon.read2d(filename, plane)
     else:
-        density = np.reshape(density[nx*(ny+nz):],(ny,nz))
-    density = density.transpose()
-    return density
+        with open(filename) as f:
+            density = np.array([float(x) for x in f])
+        n = nx*ny + nx*nz + ny*nz
+        if density.size != n:
+            raise Exception("The size of data in [%s] equal to %d doesn't match n=%d" % (name + t, density.size, n))
+        if (plane!='xy') & (plane!='xz') & (plane!='yz'):
+            print('resread.density: warning: ambiguous value for *plane* - {0}, value \'xy\' used instead'.format(plane))
+            plane = 'xy'
+        if plane=='xy':
+            density = np.reshape(density[:-ny*nz],(nx,ny+nz))[:,:-nz]
+        elif plane=='xz':
+            density = np.reshape(density[:-ny*nz],(nx,ny+nz))[:,ny:]
+        else:
+            density = np.reshape(density[nx*(ny+nz):],(ny,nz))
+        density = density.transpose()
+        return density
 
 def particles(name='phasespace',s=['x','y','g']):
     'Returns characteristics *s* for particles from the file\n\
@@ -355,3 +367,4 @@ def reset_globals():
     vrflow = 0
     catching = False
     particles_for_output = 'e'
+    output_mode = 0

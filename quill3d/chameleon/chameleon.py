@@ -1,9 +1,10 @@
 import numpy as np
 import numpy.ctypeslib as nc
+import os
 
 ncc = nc.ctypes
 
-lib = nc.load_library('libchameleon', '.')
+lib = nc.load_library('libchameleon', os.path.dirname(__file__))
 
 # fills up conf (internal chameleon global variable) with values from log file,
 # prints variable name and value if flag is True
