@@ -86,6 +86,13 @@ void spatial_region::init(int sr_id0, double dx0, double dy0, double dz0, double
     n_ion_populations = n_ion_populations0;
     icmr = icmr0;
     data_folder = df;
+
+    // we should always have at least one page for free particles (to avoid performance issues)
+    pwpo* b = new pwpo;
+    b->previous = 0;
+    b->head = (plist::particle**) numa_alloc_onnode(page_size,node_number);
+    npwpo++;
+    p_lapwpo = b;
 }
 
 void spatial_region::create_arrays(int nx0, int ny0, int nz0, int seed, int node_number)
@@ -348,8 +355,8 @@ spatial_region::~spatial_region()
 
 spatial_region::plist::particle* spatial_region::new_particle()
 {
-    if (n_f==0) {
-        if (n_ap+1>npwpa*((int) page_size/particle_size))
+    if (n_f == 0) { // create particle from scratch
+        if (n_ap+1 > npwpa*((int) page_size/particle_size))
         {
             n_ap++;
             npwpa++;
@@ -368,23 +375,34 @@ spatial_region::plist::particle* spatial_region::new_particle()
             p_lap++;
             return p_lap;
         }
-    } else {
-        if (n_f-1==(npwpo-1)*((int) page_size/pointer_size))
+    } else { // reuse memory that is left from another particle
+        if (n_f-1 == (npwpo-1)*((int) page_size/pointer_size))
         {
             n_f--;
-            npwpo--;
             plist::particle* b;
             b = *pp_lfp;
-            numa_free((void*) pp_lfp,page_size);
-            //free(pp_lfp);
-            pwpo* a;
-            a = p_lapwpo;
-            p_lapwpo = p_lapwpo->previous;
-            delete a;
-            if (p_lapwpo!=0)
+
+            if (p_lapwpo == 0)
+            {
+                cout << "Error - quill didn't create page with free particles on startup" << endl;
+            }
+
+            if (npwpo > 1) // don't delete the last page with pointers
+            {
+                npwpo--;
+                numa_free((void*) pp_lfp,page_size);
+                //free(pp_lfp);
+                pwpo* a;
+                a = p_lapwpo;
+                p_lapwpo = p_lapwpo->previous;
+                delete a;
                 pp_lfp = p_lapwpo->head + (int) page_size/pointer_size - 1;
-            else
-                pp_lfp = 0;
+            }
+            else if (n_f != 0)
+            {
+                cout << "Error - inconsistent n_f and pp_lfp, program may crash!" << endl;
+            }
+
             return b;
         }
         else
@@ -408,7 +426,13 @@ void spatial_region::delete_particle(plist::particle* a)
         }
     }
     
-    if (n_f+1>npwpo*((int) page_size/pointer_size))
+    if (n_f == 0)
+    {
+        n_f = 1;
+        pp_lfp = p_lapwpo->head;
+        *pp_lfp = a;
+    }
+    else if (n_f+1 > npwpo*((int) page_size/pointer_size))
     {
         n_f++;
         npwpo++;
