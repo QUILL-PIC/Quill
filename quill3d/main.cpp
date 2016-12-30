@@ -886,7 +886,15 @@ void init_films()
 int main()
 {
     cout<<"\n\033[1m"<<"hi!"<<"\033[0m\n"<<endl;
-    cout << "Quill process id = " << getpid() << endl;
+    
+    string hostname;
+    ifstream hostname_file("/proc/sys/kernel/hostname");
+    if (hostname_file.good())
+    {
+      getline(hostname_file, hostname);
+    }
+    hostname_file.close();
+    cout << "Quill process id = " << getpid() << ", hostname = " << hostname << endl;
     up_time = times(&tms_struct);
     start_time = times(&tms_struct);
     inaccurate_time = time(NULL);
