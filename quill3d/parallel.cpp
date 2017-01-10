@@ -1,4 +1,4 @@
-// --------------------------- Parallelizator v 1.1 ---------------------------
+// --------------------------- Parallelizator v 1.2 ---------------------------
 //
 // Parallelizator is a tool which runs Quill codes on several threads in parallel.
 // Parameters of Quill codes can be set in 2D matrix in settings file parallel.ini
@@ -7,7 +7,7 @@
 // 1. Build Parallelizator executable
 // 2. Open Quill/quill3d-conf/quill.conf.parallel/ and place a config file here which will be used as template
 // 3. In parallel.ini, set path to your template in "config_template_path" variable
-// 4. Make sure that location which is in "temp_config_folder" (in parallel.ini) exists
+// 4. Change "temp_config_folder" (where a config for each calculation is generated) if needed. However, the folder name should start with ../quill3d-conf/quill.conf
 // 5. Choose 2 parameters which should be changed during Quill runs, make sure that they exist in your config file
 //    If only one parameter needs to be changed, you may take anything as the second one and assign a constant value to it, see below
 // 6. Write both parameters in the format listed below (also see example in parallel.ini):
@@ -46,6 +46,13 @@
 // Dmitry Serebryakov
 // Fixed bug - setting string "neps = 40000" was recognized as "ne ..." and replaced with "ne = 50"; using ./run.sh for quill task instead of ./parse.sh
 
+// 2017-01-10
+// Dmitry Serebryakov
+// 1. Fixed bug: on gcc < 4.9, regex does not work properly and program may crash
+// 2. Temporary config folder is automatically created if it does not exist
+// 3. Fixed bug: custom temporary config folder could not be used, as run.sh doesn't support full path to config file as a parameter
+
+
 
 #include <iostream>
 #include <fstream>
@@ -58,7 +65,6 @@
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <regex>
 
 #define N_THREADS_DEFAULT 6
 #define N_THREADS_MAX     64
@@ -107,6 +113,7 @@ class Parallelizator
     void performTasks();
     static void logError(string message);
     static void logErrorAndExit(string message);
+    static bool contains_param(string s, string param);
 
     string temp_config_folder;
     string config_template_path;
@@ -161,11 +168,11 @@ int QuillTask::perform(int tid)
         Parallelizator::logErrorAndExit("Parallelizator is NULL");
 
     string command;
-    if (TheParallelizator->temp_config_folder.compare("../quill3d-conf/quill.conf.parallel/") != 0)
-        command = "./run.sh " + TheParallelizator->temp_config_folder + config_name;
-    else
-        command = "./run.sh .parallel/" + config_name;
-
+    if (TheParallelizator->temp_config_folder.find("../quill3d-conf/quill.conf") != 0)
+        cout << "Warning - Bad temp config folder name, quill cannot read from it";
+    auto suffix = TheParallelizator->temp_config_folder.substr(26); // length of "../quill3d-conf/quill.conf"
+    command = "./run.sh " + suffix + config_name;
+    
     pthread_mutex_lock(&print_mutex);
     cout << "Begin QuillTask # " << task_id << ", thread id " << tid << ", config_name " << config_name << endl;
     cout << command << endl;
@@ -351,7 +358,7 @@ void Parallelizator::populateTaskQueue()
         bool param_y_found = false;
         while (getline(config_template, buffer))
         {
-			if (regex_match(buffer, regex("^" + param_x.name + "\\s*=.*")))
+            if (contains_param(buffer, param_x.name))
             {
                 param_x_found = true;
                 int commentFrom = buffer.find_first_of('#');
@@ -359,7 +366,7 @@ void Parallelizator::populateTaskQueue()
                     param_x.comment = buffer.substr(commentFrom);
                 buffer = "$PARAM_X$";
             }
-            else if (regex_match(buffer, regex("^" + param_y.name + "\\s*=.*")))
+            else if (contains_param(buffer, param_y.name))
             {
                 param_y_found = true;
                 int commentFrom = buffer.find_first_of('#');
@@ -375,6 +382,10 @@ void Parallelizator::populateTaskQueue()
             logErrorAndExit("Config template doesn't match settings file, unable to continue");
 
         int temp_task_id = 0;
+        
+        string command = "mkdir -p " + temp_config_folder;
+        if (system(command.c_str()))
+            logError("Unable to create temp config folder");
 
         vector<string>::iterator yit = param_y.value.begin( );
         for (vector<string>::iterator it_x = param_x.value.begin(); it_x != param_x.value.end(); ++it_x)
@@ -487,6 +498,27 @@ void Parallelizator::logError(string message)
     cout << "ERROR: " << message << endl;
     pthread_mutex_unlock(&print_mutex);
 }
+
+// Checks if the string contains specified parameter (e.g. "ne") in a form like this:
+// ne = 500 ncr # comment
+
+bool Parallelizator::contains_param(string s, string param)
+{
+    auto pname_pos = s.find(param);
+    if (pname_pos == string::npos)
+        return false;
+    
+    auto equal_pos = s.find('=');
+    if (equal_pos == string::npos || equal_pos < pname_pos + param.size())
+        return false;
+    
+    auto whitespaces = s.substr(pname_pos + param.size(), equal_pos - pname_pos - param.size());
+    if (whitespaces.find_first_not_of(" \t") != string::npos)
+        return false;
+    
+    return true;
+}
+
 
 // Staring point of each task executor thread.
 
