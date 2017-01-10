@@ -24,6 +24,9 @@ spatial_region::spatial_region()
     cbe = 0;
     cp = 0;
     n_random = 0;
+    energy_e_deleted = 0;
+    energy_p_deleted = 0;
+    energy_ph_deleted = 0;
     //
     n_ap = 0;
     n_f = 0;
