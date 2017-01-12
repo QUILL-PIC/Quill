@@ -429,8 +429,8 @@ def rpattern(t=None,particles='geip',colors='bgmrcyk',dphi=0.1,save2='',data_fol
         plt.savefig(save2)
 
 
-def spectrum(t=None,particles='geip',colors='bgmrcyk',sptype='simple',axis=[],save2='',data_folder=None,
-        smooth=True,smooth_start=20,smooth_max=1000,smooth_width=50,window_type='triangular',**kwargs):
+def spectrum(t=None,particles='geip',colors='bgmrcyk',sptype='simple',axis=[],save2='',data_folder='',smooth=True,
+        smooth_start=20,smooth_max=1000,smooth_width=50,window_type='triangular',multi_mev_threshold=None,**kwargs):
     'spectrum() # plots spectrum for all particles\n\
     at t_end\n\
     Examples:\n\
@@ -506,6 +506,15 @@ def spectrum(t=None,particles='geip',colors='bgmrcyk',sptype='simple',axis=[],sa
     for i in np.arange(len(s)):
         sp = resread.t_data('spectrum'+s[i]+resread.t,deps[i])
 
+        print(s[i])
+        if s[i]=='_ph' and multi_mev_threshold is not None:
+            multi_mev = 0.0
+            for j in np.arange(len(sp[:,0])):
+                if sp[j,0] > multi_mev_threshold:
+                    multi_mev = multi_mev + sp[j,1] * resread.deps
+                    
+            print ('Number of multi-MeV photons (W > {0} MeV) = {1}'.format(multi_mev_threshold, multi_mev)) 
+
         if smooth:
             sp[:,1] = smooth_array(sp[:,1], smooth_start, smooth_max, smooth_width, window_type)
 
@@ -539,7 +548,8 @@ directivity_lat1 = 0
 directivity_lng1 = 0
 directivity_lat2 = 0
 directivity_lng2 = 0
-def mollweide(t=None,nlongitude=80,nlatitude=40,Nlevels=15,save2='',data_folder=None,**kwargs):
+
+def mollweide(t=None,nlongitude=80,nlatitude=40,Nlevels=15,save2='',data_folder='',recalc=True,**kwargs):
     'Plots photon radiation pattern in Mollweide projection (z-axis\n\
     sticks out of the north pole and y-axis sticks out of the\n\
     projection center) and computes (antenna-like) directivity.\n\
@@ -560,62 +570,71 @@ def mollweide(t=None,nlongitude=80,nlatitude=40,Nlevels=15,save2='',data_folder=
     lng = np.linspace(-np.pi,np.pi,nlongitude)
     rp = np.zeros((nlatitude,nlongitude))
     #
-    qgthphi = resread.particles('phasespace_ph',['q','g','theta','phi'])
-    for i in np.arange(len(qgthphi[0,:])):
-        # theta - latitude, from xy-plane, [-pi/2,pi/2]
-        # phi - longitude, in xy-plane, (-pi,pi]
-        y1 = (qgthphi[2,i]+np.pi/2)*(nlatitude-1)/np.pi
-        j = np.floor(y1)
-        y1 = y1 - j
-        y2 = 1 - y1
-        x1 = (qgthphi[3,i]+np.pi)*(nlongitude-1)/(2*np.pi)
-        k = np.ceil(x1)
-        x1 = k - x1
-        x2 = 1 - x1
-        if j!=nlatitude:
-            rp[j,k] += y1*x1*qgthphi[0,i]*qgthphi[1,i]
-            rp[j+1,k] += y2*x1*qgthphi[0,i]*qgthphi[1,i]
-            rp[j+1,k-1] += y2*x2*qgthphi[0,i]*qgthphi[1,i]
-            rp[j,k-1] += y1*x2*qgthphi[0,i]*qgthphi[1,i]
-        else:
-            rp[j,k] += y1*x1*qgthphi[0,i]*qgthphi[1,i]
-            rp[j,k-1] += y1*x2*qgthphi[0,i]*qgthphi[1,i]
-    tmp1 = 0
-    tmp2 = 0
-    for i in np.arange(nlongitude):
-        tmp1 += rp[0,i]
-        tmp2 += rp[nlatitude-1,i]
-    for i in  np.arange(nlongitude):
-        rp[0,i] = tmp1
-        rp[nlatitude-1,i] = tmp2
-    for i in np.arange(1,nlatitude-1):
-        rp[i,0] += rp[i,nlongitude-1]
-        rp[i,nlongitude-1] = rp[i,0]
-    for j in np.arange(nlongitude):
+    if recalc:
+        qgthphi = resread.particles('phasespace_ph',['q','g','theta','phi'])
+        print ('Number of particles: ' + str(len(qgthphi[0,:])))
+        cnt = 0
+        for i in np.arange(len(qgthphi[0,:])):
+            if i % (len(qgthphi[0,:]) // 50) == 0:
+                print ('Part {0} completed'.format(cnt))
+                cnt+=1
+            # theta - latitude, from xy-plane, [-pi/2,pi/2]
+            # phi - longitude, in xy-plane, (-pi,pi]
+            y1 = (qgthphi[2,i]+np.pi/2)*(nlatitude-1)/np.pi
+            j = np.floor(y1)
+            y1 = y1 - j
+            y2 = 1 - y1
+            x1 = (qgthphi[3,i]+np.pi)*(nlongitude-1)/(2*np.pi)
+            k = np.ceil(x1)
+            x1 = k - x1
+            x2 = 1 - x1
+            if j!=nlatitude:
+                rp[j,k] += y1*x1*qgthphi[0,i]*qgthphi[1,i]
+                rp[j+1,k] += y2*x1*qgthphi[0,i]*qgthphi[1,i]
+                rp[j+1,k-1] += y2*x2*qgthphi[0,i]*qgthphi[1,i]
+                rp[j,k-1] += y1*x2*qgthphi[0,i]*qgthphi[1,i]
+            else:
+                rp[j,k] += y1*x1*qgthphi[0,i]*qgthphi[1,i]
+                rp[j,k-1] += y1*x2*qgthphi[0,i]*qgthphi[1,i]
+        tmp1 = 0
+        tmp2 = 0
+        for i in np.arange(nlongitude):
+            tmp1 += rp[0,i]
+            tmp2 += rp[nlatitude-1,i]
+        for i in  np.arange(nlongitude):
+            rp[0,i] = tmp1
+            rp[nlatitude-1,i] = tmp2
         for i in np.arange(1,nlatitude-1):
-            rp[i,j] = rp[i,j]/np.cos(lat[i])
-        rp[0,j] = rp[0,j]*8/np.cos(lat[1])/(nlongitude-1)
-        rp[nlatitude-1,j] = rp[nlatitude-1,j]*8/np.cos(lat[1])/(nlongitude-1)
-    integral = 0
-    integral1 = 0
-    for j in np.arange(nlongitude):
-        for i in np.arange(1,nlatitude-1):
-            integral += rp[i,j]*np.cos(lat[i])
-            integral1 += np.cos(lat[i])
-    integral += rp[0,0]*np.cos(lat[1])/8
-    integral += rp[nlatitude-1,0]*np.cos(lat[1])/8
-    integral1 += np.cos(lat[1])/8
-    integral1 += np.cos(lat[1])/8
-    for j in np.arange(nlongitude):
-        for i in np.arange(nlatitude):
-            rp[i,j] = rp[i,j]*integral1/integral
-    directivity = rp.max()
-    directivity_lat = lat[np.floor(rp.argmax()/nlongitude)]
-    directivity_lng = lng[rp.argmax()%nlongitude]
-    directivity_lat1 = lat[np.floor(rp[:,:nlongitude/2].argmax()/(nlongitude/2))]
-    directivity_lng1 = lng[rp[:,:nlongitude/2].argmax()%(nlongitude/2)]
-    directivity_lat2 = lat[np.floor(rp[:,nlongitude/2:].argmax()/(nlongitude-nlongitude/2))]
-    directivity_lng2 = lng[nlongitude/2 + rp[:,nlongitude/2:].argmax()%(nlongitude/2)]
+            rp[i,0] += rp[i,nlongitude-1]
+            rp[i,nlongitude-1] = rp[i,0]
+        for j in np.arange(nlongitude):
+            for i in np.arange(1,nlatitude-1):
+                rp[i,j] = rp[i,j]/np.cos(lat[i])
+            rp[0,j] = rp[0,j]*8/np.cos(lat[1])/(nlongitude-1)
+            rp[nlatitude-1,j] = rp[nlatitude-1,j]*8/np.cos(lat[1])/(nlongitude-1)
+        integral = 0
+        integral1 = 0
+        for j in np.arange(nlongitude):
+            for i in np.arange(1,nlatitude-1):
+                integral += rp[i,j]*np.cos(lat[i])
+                integral1 += np.cos(lat[i])
+        integral += rp[0,0]*np.cos(lat[1])/8
+        integral += rp[nlatitude-1,0]*np.cos(lat[1])/8
+        integral1 += np.cos(lat[1])/8
+        integral1 += np.cos(lat[1])/8
+        for j in np.arange(nlongitude):
+            for i in np.arange(nlatitude):
+                rp[i,j] = rp[i,j]*integral1/integral
+        directivity = rp.max()
+        directivity_lat = lat[np.floor(rp.argmax()/nlongitude)]
+        directivity_lng = lng[rp.argmax()%nlongitude]
+        directivity_lat1 = lat[np.floor(rp[:,:nlongitude/2].argmax()/(nlongitude/2))]
+        directivity_lng1 = lng[rp[:,:nlongitude/2].argmax()%(nlongitude/2)]
+        directivity_lat2 = lat[np.floor(rp[:,nlongitude/2:].argmax()/(nlongitude-nlongitude/2))]
+        directivity_lng2 = lng[nlongitude/2 + rp[:,nlongitude/2:].argmax()%(nlongitude/2)]
+        np.savez('rpattern2d.npz', rp)
+    else:
+        rp = np.load('rpattern2d.npz')['arr_0']
     f = plt.figure()
     #ax = f.add_subplot(111) # qwe
     #ax.imshow(rp,interpolation='none') # qwe
@@ -623,10 +642,12 @@ def mollweide(t=None,nlongitude=80,nlatitude=40,Nlevels=15,save2='',data_folder=
     #ax.contour(lng,lat,rp,Nlevels,cmap='jet',origin=None)
     ax.contour(lng,lat,rp,Nlevels,origin=None)
     #
+
     if save2=='':
         plt.show()
     elif save2 is not None:
         plt.savefig(save2)
+    return lng, lat, rp
 
 
 def field(t=0,field='ex',plane='xy',fmax=None,data_folder=None,extent=None,axis=[],save2='',**kwargs):
