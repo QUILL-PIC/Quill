@@ -736,6 +736,16 @@ def tracks2(space=['x', 'y'], tracks=None, save2='', data_folder=None, **kwargs)
         plt.ylabel(tex_format(y))
         for track in tracks:
             plt.plot(track[x], track[y])
+    elif len(space) == 3:
+        x = space[0]
+        y = space[1]
+        c = space[2]
+        plt.xlabel(tex_format(x))
+        plt.ylabel(tex_format(y))
+        plt.title(tex_format(c))
+        for track in tracks:
+            plt.scatter(track[x], track[y], c = track[c], s = 1, edgecolor='none')
+        plt.colorbar()
     if not save2:
         plt.show()
     else:
