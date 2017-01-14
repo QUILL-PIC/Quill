@@ -21,7 +21,7 @@ double deps,deps_p,deps_ph,deps_i;
 int neps,enthp,neps_p,enthp_p,neps_ph,enthp_ph,neps_i,enthp_i;
 int xnpic,ynpic,znpic;
 double x0fout;
-double Nb,epsb,xb,rb,x0b;
+double Nb,epsb,xb,rb,x0b,y0b,phib;
 time_t inaccurate_time;
 tms tms_struct;
 clock_t up_time;
@@ -863,11 +863,11 @@ void init_fields()
 void init_beam()
 {
     if (beam_particles=="p")
-        for(int i=0;i<n_sr;i++) psr[i].add_beam(1,Nb*1.061e-11/(xb*rb*rb*lambda),((epsb>0)-(epsb<0))*sqrt(epsb*epsb/(0.511*0.511)-1),xb,rb,xlength-x0b-dx*i*(nx_sr - nx_ich));
+        for(int i=0;i<n_sr;i++) psr[i].add_beam(1,Nb*1.061e-11/(xb*rb*rb*lambda),((epsb>0)-(epsb<0))*sqrt(epsb*epsb/(0.511*0.511)-1),xb,rb,xlength-x0b-dx*i*(nx_sr - nx_ich),y0b,phib);
     else if (beam_particles=="ph")
-        for(int i=0;i<n_sr;i++) psr[i].add_beam(0,Nb*1.061e-11/(xb*rb*rb*lambda),epsb/0.511,xb,rb,xlength-x0b-dx*i*(nx_sr - nx_ich));
+        for(int i=0;i<n_sr;i++) psr[i].add_beam(0,Nb*1.061e-11/(xb*rb*rb*lambda),epsb/0.511,xb,rb,xlength-x0b-dx*i*(nx_sr - nx_ich),y0b,phib);
     else
-        for(int i=0;i<n_sr;i++) psr[i].add_beam(-1,Nb*1.061e-11/(xb*rb*rb*lambda),((epsb>0)-(epsb<0))*sqrt(epsb*epsb/(0.511*0.511)-1),xb,rb,xlength-x0b-dx*i*(nx_sr - nx_ich));
+        for(int i=0;i<n_sr;i++) psr[i].add_beam(-1,Nb*1.061e-11/(xb*rb*rb*lambda),((epsb>0)-(epsb<0))*sqrt(epsb*epsb/(0.511*0.511)-1),xb,rb,xlength-x0b-dx*i*(nx_sr - nx_ich),y0b,phib);
 }
 
 void init_films()
@@ -2095,6 +2095,25 @@ int init()
         current->units="lambda";
     }
     x0b = current->value*2*PI;
+    current = find("y0b",first);
+    if (current->units=="um")
+    {
+        current->value = current->value*1e-4/lambda;
+        current->units="lambda";
+    }
+    if (current->units=="fs")
+    {
+        current->value = current->value*1e-15*2.99792458e10/lambda;
+        current->units="lambda";
+    }
+    y0b = current->value*2*PI;
+    current = find("phib",first);
+    if (current->units=="deg")
+    {
+        current->value = current->value*PI/180;
+        current->units="rad";
+    }
+    phib = current->value;
     current = find("ions",first);
     ions = current->units;
     if (ions=="") ions = "off";
@@ -2582,6 +2601,8 @@ int init()
     fout_log<<"xb\n"<<xb/2/PI<<"\n";
     fout_log<<"rb\n"<<rb/2/PI<<"\n";
     fout_log<<"x0b\n"<<x0b/2/PI<<"\n";
+    fout_log<<"y0b\n"<<y0b/2/PI<<"\n";
+    fout_log<<"phib\n"<<phib<<"\n";
     fout_log<<"mwspeed\n"<<mwspeed<<"\n";
     fout_log<<"nelflow\n"<<nelflow<<"\n";
     fout_log<<"vlflow\n"<<vlflow<<"\n";

@@ -151,6 +151,17 @@ xb = 9 # default: lambda; possible: um, fs
 rb = 4 # default: lambda; possible: um
 # расстояние от правой границы области до центра пучка
 x0b = 9 # default: lambda; possible: um, fs
+# энергия частиц в пучке; в слечае epsb<0 пучок летит в противоположном направлении
+epsb = 50 # MeV; possible: mc^2
+# размеры пучка: xb - половина длины пучка, rb - радиус пучка
+xb = 9 # default: lambda; possible: um, fs
+rb = 4 # default: lambda; possible: um
+# расстояние от правой границы области до центра пучка
+x0b = 9 # default: lambda; possible: um, fs
+# координата центра пучка по y относительно центра области
+y0b = 0 # default: lambda; possible: um
+# направление распространения пучка в плоскости xy (phib = 0 deg - по оси x, phib = 90 deg - по оси y, и т.д.)
+phib = 0 deg # default: rad
 
 # включение ионов (только для плёнок)
 ions = off # default: off; possible: on
