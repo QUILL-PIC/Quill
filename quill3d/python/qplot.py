@@ -820,13 +820,27 @@ def onaxis(t, particles = 'we', colors = 'rgbcmyk', norm = 'true',
         plt.savefig(save2)
 
 
+def ion():
+    """
+    Invokes 'plt.ion()'
+    """
+    plt.ion()
+
+
+def ioff():
+    """
+    Invokes 'plt.ioff()'
+    """
+    plt.ioff()
+
+
 def reset_style():
     mpl.rcParams.update(rc_backup) 
 
 import __main__
 if not plt.isinteractive() and not hasattr(__main__, '__file__'):
-    print("For the interactive regime use IPython in the Pylab mode ('ipython --pylab' or '%pylab') or 'plt.ion()'")
-
+    print("For the interactive regime use IPython in the Pylab mode ('ipython --pylab' or '%pylab'), 'plt.ion()', "
+          "or 'qplot.ion()'")
 
 lw = 0.7 # linewidth for border
 lwl = 1.0 # linewidth for lines in plots
