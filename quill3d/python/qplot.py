@@ -37,7 +37,7 @@ def tex_format(space_item):
 
 
 def density(t=0, plane='xy', max_w=0, max_e_density=0, max_p_density=0, max_g_density=0, max_i_density=0, axis=None,
-            extent=None, save2='', data_folder=None, particles='geipw', cmaps={}, **kwargs):
+            extent=None, save2='', data_folder=None, particles='geipw', cmaps={}, xlim=None, ylim=None, **kwargs):
     """
     Plots density distributions of particles and the electromagnetic field w.
 
@@ -70,6 +70,10 @@ def density(t=0, plane='xy', max_w=0, max_e_density=0, max_p_density=0, max_g_de
     plt.gca().set_title('Particle densities', fontsize='medium')
     plt.xlabel(tex_format(plane[0])[:-1] + '/\lambda$')
     plt.ylabel(tex_format(plane[1])[:-1] + '/\lambda$')
+    if xlim is not None:
+        plt.xlim(xlim)
+    if ylim is not None:
+        plt.ylim(ylim)
     if plane == 'xz':
         xlength = resread.nx * resread.dx
         ylength = resread.nz * resread.dz
@@ -429,7 +433,7 @@ def rpattern(t=None,particles='geip',colors='bgmrcyk',dphi=0.1,save2='',data_fol
         plt.savefig(save2)
 
 
-def spectrum(t=None,particles='geip',colors='bgmrcyk',sptype='simple',axis=[],save2='',data_folder='',smooth=True,
+def spectrum(t=None,particles='geip',colors='bgmrcyk',sptype='simple',axis=[],save2='',data_folder='',smooth=True,xlim=None,ylim=None,
         smooth_start=20,smooth_max=1000,smooth_width=50,window_type='triangular',multi_mev_threshold=None,**kwargs):
     'spectrum() # plots spectrum for all particles\n\
     at t_end\n\
@@ -471,6 +475,10 @@ def spectrum(t=None,particles='geip',colors='bgmrcyk',sptype='simple',axis=[],sa
     
     plt.xlabel('kinetic energy, MeV')
     plt.ylabel('dN/deps, a.u.')
+    if xlim is not None:
+        plt.xlim(xlim)
+    if ylim is not None:
+        plt.ylim(ylim)
     if axis!=[]:
         plt.axis(axis)
     data_folder = __get_data_folder(data_folder, kwargs)
@@ -506,34 +514,37 @@ def spectrum(t=None,particles='geip',colors='bgmrcyk',sptype='simple',axis=[],sa
     for i in np.arange(len(s)):
         sp = resread.t_data('spectrum'+s[i]+resread.t,deps[i])
 
-        print(s[i])
-        if s[i]=='_ph' and multi_mev_threshold is not None:
+        if multi_mev_threshold is not None:
             multi_mev = 0.0
             for j in np.arange(len(sp[:,0])):
                 if sp[j,0] > multi_mev_threshold:
                     multi_mev = multi_mev + sp[j,1] * resread.deps
                     
-            print ('Number of multi-MeV photons (W > {0} MeV) = {1}'.format(multi_mev_threshold, multi_mev)) 
+            print ('Number of multi-MeV particles of type [{0}] (W > {1} MeV) = {2}'.format(s[i], multi_mev_threshold, multi_mev)) 
+            if s[i] == '' or s[i] == '_p':
+                print ('Total charge = {0} nC'.format(multi_mev * 1.6e-10))
 
         if smooth:
             sp[:,1] = smooth_array(sp[:,1], smooth_start, smooth_max, smooth_width, window_type)
 
-        if sptype=='energy':
+        plt.yscale('log')
+        if sptype=='energy' or sptype=='loglog':
             for j in np.arange(len(sp[:,0])):
                 sp[j,1] = sp[j,0]*sp[j,1]
-        elif sptype=='loglog':
-            for j in np.arange(len(sp[:,0])):
-                sp[j,1] = sp[j,0]*sp[j,1]
-                if sp[j,1]>0:
-                    sp[j,1] = np.log10( sp[j,1] )
-                else:
-                    sp[j,1] = 0
-                sp[j,0] = np.log10( sp[j,0] )
-        for j in np.arange(len(sp[:,0])):
-            if sp[j,1]>0:
-                sp[j,1] = np.log(sp[j,1])/np.log(10.)
-            else:
-                sp[j,1] = 0
+        if sptype=='loglog':
+            plt.xscale('log')
+            # for j in np.arange(len(sp[:,0])):
+                # sp[j,1] = sp[j,0]*sp[j,1]
+                # if sp[j,1]>0:
+                    # sp[j,1] = np.log10( sp[j,1] )
+                # else:
+                    # sp[j,1] = 0
+                # sp[j,0] = np.log10( sp[j,0] )
+        # for j in np.arange(len(sp[:,0])):
+            # if sp[j,1]>0:
+                # sp[j,1] = np.log(sp[j,1])/np.log(10.)
+            # else:
+                # sp[j,1] = 0
         plt.plot(sp[:,0],sp[:,1],colors[ci[i]])
 
     if save2=='':
@@ -650,7 +661,7 @@ def mollweide(t=None,nlongitude=80,nlatitude=40,Nlevels=15,save2='',data_folder=
     return lng, lat, rp
 
 
-def field(t=0,field='ex',plane='xy',fmax=None,data_folder=None,extent=None,axis=[],save2='',**kwargs):
+def field(t=0,field='ex',plane='xy',fmax=None,data_folder=None,extent=None,xlim=None,ylim=None,axis=[],save2='',**kwargs):
     'Plots fields.'
     resread.t = '%g' % t
     data_folder = __get_data_folder(data_folder, kwargs)
@@ -661,6 +672,10 @@ def field(t=0,field='ex',plane='xy',fmax=None,data_folder=None,extent=None,axis=
     plt.title(tex_format(field))
     plt.xlabel(tex_format(plane[0]) + '$/\lambda$')
     plt.ylabel(tex_format(plane[1]) + '$/\lambda$')
+    if xlim is not None:
+        plt.xlim(xlim)
+    if ylim is not None:
+        plt.ylim(ylim)
     if plane=='xz':
         xlength = resread.nx*resread.dx
         ylength = resread.nz*resread.dz
