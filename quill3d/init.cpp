@@ -373,7 +373,7 @@ void spatial_region::f_init_uniformB(double a0y, double a0z) {
     }
 }
 
-void spatial_region::fill_cell_by_particles(double cmr, int_vector3d& a, int_vector3d& b, double n, double ux0, double dsplmt, double T)
+void spatial_region::fill_cell_by_particles(double cmr, int_vector3d& a, int_vector3d& b, double n, double ux0, double uy0, double dsplmt, double T)
 {
     // a = {i,j,k} - cell position, b = {xnpic,ynpic,znpic}, n - density
     double x0;
@@ -400,7 +400,8 @@ void spatial_region::fill_cell_by_particles(double cmr, int_vector3d& a, int_vec
                 tmp_p->y = y0 + double(a.j) + double(jp)/double(b.j);
                 tmp_p->z = z0 + double(a.k) + double(kp)/double(b.k);
                 if ( T!=0 && cmr!=0 ){
-                    double v0 = ux0/sqrt( 1 + ux0*ux0 );
+                    double u0 = sqrt( ux0*ux0 + uy0*uy0 );
+                    double v0 = u0 / sqrt( 1 + u0*u0 );
                     double a, b, c, r, gamma, v;
                     // gives gamma with approximately e^(-(x-1)/T) distribution
                     do {
@@ -427,12 +428,12 @@ void spatial_region::fill_cell_by_particles(double cmr, int_vector3d& a, int_vec
                     c = c*sqrt( 1 - v0*v0 )/( 1 + a*v0 );
                     a = ( a + v0 )/( 1 + a*v0 );
                     double g = 1/sqrt( 1 - a*a - b*b - c*c );
-                    tmp_p->ux = a*g;
-                    tmp_p->uy = b*g;
+                    tmp_p->ux = a*g*ux0/u0 - b*g*uy0/u0;
+                    tmp_p->uy = a*g*uy0/u0 + b*g*ux0/u0;
                     tmp_p->uz = c*g;
                 } else {
                     tmp_p->ux = ux0;
-                    tmp_p->uy = 0;
+                    tmp_p->uy = uy0;
                     tmp_p->uz = 0;
                 }
                 if (cmr!=0)
@@ -448,53 +449,57 @@ void spatial_region::fill_cell_by_particles(double cmr, int_vector3d& a, int_vec
     cp[a.i][a.j][a.k].pl.start = cp[a.i][a.j][a.k].pl.head;
 }
 
-void spatial_region::add_beam(double cmr, double n0, double ux0, double xb, double rb, double x0b)
+void spatial_region::add_beam(double cmr, double n0, double u0, double xb, double rb, double x0b, double y0b, double phib)
 {
     /* Добавляет электронный пучок с полями, вычисленными в
      * приближении бесконечного гамма-фактора пучка. n0 - максимальная
      * концентрация электронов в пучке, нормированная на критическую
-     * концентрацию */
+     * концентрацию. phib - направление (в плоскости xy), в котором пучок распространяется
+     */
 
     int_vector3d a,b;
     b.i = xnpic;
     b.j = ynpic;
     b.k = znpic;
-    double x;
-    double r;
-    double n;
-    double tmp;
-    double signum;
-    double type;
-    signum = (ux0>0) - (ux0<0);
+    double x, y, z, r, n, f_ampl, signum, type, phi;
+    signum = (u0>0) - (u0<0);
     type = (cmr>0)-(cmr<0);
-    for(int i=0;i<nx;i++)
+    for(int i=0; i<nx; i++)
     {
-        for(int j=0;j<ny;j++)
+        for(int j=0; j<ny; j++)
         {
-            for(int k=0;k<nz;k++)
+            for(int k=0; k<nz; k++)
             {
                 a.i = i;
                 a.j = j;
                 a.k = k;
-                x = i*dx-x0b;
-                r = sqrt((j-ny/2)*(j-ny/2)*dy*dy+(k-nz/2)*(k-nz/2)*dz*dz);
-                if (x>-xb&&x<xb&&r<rb)
+                phi = atan2((j-ny/2)*dy-y0b, i*dx-x0b);
+                // x,y,z are in the rotated (by phib) coordinate system
+                x = sqrt((i*dx-x0b)*(i*dx-x0b) + ((j-ny/2)*dy-y0b)*((j-ny/2)*dy-y0b)) * cos(phi - phib);
+                y = sqrt((i*dx-x0b)*(i*dx-x0b) + ((j-ny/2)*dy-y0b)*((j-ny/2)*dy-y0b)) * sin(phi - phib);
+                z = (k-nz/2)*dz;
+                r = sqrt(y*y + z*z);
+                if (x>-xb && x<xb && r<rb)
                 {
                     n = n0*(1-x*x/(xb*xb))*(1-r*r/(rb*rb));
-                    fill_cell_by_particles(cmr,a,b,n,ux0);
-                    tmp = 0.5*n0*(1-x*x/(xb*xb))*(1-r*r/(2*rb*rb));
-                    ce[i][j][k].ey += type*tmp*(j-ny/2)*dy;
-                    ce[i][j][k].ez += type*tmp*(k-nz/2)*dz;
-                    cb[i][j][k].by -= type*signum*tmp*(k-nz/2)*dz;
-                    cb[i][j][k].bz += type*signum*tmp*(j-ny/2)*dy;
+                    fill_cell_by_particles(cmr,a,b,n,u0*cos(phib),u0*sin(phib));
+                    f_ampl = 0.5*n0*(1-x*x/(xb*xb))*(1-r*r/(2*rb*rb));
+                    ce[i][j][k].ex -= type*f_ampl*y * sin(phib);
+                    ce[i][j][k].ey += type*f_ampl*y * cos(phib);
+                    ce[i][j][k].ez += type*f_ampl*z;
+                    cb[i][j][k].bx += type*signum*f_ampl*z * sin(phib);
+                    cb[i][j][k].by -= type*signum*f_ampl*z * cos(phib);
+                    cb[i][j][k].bz += type*signum*f_ampl*y;
                 }
-                if (x>-xb&&x<xb&&r>rb)
+                if (x>-xb && x<xb && r>=rb)
                 {
-                    tmp = 0.25*n0*(1-x*x/(xb*xb))*rb*rb/(r*r);
-                    ce[i][j][k].ey += type*tmp*(j-ny/2)*dy;
-                    ce[i][j][k].ez += type*tmp*(k-nz/2)*dz;
-                    cb[i][j][k].by -= type*signum*tmp*(k-nz/2)*dz;
-                    cb[i][j][k].bz += type*signum*tmp*(j-ny/2)*dy;
+                    f_ampl = 0.25*n0*(1-x*x/(xb*xb))*rb*rb/(r*r);
+                    ce[i][j][k].ex -= type*f_ampl*y * sin(phib);
+                    ce[i][j][k].ey += type*f_ampl*y * cos(phib);
+                    ce[i][j][k].ez += type*f_ampl*z;
+                    cb[i][j][k].bx += type*signum*f_ampl*z * sin(phib);
+                    cb[i][j][k].by -= type*signum*f_ampl*z * cos(phib);
+                    cb[i][j][k].bz += type*signum*f_ampl*y;
                 }
             }
         }

@@ -38,7 +38,7 @@ def tex_format(space_item):
 
 
 def density(t=0, plane='xy', max_w=0, max_e_density=0, max_p_density=0, max_g_density=0, max_i_density=0, axis=None,
-            extent=None, save2='', data_folder=None, particles='geipw', cmaps={}, xlim=None, ylim=None, **kwargs):
+            extent=None, save2=None, data_folder=None, particles='geipw', cmaps={}, xlim=None, ylim=None, **kwargs):
     """
     Plots density distributions of particles and the electromagnetic field w.
 
@@ -51,7 +51,7 @@ def density(t=0, plane='xy', max_w=0, max_e_density=0, max_p_density=0, max_g_de
         Passed to imshow if not None or 'xi'. If None, extent is calculated automatically.
         If 'xi', will use xi = x - vt instead of x.
     save2 : string
-        File to save the image to. If empty (default), plt.show() is always invoked in the end. If None, does nothing.
+        File to save the image to. If None, does nothing.
     data_folder : string
         E.g. '../results/'. Use 'df' for shortcut.
     particles : string
@@ -135,13 +135,11 @@ def density(t=0, plane='xy', max_w=0, max_e_density=0, max_p_density=0, max_g_de
             if p not in 'gwiep':
                 print("Warning: Particle '%c' is not a valid option. Possible options are: gwiep." % p)
 
-    if save2 == '':
-        plt.show()
-    elif save2 is not None:
+    if save2 is not None:
         plt.savefig(save2)
 
 
-def particles(t=0,space=['x','y'],particles='geip',colors='bgmrcyk',r=3,alpha=0.1,cmap='jet',gamma=0,data_folder=None,axis=[],save2='',vmin=None,vmax=None,xlim=None,ylim=None,**kwargs):
+def particles(t=0,space=['x','y'],particles='geip',colors='bgmrcyk',r=3,alpha=0.1,cmap='jet',gamma=0,data_folder=None,axis=[],save2=None,vmin=None,vmax=None,xlim=None,ylim=None,**kwargs):
     'Plots particles as dots in (phase)*space*.\n\
     \n\
     Examples:\n\
@@ -206,13 +204,11 @@ def particles(t=0,space=['x','y'],particles='geip',colors='bgmrcyk',r=3,alpha=0.
         plt.xlim(xlim)
         plt.ylim(ylim)
         plt.colorbar()
-    if save2=='':
-        plt.show()
-    elif save2 is not None:
+    if save2 is not None:
         plt.savefig(save2)
 
 
-def tracks(space=['x','y'],particles='geip',t0=0,t1=0,colors='bgmrcyk',cmaps=['jet'],clims2all=1,axis=[],save2='',r=2,data_folder=None,**kwargs):
+def tracks(space=['x','y'],particles='geip',t0=0,t1=0,colors='bgmrcyk',cmaps=['jet'],clims2all=1,axis=[],save2=None,r=2,data_folder=None,**kwargs):
     'Plots particle tracks as lines in 2D or dots in 3D (phase)*space*\n\
     at [tr_start+*t0*,tr_start+*t1*]\n\
     Examples:\n\
@@ -340,13 +336,11 @@ def tracks(space=['x','y'],particles='geip',t0=0,t1=0,colors='bgmrcyk',cmaps=['j
         plt.axis(axis)
     plt.xlabel(tex_format(space[0]))
     plt.ylabel(tex_format(space[1]))
-    if save2=='':
-        plt.show()
-    elif save2 is not None:
+    if save2 is not None:
         plt.savefig(save2)
 
 
-def rpattern(t=None,particles='geip',colors='bgmrcyk',dphi=0.1,save2='',data_folder=None,catching=True,polar=True,**kwargs):
+def rpattern(t=None,particles='geip',colors='bgmrcyk',dphi=0.1,save2=None,data_folder=None,catching=True,polar=True,**kwargs):
     'Plots radiation pattern of the emitted energy\n\
     Examples:\n\
     rpattern() # plots radiation patterns for all particles\n\
@@ -428,13 +422,11 @@ def rpattern(t=None,particles='geip',colors='bgmrcyk',dphi=0.1,save2='',data_fol
             plt.plot(phi,rp_withcatching,'--',color=c[ci])
         ci+=1
 
-    if save2 == '':
-        plt.show()
-    elif save2 is not None:
+    if save2 is not None:
         plt.savefig(save2)
 
 
-def spectrum(t=None,particles='geip',colors='bgmrcyk',sptype='simple',axis=[],save2='',data_folder='',smooth=True,xlim=None,ylim=None,
+def spectrum(t=None,particles='geip',colors='bgmrcyk',sptype='simple',axis=[],save2=None,data_folder=None,smooth=True,xlim=None,ylim=None,
         smooth_start=20,smooth_max=1000,smooth_width=50,window_type='triangular',multi_mev_threshold=None,**kwargs):
     'spectrum() # plots spectrum for all particles\n\
     at t_end\n\
@@ -548,9 +540,7 @@ def spectrum(t=None,particles='geip',colors='bgmrcyk',sptype='simple',axis=[],sa
                 # sp[j,1] = 0
         plt.plot(sp[:,0],sp[:,1],colors[ci[i]])
 
-    if save2=='':
-        plt.show()
-    elif save2 is not None:
+    if save2 is not None:
         plt.savefig(save2)
 
 directivity = 0
@@ -562,7 +552,7 @@ directivity_lat2 = 0
 directivity_lng2 = 0
 
 
-def mollweide(t=None,nlongitude=80,nlatitude=40,Nlevels=15,save2='',data_folder='',data=None,**kwargs):
+def mollweide(t=None,nlongitude=80,nlatitude=40,Nlevels=15,save2=None,data_folder=None,data=None,**kwargs):
     '''Plots photon radiation pattern in Mollweide projection and computes (antenna-like) directivity.
     
     In the Mollweide projection, z-axis sticks out of the north pole and y-axis sticks out of the\n\
@@ -670,14 +660,12 @@ def mollweide(t=None,nlongitude=80,nlatitude=40,Nlevels=15,save2='',data_folder=
     ax = f.add_subplot(111,projection='mollweide')
     ax.contour(lng,lat,rp,Nlevels,origin=None)
 
-    if save2=='':
-        plt.show()
-    elif save2 is not None:
+    if save2 is not None:
         plt.savefig(save2)
     return lng, lat, rp
 
 
-def field(t=0,field='ex',plane='xy',field2=None,fmax=None,data_folder=None,extent=None,xlim=None,ylim=None,axis=[],save2='',**kwargs):
+def field(t=0,field='ex',plane='xy',field2=None,fmax=None,data_folder=None,extent=None,xlim=None,ylim=None,axis=[],save2=None,**kwargs):
     '''Plots fields in the specified plane.
 
     Arguments:
@@ -739,13 +727,11 @@ def field(t=0,field='ex',plane='xy',field2=None,fmax=None,data_folder=None,exten
         extent = ( resread.xi( 0, t ), resread.xi( xlength, t ), 0, ylength )
     plt.imshow(f,'bwr',interpolation='none',vmin=-fmax,vmax=fmax,origin='lower',extent=extent)
     #
-    if save2=='':
-        plt.show()
-    elif save2 is not None:
+    if save2 is not None:
         plt.savefig(save2)
 
 
-def energy(data_folder=None,save2='',catching=True, **kwargs):
+def energy(data_folder=None,save2=None,catching=True, **kwargs):
     'Plots energy of electrons, ions, etc. vs time'
     #Important: several types of ions are not supported
 
@@ -792,13 +778,11 @@ def energy(data_folder=None,save2='',catching=True, **kwargs):
     plt.xlabel('$ct/\lambda$')
     plt.ylabel('Energy, J')
 
-    if save2=='':
-        plt.show()
-    elif save2 is not None:
+    if save2 is not None:
         plt.savefig(save2)
 
 
-def tracks2(space=['x', 'y'], tracks=None, save2='', data_folder=None, **kwargs):
+def tracks2(space=['x', 'y'], tracks=None, save2=None, data_folder=None, **kwargs):
     'Plots 2d tracks in the specified *space*'
     data_folder = __get_data_folder(data_folder, kwargs)
     if data_folder is not None:
@@ -812,13 +796,21 @@ def tracks2(space=['x', 'y'], tracks=None, save2='', data_folder=None, **kwargs)
         plt.ylabel(tex_format(y))
         for track in tracks:
             plt.plot(track[x], track[y])
-    if not save2:
-        plt.show()
-    else:
+    elif len(space) == 3:
+        x = space[0]
+        y = space[1]
+        c = space[2]
+        plt.xlabel(tex_format(x))
+        plt.ylabel(tex_format(y))
+        plt.title(tex_format(c))
+        for track in tracks:
+            plt.scatter(track[x], track[y], c = track[c], s = 1, edgecolor='none')
+        plt.colorbar()
+    if save2 is not None:
         plt.savefig(save2)
 
 
-def N(data_folder = None, particles = 'gep', save2 = '', **kwargs):
+def N(data_folder = None, particles = 'gep', save2 = None, **kwargs):
     'Plots number of particles over time. Ions are not currently supported'
     data_folder = __get_data_folder(data_folder, kwargs)
     if data_folder is not None:
@@ -843,14 +835,12 @@ def N(data_folder = None, particles = 'gep', save2 = '', **kwargs):
     plt.ylabel(r'$N$')
     plt.yscale('log')
 
-    if save2=='':
-        plt.show()
-    elif save2 is not None:
+    if save2 is not None:
         plt.savefig(save2)
 
 
 def onaxis(t, particles = 'we', colors = 'rgbcmyk', norm = 'true',
-        data_folder = None, save2 = '', plotargs = {}, rrargs = {}, **kwargs):
+        data_folder = None, save2 = None, plotargs = {}, rrargs = {}, **kwargs):
     'Plot of particle density, fields etc. along the x-axis.\n\
     *norm* can be set to \'optimal\', \'true\' or to array of desired maximal values.\n\
     For rrargs see help(qplot.resread.onaxis),\n\
@@ -902,14 +892,31 @@ def onaxis(t, particles = 'we', colors = 'rgbcmyk', norm = 'true',
     for i, b in enumerate(a):
         plt.plot(x, b, color = colors[i % len(colors)], **plotargs)
     plt.xlabel('$x$')
-    if save2=='':
-        plt.show()
-    elif save2 is not None:
+    if save2 is not None:
         plt.savefig(save2)
+
+
+def ion():
+    """
+    Invokes 'plt.ion()'
+    """
+    plt.ion()
+
+
+def ioff():
+    """
+    Invokes 'plt.ioff()'
+    """
+    plt.ioff()
 
 
 def reset_style():
     mpl.rcParams.update(rc_backup) 
+
+import __main__
+if not plt.isinteractive() and not hasattr(__main__, '__file__'):
+    print("For the interactive regime use IPython in the Pylab mode ('ipython --pylab' or '%pylab'), 'plt.ion()', "
+          "or 'qplot.ion()'")
 
 lw = 0.7 # linewidth for border
 lwl = 1.0 # linewidth for lines in plots
