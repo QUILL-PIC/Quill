@@ -1,5 +1,6 @@
 #!/usr/bin/python
 
+from __future__ import print_function
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
@@ -560,35 +561,49 @@ directivity_lng1 = 0
 directivity_lat2 = 0
 directivity_lng2 = 0
 
-def mollweide(t=None,nlongitude=80,nlatitude=40,Nlevels=15,save2='',data_folder='',recalc=True,**kwargs):
-    'Plots photon radiation pattern in Mollweide projection (z-axis\n\
-    sticks out of the north pole and y-axis sticks out of the\n\
-    projection center) and computes (antenna-like) directivity.\n\
-    Examples:\n\
-    ...'
+
+def mollweide(t=None,nlongitude=80,nlatitude=40,Nlevels=15,save2='',data_folder='',data=None,**kwargs):
+    '''Plots photon radiation pattern in Mollweide projection and computes (antenna-like) directivity.
+    
+    In the Mollweide projection, z-axis sticks out of the north pole and y-axis sticks out of the\n\
+    projection center.
+
+    Return value:
+        lng, lat, rp - grid points and computed radiation pattern
+    Arguments:
+        t -- the time at which the radiation pattern is calculated
+        data_folder (or df) -- folder to take the data from
+        nlongitude, nlatitude -- determines the plot resolution
+        data -- if specified, the other parameters are ignored and 'data' is plotted.
+            It can be in one of the 2 formats: either (lng, lat, rp) as returned by this function, or just rp (2D array)
+    Note:
+        The function inits the global variables 'directivity', 'directivity_lat', etc.
+    '''
     global directivity, directivity_lat, directivity_lng,\
     directivity_lat1, directivity_lng1, directivity_lat2,\
     directivity_lng2
-    data_folder = __get_data_folder(data_folder, kwargs)
-    if data_folder is not None:
-        resread.data_folder = data_folder
-    resread.read_parameters()
-    if t==None:
-        t = resread.t_end - resread.dt
-    resread.t = '%g' % t
-    #
-    lat = np.linspace(-np.pi/2,np.pi/2,nlatitude)
-    lng = np.linspace(-np.pi,np.pi,nlongitude)
-    rp = np.zeros((nlatitude,nlongitude))
-    #
-    if recalc:
+
+    if data is None:
+        data_folder = __get_data_folder(data_folder, kwargs)
+        if data_folder is not None:
+            resread.data_folder = data_folder
+        resread.read_parameters()
+        if t==None:
+            t = resread.t_end - resread.dt
+        resread.t = '%g' % t
+        #
+        lat = np.linspace(-np.pi/2,np.pi/2,nlatitude)
+        lng = np.linspace(-np.pi,np.pi,nlongitude)
+        rp = np.zeros((nlatitude,nlongitude))
+        #
         qgthphi = resread.particles('phasespace_ph',['q','g','theta','phi'])
         print ('Number of particles: ' + str(len(qgthphi[0,:])))
         cnt = 0
+        print('Computing radiation pattern...', end='')
         for i in np.arange(len(qgthphi[0,:])):
-            if i % (len(qgthphi[0,:]) // 50) == 0:
-                print ('Part {0} completed'.format(cnt))
+            if i % (len(qgthphi[0,:]) // 9 + 1) == 0:
                 cnt+=1
+                print ('{0}%..'.format(cnt*10), end='')
             # theta - latitude, from xy-plane, [-pi/2,pi/2]
             # phi - longitude, in xy-plane, (-pi,pi]
             y1 = (qgthphi[2,i]+np.pi/2)*(nlatitude-1)/np.pi
@@ -607,6 +622,7 @@ def mollweide(t=None,nlongitude=80,nlatitude=40,Nlevels=15,save2='',data_folder=
             else:
                 rp[j,k] += y1*x1*qgthphi[0,i]*qgthphi[1,i]
                 rp[j,k-1] += y1*x2*qgthphi[0,i]*qgthphi[1,i]
+        print('100%')
         tmp1 = 0
         tmp2 = 0
         for i in np.arange(nlongitude):
@@ -643,16 +659,16 @@ def mollweide(t=None,nlongitude=80,nlatitude=40,Nlevels=15,save2='',data_folder=
         directivity_lng1 = lng[rp[:,:nlongitude/2].argmax()%(nlongitude/2)]
         directivity_lat2 = lat[np.floor(rp[:,nlongitude/2:].argmax()/(nlongitude-nlongitude/2))]
         directivity_lng2 = lng[nlongitude/2 + rp[:,nlongitude/2:].argmax()%(nlongitude/2)]
-        np.savez('rpattern2d.npz', rp)
     else:
-        rp = np.load('rpattern2d.npz')['arr_0']
+        if len(data) == 3: # lng, lat, rp
+            lng, lat, rp = data
+        else:              # only rp
+            rp = data
+            lat = np.linspace(-np.pi/2,np.pi/2,data.shape[0])
+            lng = np.linspace(-np.pi,np.pi,data.shape[1])
     f = plt.figure()
-    #ax = f.add_subplot(111) # qwe
-    #ax.imshow(rp,interpolation='none') # qwe
     ax = f.add_subplot(111,projection='mollweide')
-    #ax.contour(lng,lat,rp,Nlevels,cmap='jet',origin=None)
     ax.contour(lng,lat,rp,Nlevels,origin=None)
-    #
 
     if save2=='':
         plt.show()
@@ -665,11 +681,12 @@ def field(t=0,field='ex',plane='xy',field2=None,fmax=None,data_folder=None,exten
     '''Plots fields in the specified plane.
 
     Arguments:
-    field -- the field to be plotted
-    field2 (optional) -- the second field which can be added to the 1st one.
-        Example: field='ey', field2='-bz' plots Ey-Bz value
-    plane -- either 'xy', 'xz' or 'yz'. The 3rd coordinate is pre-determined (set in the Quill config file)
-    data_folder (or df) -- folder to take data from
+        t -- the time at which the field is plotted
+        field -- the field to be plotted
+        field2 (optional) -- the second field which can be added to the 1st one.
+            Example: field='ey', field2='-bz' plots Ey-Bz value
+        plane -- either 'xy', 'xz' or 'yz'. The 3rd coordinate is pre-determined (set in the Quill config file)
+        data_folder (or df) -- folder to take data from
     '''
     resread.t = '%g' % t
     data_folder = __get_data_folder(data_folder, kwargs)
