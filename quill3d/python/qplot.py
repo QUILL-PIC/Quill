@@ -661,15 +661,29 @@ def mollweide(t=None,nlongitude=80,nlatitude=40,Nlevels=15,save2='',data_folder=
     return lng, lat, rp
 
 
-def field(t=0,field='ex',plane='xy',fmax=None,data_folder=None,extent=None,xlim=None,ylim=None,axis=[],save2='',**kwargs):
-    'Plots fields.'
+def field(t=0,field='ex',plane='xy',field2=None,fmax=None,data_folder=None,extent=None,xlim=None,ylim=None,axis=[],save2='',**kwargs):
+    '''Plots fields in the specified plane.
+
+    Arguments:
+    field -- the field to be plotted
+    field2 (optional) -- the second field which can be added to the 1st one.
+        Example: field='ey', field2='-bz' plots Ey-Bz value
+    plane -- either 'xy', 'xz' or 'yz'. The 3rd coordinate is pre-determined (set in the Quill config file)
+    data_folder (or df) -- folder to take data from
+    '''
     resread.t = '%g' % t
     data_folder = __get_data_folder(data_folder, kwargs)
     if data_folder is not None:
         resread.data_folder = data_folder
     resread.read_parameters()
     #
-    plt.title(tex_format(field))
+    title = tex_format(field)
+    if field2 is not None:
+        if field2[0] == '-':
+            title += '-' + tex_format(field2[1:])
+        else:
+            title += '+' + tex_format(field2)
+    plt.title(title)
     plt.xlabel(tex_format(plane[0]) + '$/\lambda$')
     plt.ylabel(tex_format(plane[1]) + '$/\lambda$')
     if xlim is not None:
@@ -689,6 +703,15 @@ def field(t=0,field='ex',plane='xy',fmax=None,data_folder=None,extent=None,xlim=
         plt.axis(axis)
     #
     f = resread.density(field,plane)
+
+    # additive second field
+    if field2 is not None:
+        if field2[0] == '-':
+            f2 = -1.0 * resread.density(field2[1:],plane)
+        else:
+            f2 = resread.density(field2,plane)
+        f += f2
+
     if fmax==None:
         fmax = np.max( [-np.min(f), np.max(f)] )
         print('fmax = {0}'.format(fmax))
