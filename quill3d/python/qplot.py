@@ -6,8 +6,8 @@ import numpy as np
 import os
 import resread
 import tcmap
-
-__doc__ = 'see source'
+from collections import OrderedDict
+import expression_parser
 
 
 def __get_data_folder(data_folder, kwargs_dict):
@@ -134,22 +134,36 @@ def density(t=0, plane='xy', max_w=0, max_e_density=0, max_p_density=0, max_g_de
         plt.savefig(save2)
 
 
-def particles(t=0,space=['x','y'],particles='geip',colors='bgmrcyk',r=3,alpha=0.1,cmap='jet',gamma=0,data_folder=None,axis=[],save2=None,vmin=None,vmax=None,xlim=None,ylim=None,**kwargs):
-    'Plots particles as dots in (phase)*space*.\n\
-    \n\
-    Examples:\n\
-    qplot.particles(10,[\'x\',\'y\']),\n\
-    qplot.particles(15,[\'x\',\'y\',\'g\'],\'i\',gamma=1).'
-    
+def particles(t=0, space=['x','y'], particles='geip', colors='bgmrcyk', r=3, alpha=0.1, cmap='jet', gamma=0,
+              data_folder=None, axis=[], save2=None, vmin=None, vmax=None, xlim=None, ylim=None, filter=None, **kwargs):
+    """
+    Plots particles as dots in (phase)*space*.
+    Examples:
+        qplot.particles(10,[\'x\',\'y\']),\n\
+        qplot.particles(15,[\'x\',\'y\',\'g\'],\'i\',gamma=1).
+    :param t: time for which to plot the particle distribution
+    :param space: phasespace containing 2 or 3 variables (if 3, the third one is shown as color on a 2D plot)
+    :param particles: particles to plot (g for photons, e for electrons, i for ions
+    :param filter: condition for filtering the variables. E.g.: 'x > 5 && (theta > 0.5 || theta < -0.5)'
+        Allowed operations: + - * / ^ () < > = != <= >= && || sin cos exp log min max
+            (there are also aliases '**','and','or')
+    """
+
     def particle_from_suffix(s):
-        if s=='':
+        if s == '':
             return 'e'
-        elif s=='_p':
+        elif s == '_p':
             return 'p'
-        elif s=='_ph':
+        elif s == '_ph':
             return 'g'
         else:
             return 'i'
+
+    def filter_phspace(phs, expr, var_space):
+        mask = np.ones(phs.shape[1], dtype=bool).T
+        if expr:
+            mask &= expression_parser.evaluate(expr, lambda var_name: phs.T[:, var_space.index(var_name)])
+        return phs.T[mask].T
 
     resread.t = '%g' % t
     data_folder = __get_data_folder(data_folder, kwargs)
@@ -157,45 +171,58 @@ def particles(t=0,space=['x','y'],particles='geip',colors='bgmrcyk',r=3,alpha=0.
         resread.data_folder = data_folder
     resread.read_parameters()
 
+    filter_expr = expression_parser.to_polish(filter)
+    if len(space) == 2:
+        is_3d = False
+    elif len(space) == 3:
+        is_3d = True
+    else:
+        raise ValueError('Incorrect value for space parameter')
+    space = list(OrderedDict((v, i) for i, v in enumerate(space + expression_parser.get_vars(filter_expr))).keys())
     plt.xlabel(tex_format(space[0]))
     plt.ylabel(tex_format(space[1]))
-    if axis!=[]:
+    if axis:
         plt.axis(axis)
     lp = list(particles)
     s = []
     for p in lp:
-        if p=='e':
+        if p == 'e':
             s.append('')
-        elif p=='p':
+        elif p == 'p':
             s.append('_p')
-        elif p=='g':
+        elif p == 'g':
             s.append('_ph')
-        elif p=='i':
+        elif p == 'i':
             for cmr in resread.icmr:
                 s.append('_'+str(cmr)+'_')
-    if len(space)==2:
+    if not is_3d:
         c = list(colors)
-        i=0
+        i = 0
         for suffix in s:
-            phspace = resread.particles('phasespace'+suffix,space)
-            print('Plotting {0}({1}) for {2}; vmin = {3}, vmax = {4}'.format(space[1],space[0],particle_from_suffix(suffix),vmin,vmax))
-            plt.scatter(phspace[0,:],phspace[1,:],color=c[i],s=r*r,alpha=alpha,edgecolors='None')
-            if ylim: #we assume that either ylim is set or vmin / vmax are set
+            phspace = resread.particles('phasespace'+suffix, space)
+            phspace = filter_phspace(phspace, filter_expr, space)
+            print('Plotting {0}({1}) for {2}; vmin = {3}, vmax = {4}'
+                  .format(space[1], space[0], particle_from_suffix(suffix), vmin, vmax))
+            plt.scatter(phspace[0,:], phspace[1,:], color=c[i], s=r*r, alpha=alpha, edgecolors='None')
+            if ylim:  # we assume that either ylim is set or vmin / vmax are set
                 plt.ylim(ylim)
             else:
                 plt.ylim(vmin,vmax)
             plt.xlim(xlim)
-            i+=1
-    elif len(space)==3:
-        cmap = tcmap.get(cmap,gamma=gamma)
+            i += 1
+    else:
+        cmap = tcmap.get(cmap, gamma=gamma)
         plt.title(tex_format(space[2]))
-        phspace = resread.particles('phasespace'+s[0],space)  # 2 or more sorts of ions are not currently supported
-        if vmin == None:
+        phspace = resread.particles('phasespace'+s[0], space)  # 2 or more sorts of ions are not supported
+        phspace = filter_phspace(phspace, filter_expr, space)
+        if vmin is None:
             vmin = np.min(phspace[2,:])
-        if vmax == None:
+        if vmax is None:
             vmax = np.max(phspace[2,:])
-        print('Plotting {0}({1},{2}) for {3}; vmin = {4}, vmax = {5}'.format(space[2],space[0],space[1],particles[0],vmin,vmax))
-        plt.scatter(phspace[0,:],phspace[1,:],s=r*r,c=phspace[2,:],cmap=cmap,vmin=vmin,vmax=vmax,edgecolors='None')
+        print('Plotting {0}({1},{2}) for {3}; vmin = {4}, vmax = {5}'
+              .format(space[2], space[0], space[1], particles[0], vmin, vmax))
+        plt.scatter(phspace[0,:], phspace[1,:], s=r*r, c=phspace[2,:],
+                    cmap=cmap, vmin=vmin, vmax=vmax, edgecolors='None')
         plt.xlim(xlim)
         plt.ylim(ylim)
         plt.colorbar()
