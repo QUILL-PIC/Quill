@@ -45,6 +45,7 @@ bool b_sign; // b_sign = 1 соответствует знаку '+', 0 - зна
 int n_ion_populations;
 double* icmr;
 int n_tracks;
+std::string particles_to_track;
 bool tr_init;
 double tr_start,xtr1,ytr1,ztr1,xtr2,ytr2,ztr2;
 double mwspeed,nelflow,vlflow,mcrlflow,Tlflow,nerflow,vrflow,mcrrflow,Trflow;
@@ -1018,8 +1019,8 @@ int main()
         for(int i=0;i<n_sr;i++) pthread_mutex_lock(&sr_mutex1[i]);
 
         // start tracking
-        if (l==int(tr_start/dt)) {
-            cout<<"Tracking started"<<endl;
+        if (!particles_to_track.empty() && l == int(tr_start/dt)) {
+            cout << "Tracking started for particles: " << particles_to_track << endl;
             long trn = 1; // trn = 0 for untracked particles
             if (tr_init==0) {
                 int x1,y1,z1,x2,y2,z2;
@@ -1044,44 +1045,56 @@ int main()
                         spatial_region::plist::particle* h = psr[n].cp[x][y2][z2].pl.head;
                         spatial_region::plist::particle* p = h;
                         bool b = 1;
-                        while (p!=0 && b) {
-                            if (p->cmr==-1) {
-                                p->trn = trn;
-                                trn++;
-                                b = 0;
-                            }
-                            p = p->next;
-                        }
-                        p = h;
-                        b = 1;
-                        while (p!=0 && b) {
-                            if (p->cmr==1) {
-                                p->trn = trn;
-                                trn++;
-                                b = 0;
-                            }
-                            p = p->next;
-                        }
-                        p = h;
-                        b = 1;
-                        while (p!=0 && b) {
-                            if (p->cmr==0) {
-                                p->trn = trn;
-                                trn++;
-                                b = 0;
-                            }
-                            p = p->next;
-                        }
-                        for (int m=0;m<n_ion_populations;m++) {
-                            p = h;
-                            b = 1;
+                        if (particles_to_track.find('e') != string::npos)
+                        {
                             while (p!=0 && b) {
-                                if (p->cmr==icmr[m]) {
+                                if (p->cmr==-1) {
                                     p->trn = trn;
                                     trn++;
                                     b = 0;
                                 }
                                 p = p->next;
+                            }
+                        }
+                        if (particles_to_track.find('p') != string::npos)
+                        {
+                            p = h;
+                            b = 1;
+                            while (p!=0 && b) {
+                                if (p->cmr==1) {
+                                    p->trn = trn;
+                                    trn++;
+                                    b = 0;
+                                }
+                                p = p->next;
+                            }
+                        }
+                        if (particles_to_track.find('g') != string::npos)
+                        {
+                            p = h;
+                            b = 1;
+                            while (p!=0 && b) {
+                                if (p->cmr==0) {
+                                    p->trn = trn;
+                                    trn++;
+                                    b = 0;
+                                }
+                                p = p->next;
+                            }
+                        }
+                        if (particles_to_track.find('i') != string::npos)
+                        {
+                            for (int m=0;m<n_ion_populations;m++) {
+                                p = h;
+                                b = 1;
+                                while (p!=0 && b) {
+                                    if (p->cmr==icmr[m]) {
+                                        p->trn = trn;
+                                        trn++;
+                                        b = 0;
+                                    }
+                                    p = p->next;
+                                }
                             }
                         }
                     }
@@ -1102,44 +1115,56 @@ int main()
                     spatial_region::plist::particle* h = psr[n].cp[x][y1][z1].pl.head;
                     spatial_region::plist::particle* p = h;
                     bool b = 1;
-                    while (p!=0 && b) {
-                        if (p->cmr==-1) {
-                            p->trn = trn;
-                            trn++;
-                            b = 0;
-                        }
-                        p = p->next;
-                    }
-                    p = h;
-                    b = 1;
-                    while (p!=0 && b) {
-                        if (p->cmr==1) {
-                            p->trn = trn;
-                            trn++;
-                            b = 0;
-                        }
-                        p = p->next;
-                    }
-                    p = h;
-                    b = 1;
-                    while (p!=0 && b) {
-                        if (p->cmr==0) {
-                            p->trn = trn;
-                            trn++;
-                            b = 0;
-                        }
-                        p = p->next;
-                    }
-                    for (int m=0;m<n_ion_populations;m++) {
-                        p = h;
-                        b = 1;
+                    if (particles_to_track.find('e') != string::npos)
+                    {
                         while (p!=0 && b) {
-                            if (p->cmr==icmr[m]) {
+                            if (p->cmr==-1) {
                                 p->trn = trn;
                                 trn++;
                                 b = 0;
                             }
                             p = p->next;
+                        }
+                    }
+                    if (particles_to_track.find('p') != string::npos)
+                    {
+                        p = h;
+                        b = 1;
+                        while (p!=0 && b) {
+                            if (p->cmr==1) {
+                                p->trn = trn;
+                                trn++;
+                                b = 0;
+                            }
+                            p = p->next;
+                        }
+                    }
+                    if (particles_to_track.find('g') != string::npos)
+                    {
+                        p = h;
+                        b = 1;
+                        while (p!=0 && b) {
+                            if (p->cmr==0) {
+                                p->trn = trn;
+                                trn++;
+                                b = 0;
+                            }
+                            p = p->next;
+                        }
+                    }
+                    if (particles_to_track.find('i') != string::npos)
+                    {
+                        for (int m=0;m<n_ion_populations;m++) {
+                            p = h;
+                            b = 1;
+                            while (p!=0 && b) {
+                                if (p->cmr==icmr[m]) {
+                                    p->trn = trn;
+                                    trn++;
+                                    b = 0;
+                                }
+                                p = p->next;
+                            }
                         }
                     }
                 }
@@ -2429,6 +2454,10 @@ int init()
         freezing = 0;
     current = find("n_tracks",first);
     n_tracks = current->value;
+    current = find("particles_to_track",first);
+    particles_to_track = current->units;
+    if (particles_to_track.empty()) particles_to_track = "epgi"; // for backward compatibility
+    if (particles_to_track == "none") particles_to_track = "";
     current = find("tr_init",first);
     if (current->units=="volume")
         tr_init = 1;
@@ -2652,6 +2681,7 @@ int init()
     fout_log<<"n_sr\n"<<n_sr<<"\n";
     fout_log<<"n_numa_nodes\n"<<n_numa_nodes<<"\n";
     fout_log<<"n_tracks\n"<<n_tracks<<"\n";
+    fout_log<<"particles_to_track\n"<<particles_to_track<<"\n";
     fout_log<<"tr_start\n"<<tr_start/2/PI<<"\n";
     fout_log<<"tr_init\n"<<tr_init<<"\n";
     fout_log<<"xtr1\n"<<xtr1<<"\n";
