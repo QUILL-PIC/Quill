@@ -168,9 +168,17 @@ def evaluate(expr, var_evaluator=None, should_log=False):
             elif token == 'log':
                 stack.append(np.log(operand_to_float(stack.pop(), var_evaluator)))
             elif token == 'min':
-                stack.append(np.min(operand_to_float(stack.pop(), var_evaluator)))
+                val = operand_to_float(stack.pop(), var_evaluator)
+                if isinstance(val, np.ndarray) and len(val) == 0:
+                    stack.append(val)
+                else:
+                    stack.append(np.min(val))
             elif token == 'max':
-                stack.append(np.max(operand_to_float(stack.pop(), var_evaluator)))
+                val = operand_to_float(stack.pop(), var_evaluator)
+                if isinstance(val, np.ndarray) and len(val) == 0:
+                    stack.append(val)
+                else:
+                    stack.append(np.max(val))
         else:
             raise ValueError('Unrecognized function: {0}'.format(token))
     if len(stack) != 1:
