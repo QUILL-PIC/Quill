@@ -508,7 +508,8 @@ void spatial_region::add_beam(double cmr, double n0, double u0, double xb, doubl
 
 void spatial_region::film(double x0, double x1, double ne, bool ions, double
         cmr, double gradwidth, double y0, double y1, double z0, double z1,
-        double T, double vx, bool is_profiled)
+        double T, double vx, bool is_profiled,
+        int xnpic_film, int ynpic_film, int znpic_film)
 { /* x0 - координата левой границы плёнки, x1 - правой, ne -
      концентрация электронов в плёнке, нормированная на критическую
      концентрацию */
@@ -519,9 +520,9 @@ void spatial_region::film(double x0, double x1, double ne, bool ions, double
     // if is_profiled == 1 then film has transverse envelope
 
     int_vector3d a,b;
-    b.i = xnpic;
-    b.j = ynpic;
-    b.k = znpic;
+    b.i = xnpic_film;
+    b.j = ynpic_film;
+    b.k = znpic_film;
     int i0,i1;
     i0 = x0/dx;
     i1 = x1/dx;

@@ -879,7 +879,18 @@ void init_films()
         /* x0film - координата левой границы плёнки, filmwidth - её
          * толщина, gradwidth - толщина части плёнки с линейным ростом
          * плотности */
-        for(int i=0;i<n_sr;i++) psr[i].film(tmp_p_film->x0-dx*i*(nx_sr-nx_ich),tmp_p_film->x0+tmp_p_film->filmwidth-dx*i*(nx_sr-nx_ich),tmp_p_film->ne/(1.11485e+13/lambda/lambda),ions=="on",1/(proton_mass*tmp_p_film->mcr),tmp_p_film->gradwidth,tmp_p_film->y0,tmp_p_film->y1,tmp_p_film->z0,tmp_p_film->z1,tmp_p_film->T, tmp_p_film->vx, nelflow != 0 || nerflow != 0);
+        if (tmp_p_film->xnpic_film == 0 || tmp_p_film->ynpic_film == 0 || tmp_p_film->znpic_film == 0)
+        {
+            tmp_p_film->xnpic_film = xnpic;
+            tmp_p_film->ynpic_film = ynpic;
+            tmp_p_film->znpic_film = znpic;
+        }
+        for(int i=0;i<n_sr;i++) 
+            psr[i].film(tmp_p_film->x0-dx*i*(nx_sr-nx_ich), tmp_p_film->x0+tmp_p_film->filmwidth-dx*i*(nx_sr-nx_ich), 
+                tmp_p_film->ne/(1.11485e+13/lambda/lambda), ions=="on", 1/(proton_mass*tmp_p_film->mcr),
+                tmp_p_film->gradwidth, tmp_p_film->y0, tmp_p_film->y1, tmp_p_film->z0, tmp_p_film->z1,
+                tmp_p_film->T, tmp_p_film->vx, nelflow != 0 || nerflow != 0,
+                tmp_p_film->xnpic_film, tmp_p_film->ynpic_film, tmp_p_film->znpic_film);
         tmp_p_film = tmp_p_film->prev;
     }
 }
@@ -2271,6 +2282,12 @@ int init()
         p_last_film->T = current->value;
         current = find("vxfilm",tmp);
         p_last_film->vx = current->value;
+        current = find("xnpic_film",tmp);
+        p_last_film->xnpic_film = current->value;
+        current = find("ynpic_film",tmp);
+        p_last_film->ynpic_film = current->value;
+        current = find("znpic_film",tmp);
+        p_last_film->znpic_film = current->value;
         do
         {
             current = find("film",tmp);
@@ -2657,6 +2674,9 @@ int init()
         fout_log<<"mcr\n"<<tmp_p_film->mcr<<"\n";
         fout_log<<"Tfilm\n"<<tmp_p_film->T<<"\n";
         fout_log<<"vxfilm\n"<<tmp_p_film->vx<<"\n";
+        fout_log<<"xnpic_film\n"<<tmp_p_film->xnpic_film<<"\n";
+        fout_log<<"ynpic_film\n"<<tmp_p_film->ynpic_film<<"\n";
+        fout_log<<"znpic_film\n"<<tmp_p_film->znpic_film<<"\n";
         tmp_p_film = tmp_p_film->prev;
     }
     fout_log<<"n_ion_populations\n"<<n_ion_populations<<"\n";

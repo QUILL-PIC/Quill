@@ -618,4 +618,7 @@ film::film()
     mcr = 1;
     T = 0;
     vx = 0;
+    xnpic_film = 0;
+    ynpic_film = 0;
+    znpic_film = 0;
 }

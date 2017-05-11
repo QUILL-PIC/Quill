@@ -166,7 +166,7 @@ class spatial_region
     void f_init_focused(double,double,double,double,double,double,bool,double,double,double,bool,double,int,double,double,double,double);
     void f_init_uniformB(double, double);
     void add_beam(double,double,double,double,double,double,double,double);
-    void film(double,double,double,bool,double,double,double,double,double,double,double,double, bool);
+    void film(double,double,double,bool,double,double,double,double,double,double,double,double,bool,int,int,int);
     void fill_cell_by_particles(double,int_vector3d&,int_vector3d&,double,double=0,double=0,double=0,double=0);
     void fadvance_ndfx();
     void f_zeroing_on_boundaries();
@@ -211,6 +211,7 @@ class film
     public:
         film* prev;
         double x0, filmwidth, gradwidth, y0, y1, z0, z1, ne, mcr, T, vx;
+        int xnpic_film, ynpic_film, znpic_film;
         film();
 };
 
