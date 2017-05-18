@@ -26,6 +26,7 @@ void spatial_region::f_init_cos(double a0y, double a0z, double xsigma, double ys
      * расстояние от оси до первого нуля интенсивности в поперечном
      * распределении, xsigma - половина размера лазерного импульса на уровне
      * 1/e^2 (по интенсивности). E_x не вычисляется, а полагается равным нулю. */
+    // sscos = 3 - sscos transverse, cos longutudinal
     double x,y,z,xi;
     double xs, ys, zs;
     if (sscos==0) {
@@ -40,6 +41,10 @@ void spatial_region::f_init_cos(double a0y, double a0z, double xsigma, double ys
         xs = xsigma * 2 * sqrt(2 * PI) / 3;
         ys = 1e2 * ysigma; // just >> ysigma
         zs = 1e2 * ysigma; // just >> ysigma
+    } else if (sscos == 3) {
+        xs = xsigma * 2 * sqrt(2 * PI) / 3;
+        ys = 0.822 * ysigma;
+        zs = 0.822 * zsigma;
     }
     double cosx,cosy,cosz,sinx,siny,sinz,tr_envelope;
     double y12,z12;
@@ -137,6 +142,25 @@ void spatial_region::f_init_cos(double a0y, double a0z, double xsigma, double ys
                         }
                         ey = a0y * siny * (cos(xi)*cosx*cosx - PI/xs*sin(xi)*cosx*sinx);
                         ez = a0z * siny * (sin(xi)*cosx*cosx + PI/xs*cos(xi)*cosx*sinx);
+                        bz = ey;
+                        by = -ez;
+                        ex = 0;
+                        bx = 0;
+                    }
+                    else if (sscos == 3) {
+                        cosx = cos(PI*x/2/xs);
+                        sinx = sin(PI*x/2/xs);
+                        double r = sqrt(y * y + z * z);
+                        if (r <= ys)
+                        {
+                            cosy = cos(PI*r*r*r*r/2/(ys*ys*ys*ys));
+                        }
+                        else
+                        {
+                            cosy = 0.0;
+                        }
+                        ey = a0y * cosy * cosy * (cos(xi)*cosx*cosx - PI/xs*sin(xi)*cosx*sinx);
+                        ez = a0z * cosy * cosy * (sin(xi)*cosx*cosx + PI/xs*cos(xi)*cosx*sinx);
                         bz = ey;
                         by = -ez;
                         ex = 0;

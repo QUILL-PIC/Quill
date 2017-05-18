@@ -1938,6 +1938,9 @@ int init()
     } else if (f_envelope == "pearl") {
         f_envelope == "cos";
         sscos = 2;
+    } else if (f_envelope == "tophat") {
+        f_envelope = "cos";
+        sscos = 3;
     }
     current = find("b_sign",first);
     if (current->value!=-1) b_sign = 1;

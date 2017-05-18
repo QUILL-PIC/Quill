@@ -52,7 +52,7 @@ output_period = 1
 # (исключение: в случае, если x' параллелен z, то y' совпадает с y и
 # z' лежит в плоскости xy).
 # тип огибающей лазерного импульса
-f_envelope = focused # default: cos, possible: focused, sscos, focussedSSC, pearl
+f_envelope = focused # default: cos, possible: focused, sscos, focussedSSC, pearl, tophat
 # по умолчанию лазерные импульсы распространяются к центру области
 # моделирования (если не заданы ytarget, ztarget); b_sign = -1 меняет направление 
 # магнитного поля импульсов и, следовательно, их направление распространения на
