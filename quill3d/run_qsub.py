@@ -1,9 +1,11 @@
+import collections
 import os
 import re
 
 conf_prefix = '../quill3d-conf/quill.conf.'
 qsub_folder = conf_prefix + 'qsub/'
 qsub_script = 'run_qsub.sh'
+
 
 def create_conf(template, d):
     new = []
@@ -29,13 +31,26 @@ def run_confs(template, d, d_change, folder='res'):
     if len(d_change) == 0:
         run_conf(template, d, folder)
     else:
-        k = sorted(list(d_change.keys()))[0]
+        od_change = collections.OrderedDict(d_change)
+        k = list(od_change.keys())[0]
         for val in d_change[k]:
-            new_folder = folder + '_' + k + str(val)
-            d[k] = val
-            new_d_change = d_change.copy()
-            new_d_change.pop(k)
-            run_confs(template, d, new_d_change, new_folder)
+            if isinstance(k, tuple):
+                if len(val) != len(k):
+                    raise ValueError('Different length of {0} and {1}'.format(k, val))
+                new_folder = folder
+                for i in range(len(k)):
+                    new_folder += '_' + k[i] + str(val[i])
+                    print('  k = {0}, i = {1}, new_folder = {2}'.format(k,i,new_folder))
+                    d[k[i]] = val[i]
+                new_d_change = d_change.copy()
+                new_d_change.pop(k)
+                run_confs(template, d, new_d_change, new_folder)
+            else:
+                new_folder = folder + '_' + k + str(val)
+                d[k] = val
+                new_d_change = d_change.copy()
+                new_d_change.pop(k)
+                run_confs(template, d, new_d_change, new_folder)
 
 
 def run_conf(template, d, folder=None):
@@ -72,5 +87,8 @@ d['rc'] = 3
 d['Nb'] = '2e10'
 
 d_change = {'rc': [1, 2, 3]}
+
+# example of d_change with locked variables (which don't change independently):
+# d_change = {'ne': [200, 400], ('nfilm', 'a0') : [[0.5, 2], [1, 4]]}
 
 run_confs(tmp, d, d_change, 'res_test')
