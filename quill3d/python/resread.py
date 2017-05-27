@@ -330,9 +330,9 @@ def onaxis(filename, sx = 1, sy = 1, sz = 1, av = 'None'):
         else:
             a = np.zeros(nx)
             for i in np.linspace(1 - sy, sy - 1, 2 * sy - 1):
-                a += density(filename)[ny/2+i,:]
+                a += density(filename)[int(ny/2+i),:]
             for i in np.linspace(1 - sz, sz - 1, 2 * sz - 1):
-                a += density(filename,'xz')[nz/2+i,:]
+                a += density(filename,'xz')[int(nz/2+i),:]
             a = a / (2 * (sy + sz) - 2)
     return smooth(a, lr)
 
