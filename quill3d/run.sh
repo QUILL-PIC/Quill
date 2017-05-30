@@ -9,7 +9,8 @@ echo "Data folder: $folder"
 sleep 1.5  # so the user has time to see the data folder
 
 mkdir -p $folder
-cp ../quill3d-conf/quill.conf"$1" $folder/quill.conf"$1"
+
+cp ../quill3d-conf/quill.conf"$1" $folder/
 
 # 1. Parsing config file (parse.sh)
 # 2. Running quill with input from step 1

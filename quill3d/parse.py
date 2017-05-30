@@ -14,11 +14,11 @@ value_regex = '(' + number_regex + '|' + array_regex + ')'
 dimension_regex = r'(\w+|%)(\^{?[+-]?\d+}?)?'
 # value with the dimension are separated by space
 value_dimension_regex = value_regex + '\s+' + dimension_regex
-# text only values can contain word symbols, digits, ampersands and hyphens
-text_only_regex = r'([\w\d&-]+)'
+# text only values can contain word symbols, digits, dots, slashes, ampersands and hyphens
+text_only_regex = r'([\w\d&-./]+)'
 
 conf = prefix + sys.argv[1]
-with open(conf) as f:
+with open(conf, "r") as f:
     for l in f:
         if '#' in l:
             l = l[:l.find('#')]
