@@ -679,6 +679,219 @@ void write_spectrum_phasespace(bool write_p, bool write_ph)
     delete[] spectrum_i;
 }
 
+void write_fields()
+{
+    std::string file_name;
+    char file_num_pchar[20];
+    ofstream* pof;
+    int onx;
+    int onx0;
+    int ii;
+    bool is_last_sr; // 0 - not last, 1 - last
+    //
+    if (e_components_for_output=="x"||e_components_for_output=="xy"||e_components_for_output=="xz"||e_components_for_output=="xyz")
+    {
+        file_name = data_folder+"/ex";
+        sprintf(file_num_pchar,"%g",int([](ddi* a) {double b=a->f*a->output_period; if(a->prev!=0) b+=(a->prev)->t_end; return b;} (p_current_ddi)/2/PI*file_name_accuracy)/file_name_accuracy);
+        file_name = file_name + file_num_pchar;
+        ofstream fout_ex(file_name.c_str());
+        pof = &fout_ex;
+        for(int i=0;i<n_sr;i++)
+        {
+            if(i==n_sr-1)
+                onx = nx_sr;
+            else
+                onx = nx_sr-nx_ich/2;
+            if(i==0)
+                onx0 = 0;
+            else
+                onx0 = nx_ich/2;
+            psr[i].fout_ex(pof,onx0,onx, output_mode);
+        }
+        ii = int(((xlength-x0fout)/dx - nx_ich)/(nx_sr - nx_ich));
+        if(ii<0) ii = 0;
+        psr[ii].fout_ex_yzplane(pof,int((xlength-x0fout)/dx)-ii*(nx_sr-nx_ich), output_mode);
+        fout_ex.close();
+    }
+    //
+    if (e_components_for_output=="y"||e_components_for_output=="xy"||e_components_for_output=="yz"||e_components_for_output=="xyz")
+    {
+        file_name = data_folder+"/ey";
+        sprintf(file_num_pchar,"%g",int([](ddi* a) {double b=a->f*a->output_period; if(a->prev!=0) b+=(a->prev)->t_end; return b;} (p_current_ddi)/2/PI*file_name_accuracy)/file_name_accuracy);
+        file_name = file_name + file_num_pchar;
+        ofstream fout_ey(file_name.c_str());
+        pof = &fout_ey;
+        for(int i=0;i<n_sr;i++)
+        {
+            if(i==n_sr-1)
+                onx = nx_sr;
+            else
+                onx = nx_sr-nx_ich/2;
+            if(i==0)
+                onx0 = 0;
+            else
+                onx0 = nx_ich/2;
+            psr[i].fout_ey(pof,onx0,onx, output_mode);
+        }
+        ii = int(((xlength-x0fout)/dx - nx_ich)/(nx_sr - nx_ich));
+        if(ii<0) ii = 0;
+        psr[ii].fout_ey_yzplane(pof,int((xlength-x0fout)/dx)-ii*(nx_sr-nx_ich), output_mode);
+        fout_ey.close();
+    }
+    //
+    if (e_components_for_output=="z"||e_components_for_output=="xz"||e_components_for_output=="yz"||e_components_for_output=="xyz")
+    {
+        file_name = data_folder+"/ez";
+        sprintf(file_num_pchar,"%g",int([](ddi* a) {double b=a->f*a->output_period; if(a->prev!=0) b+=(a->prev)->t_end; return b;} (p_current_ddi)/2/PI*file_name_accuracy)/file_name_accuracy);
+        file_name = file_name + file_num_pchar;
+        ofstream fout_ez(file_name.c_str());
+        pof = &fout_ez;
+        for(int i=0;i<n_sr;i++)
+        {
+            if(i==n_sr-1)
+                onx = nx_sr;
+            else
+                onx = nx_sr-nx_ich/2;
+            if(i==0)
+                onx0 = 0;
+            else
+                onx0 = nx_ich/2;
+            psr[i].fout_ez(pof,onx0,onx, output_mode);
+        }
+        ii = int(((xlength-x0fout)/dx - nx_ich)/(nx_sr - nx_ich));
+        if(ii<0) ii = 0;
+        psr[ii].fout_ez_yzplane(pof,int((xlength-x0fout)/dx)-ii*(nx_sr-nx_ich), output_mode);
+        fout_ez.close();
+    }
+    //
+    if (b_components_for_output=="x"||b_components_for_output=="xy"||b_components_for_output=="xz"||b_components_for_output=="xyz")
+    {
+        file_name = data_folder+"/bx";
+        sprintf(file_num_pchar,"%g",int([](ddi* a) {double b=a->f*a->output_period; if(a->prev!=0) b+=(a->prev)->t_end; return b;} (p_current_ddi)/2/PI*file_name_accuracy)/file_name_accuracy);
+        file_name = file_name + file_num_pchar;
+        ofstream fout_bx(file_name.c_str(), output_mode);
+        pof = &fout_bx;
+        for(int i=0;i<n_sr;i++)
+        {
+            if(i==n_sr-1)
+                onx = nx_sr;
+            else
+                onx = nx_sr-nx_ich/2;
+            if(i==0)
+                onx0 = 0;
+            else
+                onx0 = nx_ich/2;
+            psr[i].fout_bx(pof,onx0,onx, output_mode);
+        }
+        ii = int(((xlength-x0fout)/dx - nx_ich)/(nx_sr - nx_ich));
+        if(ii<0) ii = 0;
+        psr[ii].fout_bx_yzplane(pof,int((xlength-x0fout)/dx)-ii*(nx_sr-nx_ich), output_mode);
+        fout_bx.close();
+    }
+    //
+    if (b_components_for_output=="y"||b_components_for_output=="xy"||b_components_for_output=="yz"||b_components_for_output=="xyz")
+    {
+        file_name = data_folder+"/by";
+        sprintf(file_num_pchar,"%g",int([](ddi* a) {double b=a->f*a->output_period; if(a->prev!=0) b+=(a->prev)->t_end; return b;} (p_current_ddi)/2/PI*file_name_accuracy)/file_name_accuracy);
+        file_name = file_name + file_num_pchar;
+        ofstream fout_by(file_name.c_str());
+        pof = &fout_by;
+        for(int i=0;i<n_sr;i++)
+        {
+            if(i==n_sr-1)
+                onx = nx_sr;
+            else
+                onx = nx_sr-nx_ich/2;
+            if(i==0)
+                onx0 = 0;
+            else
+                onx0 = nx_ich/2;
+            psr[i].fout_by(pof,onx0,onx, output_mode);
+        }
+        ii = int(((xlength-x0fout)/dx - nx_ich)/(nx_sr - nx_ich));
+        if(ii<0) ii = 0;
+        psr[ii].fout_by_yzplane(pof,int((xlength-x0fout)/dx)-ii*(nx_sr-nx_ich), output_mode);
+        fout_by.close();
+    }
+    //
+    if (b_components_for_output=="z"||b_components_for_output=="xz"||b_components_for_output=="yz"||b_components_for_output=="xyz")
+    {
+        file_name = data_folder+"/bz";
+        sprintf(file_num_pchar,"%g",int([](ddi* a) {double b=a->f*a->output_period; if(a->prev!=0) b+=(a->prev)->t_end; return b;} (p_current_ddi)/2/PI*file_name_accuracy)/file_name_accuracy);
+        file_name = file_name + file_num_pchar;
+        ofstream fout_bz(file_name.c_str());
+        pof = &fout_bz;
+        for(int i=0;i<n_sr;i++)
+        {
+            if(i==n_sr-1)
+                onx = nx_sr;
+            else
+                onx = nx_sr-nx_ich/2;
+            if(i==0)
+                onx0 = 0;
+            else
+                onx0 = nx_ich/2;
+            psr[i].fout_bz(pof,onx0,onx, output_mode);
+        }
+        ii = int(((xlength-x0fout)/dx - nx_ich)/(nx_sr - nx_ich));
+        if(ii<0) ii = 0;
+        psr[ii].fout_bz_yzplane(pof,int((xlength-x0fout)/dx)-ii*(nx_sr-nx_ich), output_mode);
+        fout_bz.close();
+    }
+    //
+    file_name = data_folder+"/w";
+    sprintf(file_num_pchar,"%g",int([](ddi* a) {double b=a->f*a->output_period; if(a->prev!=0) b+=(a->prev)->t_end; return b;} (p_current_ddi)/2/PI*file_name_accuracy)/file_name_accuracy);
+    file_name = file_name + file_num_pchar;
+    ofstream fout_w(file_name.c_str());
+    pof = &fout_w;
+    for(int i=0;i<n_sr;i++)
+    {
+        if(i==n_sr-1)
+            onx = nx_sr;
+        else
+            onx = nx_sr-nx_ich/2;
+        if(i==0)
+            onx0 = 0;
+        else
+            onx0 = nx_ich/2;
+        if (i==n_sr-1)
+            is_last_sr = 1;
+        else
+            is_last_sr = 0;
+        psr[i].fout_w(pof,onx0,onx,is_last_sr);
+    }
+    ii = int(((xlength-x0fout)/dx - nx_ich)/(nx_sr - nx_ich));
+    if(ii<0) ii = 0;
+    psr[ii].fout_w_yzplane(pof,int((xlength-x0fout)/dx)-ii*(nx_sr-nx_ich));
+    //
+    file_name = data_folder+"/inv";
+    sprintf(file_num_pchar,"%g",int([](ddi* a) {double b=a->f*a->output_period; if(a->prev!=0) b+=(a->prev)->t_end; return b;} (p_current_ddi)/2/PI*file_name_accuracy)/file_name_accuracy);
+    file_name = file_name + file_num_pchar;
+    ofstream fout_inv(file_name.c_str());
+    pof = &fout_inv;
+    for(int i=0;i<n_sr;i++)
+    {
+        if(i==n_sr-1)
+            onx = nx_sr;
+        else
+            onx = nx_sr-nx_ich/2;
+        if(i==0)
+            onx0 = 0;
+        else
+            onx0 = nx_ich/2;
+        if (i==n_sr-1)
+            is_last_sr = 1;
+        else
+            is_last_sr = 0;
+        psr[i].fout_inv(pof,onx0,onx,is_last_sr);
+    }
+    ii = int(((xlength-x0fout)/dx - nx_ich)/(nx_sr - nx_ich));
+    if(ii<0) ii = 0;
+    psr[ii].fout_inv_yzplane(pof,int((xlength-x0fout)/dx)-ii*(nx_sr-nx_ich));
+    fout_w.close();
+    fout_inv.close();
+}
+
 void init_fields()
 {
     if (f_envelope=="focused")
@@ -895,6 +1108,310 @@ void init_films()
     }
 }
 
+void start_tracking()
+{
+    cout << "Tracking started for particles: " << particles_to_track << endl;
+    long trn = 1; // trn = 0 for untracked particles
+    if (tr_init==0) {
+        int x1,y1,z1,x2,y2,z2;
+        x1 = -1;
+        y1 = 0;
+        z1 = 0;
+        for (int i=0;i<n_tracks;i++) {
+            x2 = (xtr1 + (xtr2-xtr1)*i/n_tracks)/dx;
+            y2 = (ytr1 + (ytr2-ytr1)*i/n_tracks)/dy;
+            z2 = (ztr1 + (ztr2-ztr1)*i/n_tracks)/dz;
+            if (x2!=x1 || y2!=y1 || z2!=z1) {
+                x1 = x2;
+                y1 = y2;
+                z1 = z2;
+                int n,x;
+                n = x2/(nx_sr-nx_ich);
+                x = x2%(nx_sr-nx_ich);
+                if (n>0 && x<nm) {
+                    n = n - 1;
+                    x = x + nx_sr - nx_ich;
+                }
+                spatial_region::plist::particle* h = psr[n].cp[x][y2][z2].pl.head;
+                spatial_region::plist::particle* p = h;
+                bool b = 1;
+                if (particles_to_track.find('e') != string::npos)
+                {
+                    while (p!=0 && b) {
+                        if (p->cmr==-1) {
+                            p->trn = trn;
+                            trn++;
+                            b = 0;
+                        }
+                        p = p->next;
+                    }
+                }
+                if (particles_to_track.find('p') != string::npos)
+                {
+                    p = h;
+                    b = 1;
+                    while (p!=0 && b) {
+                        if (p->cmr==1) {
+                            p->trn = trn;
+                            trn++;
+                            b = 0;
+                        }
+                        p = p->next;
+                    }
+                }
+                if (particles_to_track.find('g') != string::npos)
+                {
+                    p = h;
+                    b = 1;
+                    while (p!=0 && b) {
+                        if (p->cmr==0) {
+                            p->trn = trn;
+                            trn++;
+                            b = 0;
+                        }
+                        p = p->next;
+                    }
+                }
+                if (particles_to_track.find('i') != string::npos)
+                {
+                    for (int m=0;m<n_ion_populations;m++) {
+                        p = h;
+                        b = 1;
+                        while (p!=0 && b) {
+                            if (p->cmr==icmr[m]) {
+                                p->trn = trn;
+                                trn++;
+                                b = 0;
+                            }
+                            p = p->next;
+                        }
+                    }
+                }
+            }
+        }
+    } else {
+        for (int i=0;i<n_tracks;i++) {
+            int x1,y1,z1;
+            x1 = ( xtr1 + ( xtr2 - xtr1 ) * rand( ) / RAND_MAX ) / dx;
+            y1 = ( ytr1 + ( ytr2 - ytr1 ) * rand( ) / RAND_MAX ) / dy;
+            z1 = ( ztr1 + ( ztr2 - ztr1 ) * rand( ) / RAND_MAX ) / dz;
+            int n,x;
+            n = x1/(nx_sr-nx_ich);
+            x = x1%(nx_sr-nx_ich);
+            if (i!=0 && x<nm) {
+                n = n - 1;
+                x = x + nx_sr - nx_ich;
+            }
+            spatial_region::plist::particle* h = psr[n].cp[x][y1][z1].pl.head;
+            spatial_region::plist::particle* p = h;
+            bool b = 1;
+            if (particles_to_track.find('e') != string::npos)
+            {
+                while (p!=0 && b) {
+                    if (p->cmr==-1) {
+                        p->trn = trn;
+                        trn++;
+                        b = 0;
+                    }
+                    p = p->next;
+                }
+            }
+            if (particles_to_track.find('p') != string::npos)
+            {
+                p = h;
+                b = 1;
+                while (p!=0 && b) {
+                    if (p->cmr==1) {
+                        p->trn = trn;
+                        trn++;
+                        b = 0;
+                    }
+                    p = p->next;
+                }
+            }
+            if (particles_to_track.find('g') != string::npos)
+            {
+                p = h;
+                b = 1;
+                while (p!=0 && b) {
+                    if (p->cmr==0) {
+                        p->trn = trn;
+                        trn++;
+                        b = 0;
+                    }
+                    p = p->next;
+                }
+            }
+            if (particles_to_track.find('i') != string::npos)
+            {
+                for (int m=0;m<n_ion_populations;m++) {
+                    p = h;
+                    b = 1;
+                    while (p!=0 && b) {
+                        if (p->cmr==icmr[m]) {
+                            p->trn = trn;
+                            trn++;
+                            b = 0;
+                        }
+                        p = p->next;
+                    }
+                }
+            }
+        }
+    }
+}
+
+void evaluate_merging_condition()
+{
+    int N_qp_e, N_qp_p, N_qp_g;
+    int* N_qp_i;
+    N_qp_e = 0;
+    N_qp_p = 0;
+    N_qp_g = 0;
+    N_qp_i = new int[n_ion_populations];
+    for (int i=0;i<n_ion_populations;i++)
+        N_qp_i[i] = 0;
+    for (int i=0;i<n_sr;i++) {
+        N_qp_e += psr[i].N_qp_e;
+        N_qp_p += psr[i].N_qp_p;
+        N_qp_g += psr[i].N_qp_g;
+        for (int j=0;j<n_ion_populations;j++)
+            N_qp_i[j] += psr[i].N_qp_i[j];
+    }
+    double crnp = crpc*xlength*ylength*zlength/(dx*dy*dz);
+    pmerging_now = "off";
+    if (pmerging=="ti") {
+        int N_qp;
+        N_qp = N_qp_e + N_qp_p + N_qp_g;
+        for (int i;i<n_ion_populations;i++)
+            N_qp += N_qp_i[i];
+        if (N_qp>(3+n_ion_populations)*crnp) {
+            pmerging_now = "on";
+            // portion of particles that will be deleted
+            ppd[0] = (N_qp - (3+n_ion_populations)*crnp)/N_qp;
+            cout<<"\t\033[36m"<<"ppd = "<<ppd[0]<<"\033[0m";
+        }
+    } else if (pmerging=="nl") {
+        bool merge = (N_qp_e>crnp)||(N_qp_p>crnp)||(N_qp_g>crnp);
+        for (int i = 0; i < n_ion_populations; ++i)
+            merge = merge || (N_qp_i[i]>crnp);
+        if (merge) {
+            pmerging_now = "on";
+            // portion of particles that will be deleted
+            for (int i=0;i<3+n_ion_populations;i++)
+                ppd[i] = 0;
+            if (N_qp_e>crnp)
+                ppd[0] = (N_qp_e - crnp)/N_qp_e;
+            if (N_qp_p>crnp)
+                ppd[1] = (N_qp_p - crnp)/N_qp_p;
+            if (N_qp_g>crnp)
+                ppd[2] = (N_qp_g - crnp)/N_qp_g;
+            for (int i=0;i<n_ion_populations;i++) {
+                if (N_qp_i[i]>crnp)
+                    ppd[3+i] = (N_qp_i[i] - crnp)/N_qp_i[i];
+            }
+            cout<<"\t\033[36m"<<"ppd =";
+            for (int i=0;i<3+n_ion_populations;i++) {
+                cout<<' '<<ppd[i];
+            }
+            cout<<"\033[0m";
+        }
+    }
+    delete[] N_qp_i;
+}
+
+void add_moving_window_particles()
+{
+    if (mwindow == 1 && (l + 1) * dt * mwspeed > nmw * dx && (l + 1) * dt < t_add_mw)
+    {
+        nmw = nmw + 1;
+        if (mwseed==1) {
+            double n;
+            n=1/(k0*k0);
+            if (nmw * dx < mw_transition_length)
+            {
+                n *= nmw * dx / mw_transition_length;
+            }
+            int_vector3d cell_pos;
+            cell_pos.i = nx_sr - 3;
+            int_vector3d v_npic;
+            v_npic.i = xnpic;
+            v_npic.j = ynpic;
+            v_npic.k = znpic;
+            for(int j=0;j<int(ylength/dy);j++)
+            {
+                for(int k=0;k<int(zlength/dz);k++)
+                {
+                    cell_pos.j=j;
+                    cell_pos.k=k;
+                    double zcell = k * dz;
+                    double ycell = j * dy;
+                    double ycenter = ylength / 2.0;
+                    double zcenter = zlength / 2.0;
+                    double zrel = zcell - zcenter;
+                    double yrel = ycell - ycenter;
+                    double r = sqrt(zrel * zrel + yrel * yrel);
+                    if (r >= mw_channel_radius)
+                    {
+                        psr[n_sr-1].fill_cell_by_particles(-1,cell_pos,v_npic,n);
+                    }
+                    //if (ions=="on")
+                    // psr[n_sr-1].fill_cell_by_particles(-1,cell_pos,v_npic,n); // bug??! this adds electrons, not ions; qwe
+                }
+            }
+        }
+    }
+}
+
+void add_neutral_flow_particles(short direction, double neflow, double vflow, double Tflow, double mcrflow)
+{
+    static double xlflow = 1;
+    static double xrflow = 1;
+    
+    double& xflow = direction > 0 ? xlflow : xrflow;
+    if (xflow >= 1) {
+        xflow -= 1;
+        double n=neflow/xnpic; // in n_{cr}
+        int_vector3d cell_pos, v_npic;
+        v_npic.i = 1; // с xnpic приходится обходиться отдельно, см. ниже
+        v_npic.j = ynpic;
+        v_npic.k = znpic;
+        for (int j=0; j<int(ylength/dy); j++) {
+            for (int k=0; k<int(zlength/dz); k++) {
+                cell_pos.j=j;
+                cell_pos.k=k;
+                for (int ii=0; ii<xnpic; ii++) {
+                    double x0;
+                    x0 = xrflow - float(ii)/xnpic;
+                    if ( x0 >= 0 ) {
+                        cell_pos.i = direction > 0 ? 3 : nx_sr - 4;
+                    } else {
+                        cell_pos.i = direction > 0 ? 2 : nx_sr - 3;
+                        x0 += 1;
+                    }
+                    double tmp = (j * dy - ylength / 2) / (ylength / 2);
+                    tmp = direction > 0 ? cos(0.5 * PI * tmp * tmp * tmp * tmp * tmp) : cos(0.5 * PI * tmp * tmp); //TODO: check - this might be a bug?
+                    double tr_env = tmp * tmp;
+                    tmp =  (k * dz - zlength / 2) / (zlength / 2);
+                    tmp = direction > 0 ? cos(0.5 * PI * tmp * tmp * tmp * tmp * tmp) : cos(0.5 * PI * tmp * tmp);
+                    tr_env *= tmp * tmp;
+                    
+                    int index = direction > 0 ? 0 : n_sr - 1;
+                    if (vflow != 1) {
+                        psr[index].fill_cell_by_particles(-1,cell_pos,v_npic, n * tr_env, direction * vflow/sqrt(1-vflow*vflow),(direction > 0 ? x0 : 1-x0)-0.5,Tflow); // 0.5 - for a compensation in fill_cell... for xnpic = 1
+                        if (ions == "on")
+                            psr[index].fill_cell_by_particles(1/(proton_mass*mcrflow),cell_pos,v_npic, n * tr_env, direction * vflow/sqrt(1-vflow*vflow),(direction > 0 ? x0 : 1-x0)-0.5,Tflow / (proton_mass * mcrflow));
+                    } else {
+                        psr[index].fill_cell_by_particles(0, cell_pos, v_npic, n * tr_env, direction * Tflow, (direction > 0 ? x0 : 1-x0)-0.5);
+                    }
+                }
+            }
+        }
+    }
+
+    xflow += dt*vflow/dx;
+}
+
 int main()
 {
     cout<<"\n\033[1m"<<"hi!"<<"\033[0m\n"<<endl;
@@ -1014,7 +1531,7 @@ int main()
                 write_density(write_jx, write_jy, write_jz, "jx", "jy", "jz");
 
             for (int i=0; i<n_sr; i++) pthread_mutex_unlock(&sr_mutex_j2[i]);
-            for(int i=0;i<n_sr;i++) pthread_mutex_lock(&sr_mutex_rho1[i]);
+            for (int i=0; i<n_sr; i++) pthread_mutex_lock(&sr_mutex_rho1[i]);
             
             write_density(true, write_p, write_ph, "rho", "rho_p", "rho_ph", true);
             write_spectrum_phasespace(write_p, write_ph);            
@@ -1029,157 +1546,8 @@ int main()
 
         for(int i=0;i<n_sr;i++) pthread_mutex_lock(&sr_mutex1[i]);
 
-        // start tracking
         if (!particles_to_track.empty() && l == int(tr_start/dt)) {
-            cout << "Tracking started for particles: " << particles_to_track << endl;
-            long trn = 1; // trn = 0 for untracked particles
-            if (tr_init==0) {
-                int x1,y1,z1,x2,y2,z2;
-                x1 = -1;
-                y1 = 0;
-                z1 = 0;
-                for (int i=0;i<n_tracks;i++) {
-                    x2 = (xtr1 + (xtr2-xtr1)*i/n_tracks)/dx;
-                    y2 = (ytr1 + (ytr2-ytr1)*i/n_tracks)/dy;
-                    z2 = (ztr1 + (ztr2-ztr1)*i/n_tracks)/dz;
-                    if (x2!=x1 || y2!=y1 || z2!=z1) {
-                        x1 = x2;
-                        y1 = y2;
-                        z1 = z2;
-                        int n,x;
-                        n = x2/(nx_sr-nx_ich);
-                        x = x2%(nx_sr-nx_ich);
-                        if (n>0 && x<nm) {
-                            n = n - 1;
-                            x = x + nx_sr - nx_ich;
-                        }
-                        spatial_region::plist::particle* h = psr[n].cp[x][y2][z2].pl.head;
-                        spatial_region::plist::particle* p = h;
-                        bool b = 1;
-                        if (particles_to_track.find('e') != string::npos)
-                        {
-                            while (p!=0 && b) {
-                                if (p->cmr==-1) {
-                                    p->trn = trn;
-                                    trn++;
-                                    b = 0;
-                                }
-                                p = p->next;
-                            }
-                        }
-                        if (particles_to_track.find('p') != string::npos)
-                        {
-                            p = h;
-                            b = 1;
-                            while (p!=0 && b) {
-                                if (p->cmr==1) {
-                                    p->trn = trn;
-                                    trn++;
-                                    b = 0;
-                                }
-                                p = p->next;
-                            }
-                        }
-                        if (particles_to_track.find('g') != string::npos)
-                        {
-                            p = h;
-                            b = 1;
-                            while (p!=0 && b) {
-                                if (p->cmr==0) {
-                                    p->trn = trn;
-                                    trn++;
-                                    b = 0;
-                                }
-                                p = p->next;
-                            }
-                        }
-                        if (particles_to_track.find('i') != string::npos)
-                        {
-                            for (int m=0;m<n_ion_populations;m++) {
-                                p = h;
-                                b = 1;
-                                while (p!=0 && b) {
-                                    if (p->cmr==icmr[m]) {
-                                        p->trn = trn;
-                                        trn++;
-                                        b = 0;
-                                    }
-                                    p = p->next;
-                                }
-                            }
-                        }
-                    }
-                }
-            } else {
-                for (int i=0;i<n_tracks;i++) {
-                    int x1,y1,z1;
-                    x1 = ( xtr1 + ( xtr2 - xtr1 ) * rand( ) / RAND_MAX ) / dx;
-                    y1 = ( ytr1 + ( ytr2 - ytr1 ) * rand( ) / RAND_MAX ) / dy;
-                    z1 = ( ztr1 + ( ztr2 - ztr1 ) * rand( ) / RAND_MAX ) / dz;
-                    int n,x;
-                    n = x1/(nx_sr-nx_ich);
-                    x = x1%(nx_sr-nx_ich);
-                    if (i!=0 && x<nm) {
-                        n = n - 1;
-                        x = x + nx_sr - nx_ich;
-                    }
-                    spatial_region::plist::particle* h = psr[n].cp[x][y1][z1].pl.head;
-                    spatial_region::plist::particle* p = h;
-                    bool b = 1;
-                    if (particles_to_track.find('e') != string::npos)
-                    {
-                        while (p!=0 && b) {
-                            if (p->cmr==-1) {
-                                p->trn = trn;
-                                trn++;
-                                b = 0;
-                            }
-                            p = p->next;
-                        }
-                    }
-                    if (particles_to_track.find('p') != string::npos)
-                    {
-                        p = h;
-                        b = 1;
-                        while (p!=0 && b) {
-                            if (p->cmr==1) {
-                                p->trn = trn;
-                                trn++;
-                                b = 0;
-                            }
-                            p = p->next;
-                        }
-                    }
-                    if (particles_to_track.find('g') != string::npos)
-                    {
-                        p = h;
-                        b = 1;
-                        while (p!=0 && b) {
-                            if (p->cmr==0) {
-                                p->trn = trn;
-                                trn++;
-                                b = 0;
-                            }
-                            p = p->next;
-                        }
-                    }
-                    if (particles_to_track.find('i') != string::npos)
-                    {
-                        for (int m=0;m<n_ion_populations;m++) {
-                            p = h;
-                            b = 1;
-                            while (p!=0 && b) {
-                                if (p->cmr==icmr[m]) {
-                                    p->trn = trn;
-                                    trn++;
-                                    b = 0;
-                                }
-                                p = p->next;
-                            }
-                        }
-                    }
-                }
-            }
+            start_tracking();
         }
 
         int N_ep = write_N(fout_N);
@@ -1191,61 +1559,7 @@ int main()
 
         cout<<"\033[33m"<<"ct/lambda = "<<l*dt/2/PI<<"\tstep# "<<l<<"\033[0m";
 
-        int N_qp_e, N_qp_p, N_qp_g;
-        int* N_qp_i;
-        N_qp_e = 0;
-        N_qp_p = 0;
-        N_qp_g = 0;
-        N_qp_i = new int[n_ion_populations];
-        for (int i=0;i<n_ion_populations;i++)
-            N_qp_i[i] = 0;
-        for (int i=0;i<n_sr;i++) {
-            N_qp_e += psr[i].N_qp_e;
-            N_qp_p += psr[i].N_qp_p;
-            N_qp_g += psr[i].N_qp_g;
-            for (int j=0;j<n_ion_populations;j++)
-                N_qp_i[j] += psr[i].N_qp_i[j];
-        }
-        double crnp = crpc*xlength*ylength*zlength/(dx*dy*dz);
-        pmerging_now = "off";
-        if (pmerging=="ti") {
-            int N_qp;
-            N_qp = N_qp_e + N_qp_p + N_qp_g;
-            for (int i;i<n_ion_populations;i++)
-                N_qp += N_qp_i[i];
-            if (N_qp>(3+n_ion_populations)*crnp) {
-                pmerging_now = "on";
-                // portion of particles that will be deleted
-                ppd[0] = (N_qp - (3+n_ion_populations)*crnp)/N_qp;
-                cout<<"\t\033[36m"<<"ppd = "<<ppd[0]<<"\033[0m";
-            }
-        } else if (pmerging=="nl") {
-            bool merge = (N_qp_e>crnp)||(N_qp_p>crnp)||(N_qp_g>crnp);
-            for (int i = 0; i < n_ion_populations; ++i)
-                merge = merge || (N_qp_i[i]>crnp);
-            if (merge) {
-                pmerging_now = "on";
-                // portion of particles that will be deleted
-                for (int i=0;i<3+n_ion_populations;i++)
-                    ppd[i] = 0;
-                if (N_qp_e>crnp)
-                    ppd[0] = (N_qp_e - crnp)/N_qp_e;
-                if (N_qp_p>crnp)
-                    ppd[1] = (N_qp_p - crnp)/N_qp_p;
-                if (N_qp_g>crnp)
-                    ppd[2] = (N_qp_g - crnp)/N_qp_g;
-                for (int i=0;i<n_ion_populations;i++) {
-                    if (N_qp_i[i]>crnp)
-                        ppd[3+i] = (N_qp_i[i] - crnp)/N_qp_i[i];
-                }
-                cout<<"\t\033[36m"<<"ppd =";
-                for (int i=0;i<3+n_ion_populations;i++) {
-                    cout<<' '<<ppd[i];
-                }
-                cout<<"\033[0m";
-            }
-        }
-        delete[] N_qp_i;
+        evaluate_merging_condition();
 
         if (freezing==1)
         {
@@ -1255,352 +1569,32 @@ int main()
             if (N_freezed!=0)
                 cout<<"\t\033[36m"<<"N_f/N_c = "<<N_freezed*dx*dy*dz*1.11485e13*lambda/(8*PI*PI*PI)/(N_ep)<<"\033[0m";
         }
-
         cout<<endl;
 
-        // добавление частиц для движущегося окна (moving_window)
-        if (mwindow == 1 && (l + 1) * dt * mwspeed > nmw * dx && (l + 1) * dt < t_add_mw)
-        {
-            nmw = nmw + 1;
-            if (mwseed==1) {
-                double n;
-                n=1/(k0*k0);
-                if (nmw * dx < mw_transition_length)
-                {
-                    n *= nmw * dx / mw_transition_length;
-                }
-                int_vector3d cell_pos;
-                cell_pos.i = nx_sr - 3;
-                int_vector3d v_npic;
-                v_npic.i = xnpic;
-                v_npic.j = ynpic;
-                v_npic.k = znpic;
-                for(int j=0;j<int(ylength/dy);j++)
-                {
-                    for(int k=0;k<int(zlength/dz);k++)
-                    {
-                        cell_pos.j=j;
-                        cell_pos.k=k;
-                        double zcell = k * dz;
-                        double ycell = j * dy;
-                        double ycenter = ylength / 2.0;
-                        double zcenter = zlength / 2.0;
-                        double zrel = zcell - zcenter;
-                        double yrel = ycell - ycenter;
-                        double r = sqrt(zrel * zrel + yrel * yrel);
-                        if (r >= mw_channel_radius)
-                        {
-                            psr[n_sr-1].fill_cell_by_particles(-1,cell_pos,v_npic,n);
-                        }
-                        //if (ions=="on")
-                        // psr[n_sr-1].fill_cell_by_particles(-1,cell_pos,v_npic,n); // bug??! this adds electrons, not ions; qwe
-                    }
-                }
-            }
-        }
+        add_moving_window_particles();
 
-        // добавление частиц для нейтральных потоков (neutral flows)
-        if ( nelflow!=0 ) {
-            static double xlflow = 1;
-            if ( xlflow >= 1 ) {
-                xlflow -= 1;
-                double n=nelflow/xnpic; // in n_{cr}
-                int_vector3d cell_pos, v_npic;
-                v_npic.i = 1; // с xnpic приходится обхоиться отдельно, см. ниже
-                v_npic.j = ynpic;
-                v_npic.k = znpic;
-                for (int j=0;j<int(ylength/dy);j++) {
-                    for (int k=0;k<int(zlength/dz);k++) {
-                        cell_pos.j=j;
-                        cell_pos.k=k;
-                        for ( int ii=0; ii<xnpic; ii++ ) {
-                            double x0;
-                            x0 = xlflow - float(ii)/xnpic;
-                            if ( x0 >= 0 ) {
-                                cell_pos.i = 3;
-                            } else {
-                                cell_pos.i = 2;
-                                x0 += 1;
-                            }
-                            double tmp = (j * dy - ylength / 2) / (ylength / 2);
-                            tmp = cos(0.5 * PI * tmp * tmp * tmp * tmp * tmp);
-                            double tr_env = tmp * tmp;
-                            tmp =  (k * dz - zlength / 2) / (zlength / 2);
-                            tmp = cos(0.5 * PI * tmp * tmp * tmp * tmp * tmp);
-                            tr_env *= tmp * tmp;
-                            if (vlflow != 1) {
-                                psr[0].fill_cell_by_particles(-1,cell_pos,v_npic, n * tr_env, vlflow/sqrt(1-vlflow*vlflow),x0-0.5,Tlflow); // 0.5 - for a compensation in fill_cell... for xnpic = 1
-                                if (ions=="on")
-                                    psr[0].fill_cell_by_particles(1/(proton_mass*mcrlflow),cell_pos,v_npic, n * tr_env, vlflow/sqrt(1-vlflow*vlflow),x0-0.5,Tlflow / (proton_mass * mcrlflow));
-                            } else {
-                                psr[0].fill_cell_by_particles(0, cell_pos, v_npic, n * tr_env, Tlflow, x0-0.5);
-                            }
-                        }
-                    }
-                }
-            }
-            xlflow += dt*vlflow/dx;
+        if (nelflow != 0)
+        {
+            // neutral flow traveling from the left to the right
+            add_neutral_flow_particles(1, nelflow, vlflow, Tlflow, mcrlflow);
         }
-        if ( nerflow!=0 ) {
-            //
-            static double xrflow = 1;
-            if ( xrflow >= 1 ) {
-                xrflow -= 1;
-                double n=nerflow/xnpic; // in n_{cr}
-                int_vector3d cell_pos, v_npic;
-                v_npic.i = 1; // с xnpic приходится обхоиться отдельно, см. ниже
-                v_npic.j = ynpic;
-                v_npic.k = znpic;
-                for (int j=0;j<int(ylength/dy);j++) {
-                    for (int k=0;k<int(zlength/dz);k++) {
-                        cell_pos.j=j;
-                        cell_pos.k=k;
-                        for ( int ii=0; ii<xnpic; ii++ ) {
-                            double x0;
-                            x0 = xrflow - float(ii)/xnpic;
-                            if ( x0 >= 0 ) {
-                                cell_pos.i = nx_sr - 4;
-                            } else {
-                                cell_pos.i = nx_sr - 3;
-                                x0 += 1;
-                            }
-                            double tmp = (j * dy - ylength / 2) / (ylength / 2);
-                            tmp = cos(0.5 * PI * tmp * tmp);
-                            double tr_env = tmp * tmp;
-                            tmp =  (k * dz - zlength / 2) / (zlength / 2);
-                            tmp = cos(0.5 * PI * tmp * tmp);
-                            tr_env *= tmp * tmp;
-                            if (vrflow!=1) {
-                                psr[n_sr-1].fill_cell_by_particles(-1,cell_pos,v_npic, n * tr_env, -vrflow/sqrt(1-vrflow*vrflow),(1-x0)-0.5,Trflow);
-                                if (ions=="on")
-                                    psr[n_sr-1].fill_cell_by_particles(1/(proton_mass*mcrrflow),cell_pos,v_npic, n * tr_env ,-vrflow/sqrt(1-vrflow*vrflow),(1-x0)-0.5,Trflow / (proton_mass * mcrrflow));
-                            } else {
-                                psr[n_sr-1].fill_cell_by_particles(0, cell_pos, v_npic, n * tr_env, -Trflow, (1-x0)-0.5);
-                            }
-                        }
-                    }
-                }
-            }
-            xrflow += dt*vrflow/dx;
+        if (nerflow != 0)
+        {
+            // neutral flow traveling from the right to the left
+            add_neutral_flow_particles(-1, nerflow, vrflow, Trflow, mcrrflow);
         }
 
         // вывод данных в файлы (продолжение)
         if(l*dt>=[](ddi* a) {double b=a->f*a->output_period; if(a->prev!=0) b+=(a->prev)->t_end; return b;} (p_current_ddi))
         {
             cout<<"output# "<<"\033[1m"<<int([](ddi* a) {double b=a->f*a->output_period; if(a->prev!=0) b+=(a->prev)->t_end; return b;} (p_current_ddi)/2/PI*file_name_accuracy)/file_name_accuracy<<"\033[0m"<<flush;
-            std::string file_name;
-            char file_num_pchar[20];
-            ofstream* pof;
-            int onx;
-            int onx0;
-            int ii;
-            bool is_last_sr; // 0 - not last, 1 - last
-            //
-            if (e_components_for_output=="x"||e_components_for_output=="xy"||e_components_for_output=="xz"||e_components_for_output=="xyz")
-            {
-                file_name = data_folder+"/ex";
-                sprintf(file_num_pchar,"%g",int([](ddi* a) {double b=a->f*a->output_period; if(a->prev!=0) b+=(a->prev)->t_end; return b;} (p_current_ddi)/2/PI*file_name_accuracy)/file_name_accuracy);
-                file_name = file_name + file_num_pchar;
-                ofstream fout_ex(file_name.c_str());
-                pof = &fout_ex;
-                for(int i=0;i<n_sr;i++)
-                {
-                    if(i==n_sr-1)
-                        onx = nx_sr;
-                    else
-                        onx = nx_sr-nx_ich/2;
-                    if(i==0)
-                        onx0 = 0;
-                    else
-                        onx0 = nx_ich/2;
-                    psr[i].fout_ex(pof,onx0,onx, output_mode);
-                }
-                ii = int(((xlength-x0fout)/dx - nx_ich)/(nx_sr - nx_ich));
-                if(ii<0) ii = 0;
-                psr[ii].fout_ex_yzplane(pof,int((xlength-x0fout)/dx)-ii*(nx_sr-nx_ich), output_mode);
-                fout_ex.close();
-            }
-            //
-            if (e_components_for_output=="y"||e_components_for_output=="xy"||e_components_for_output=="yz"||e_components_for_output=="xyz")
-            {
-                file_name = data_folder+"/ey";
-                sprintf(file_num_pchar,"%g",int([](ddi* a) {double b=a->f*a->output_period; if(a->prev!=0) b+=(a->prev)->t_end; return b;} (p_current_ddi)/2/PI*file_name_accuracy)/file_name_accuracy);
-                file_name = file_name + file_num_pchar;
-                ofstream fout_ey(file_name.c_str());
-                pof = &fout_ey;
-                for(int i=0;i<n_sr;i++)
-                {
-                    if(i==n_sr-1)
-                        onx = nx_sr;
-                    else
-                        onx = nx_sr-nx_ich/2;
-                    if(i==0)
-                        onx0 = 0;
-                    else
-                        onx0 = nx_ich/2;
-                    psr[i].fout_ey(pof,onx0,onx, output_mode);
-                }
-                ii = int(((xlength-x0fout)/dx - nx_ich)/(nx_sr - nx_ich));
-                if(ii<0) ii = 0;
-                psr[ii].fout_ey_yzplane(pof,int((xlength-x0fout)/dx)-ii*(nx_sr-nx_ich), output_mode);
-                fout_ey.close();
-            }
-            //
-            if (e_components_for_output=="z"||e_components_for_output=="xz"||e_components_for_output=="yz"||e_components_for_output=="xyz")
-            {
-                file_name = data_folder+"/ez";
-                sprintf(file_num_pchar,"%g",int([](ddi* a) {double b=a->f*a->output_period; if(a->prev!=0) b+=(a->prev)->t_end; return b;} (p_current_ddi)/2/PI*file_name_accuracy)/file_name_accuracy);
-                file_name = file_name + file_num_pchar;
-                ofstream fout_ez(file_name.c_str());
-                pof = &fout_ez;
-                for(int i=0;i<n_sr;i++)
-                {
-                    if(i==n_sr-1)
-                        onx = nx_sr;
-                    else
-                        onx = nx_sr-nx_ich/2;
-                    if(i==0)
-                        onx0 = 0;
-                    else
-                        onx0 = nx_ich/2;
-                    psr[i].fout_ez(pof,onx0,onx, output_mode);
-                }
-                ii = int(((xlength-x0fout)/dx - nx_ich)/(nx_sr - nx_ich));
-                if(ii<0) ii = 0;
-                psr[ii].fout_ez_yzplane(pof,int((xlength-x0fout)/dx)-ii*(nx_sr-nx_ich), output_mode);
-                fout_ez.close();
-            }
-            //
-            if (b_components_for_output=="x"||b_components_for_output=="xy"||b_components_for_output=="xz"||b_components_for_output=="xyz")
-            {
-                file_name = data_folder+"/bx";
-                sprintf(file_num_pchar,"%g",int([](ddi* a) {double b=a->f*a->output_period; if(a->prev!=0) b+=(a->prev)->t_end; return b;} (p_current_ddi)/2/PI*file_name_accuracy)/file_name_accuracy);
-                file_name = file_name + file_num_pchar;
-                ofstream fout_bx(file_name.c_str(), output_mode);
-                pof = &fout_bx;
-                for(int i=0;i<n_sr;i++)
-                {
-                    if(i==n_sr-1)
-                        onx = nx_sr;
-                    else
-                        onx = nx_sr-nx_ich/2;
-                    if(i==0)
-                        onx0 = 0;
-                    else
-                        onx0 = nx_ich/2;
-                    psr[i].fout_bx(pof,onx0,onx, output_mode);
-                }
-                ii = int(((xlength-x0fout)/dx - nx_ich)/(nx_sr - nx_ich));
-                if(ii<0) ii = 0;
-                psr[ii].fout_bx_yzplane(pof,int((xlength-x0fout)/dx)-ii*(nx_sr-nx_ich), output_mode);
-                fout_bx.close();
-            }
-            //
-            if (b_components_for_output=="y"||b_components_for_output=="xy"||b_components_for_output=="yz"||b_components_for_output=="xyz")
-            {
-                file_name = data_folder+"/by";
-                sprintf(file_num_pchar,"%g",int([](ddi* a) {double b=a->f*a->output_period; if(a->prev!=0) b+=(a->prev)->t_end; return b;} (p_current_ddi)/2/PI*file_name_accuracy)/file_name_accuracy);
-                file_name = file_name + file_num_pchar;
-                ofstream fout_by(file_name.c_str());
-                pof = &fout_by;
-                for(int i=0;i<n_sr;i++)
-                {
-                    if(i==n_sr-1)
-                        onx = nx_sr;
-                    else
-                        onx = nx_sr-nx_ich/2;
-                    if(i==0)
-                        onx0 = 0;
-                    else
-                        onx0 = nx_ich/2;
-                    psr[i].fout_by(pof,onx0,onx, output_mode);
-                }
-                ii = int(((xlength-x0fout)/dx - nx_ich)/(nx_sr - nx_ich));
-                if(ii<0) ii = 0;
-                psr[ii].fout_by_yzplane(pof,int((xlength-x0fout)/dx)-ii*(nx_sr-nx_ich), output_mode);
-                fout_by.close();
-            }
-            //
-            if (b_components_for_output=="z"||b_components_for_output=="xz"||b_components_for_output=="yz"||b_components_for_output=="xyz")
-            {
-                file_name = data_folder+"/bz";
-                sprintf(file_num_pchar,"%g",int([](ddi* a) {double b=a->f*a->output_period; if(a->prev!=0) b+=(a->prev)->t_end; return b;} (p_current_ddi)/2/PI*file_name_accuracy)/file_name_accuracy);
-                file_name = file_name + file_num_pchar;
-                ofstream fout_bz(file_name.c_str());
-                pof = &fout_bz;
-                for(int i=0;i<n_sr;i++)
-                {
-                    if(i==n_sr-1)
-                        onx = nx_sr;
-                    else
-                        onx = nx_sr-nx_ich/2;
-                    if(i==0)
-                        onx0 = 0;
-                    else
-                        onx0 = nx_ich/2;
-                    psr[i].fout_bz(pof,onx0,onx, output_mode);
-                }
-                ii = int(((xlength-x0fout)/dx - nx_ich)/(nx_sr - nx_ich));
-                if(ii<0) ii = 0;
-                psr[ii].fout_bz_yzplane(pof,int((xlength-x0fout)/dx)-ii*(nx_sr-nx_ich), output_mode);
-                fout_bz.close();
-            }
-            //
-            file_name = data_folder+"/w";
-            sprintf(file_num_pchar,"%g",int([](ddi* a) {double b=a->f*a->output_period; if(a->prev!=0) b+=(a->prev)->t_end; return b;} (p_current_ddi)/2/PI*file_name_accuracy)/file_name_accuracy);
-            file_name = file_name + file_num_pchar;
-            ofstream fout_w(file_name.c_str());
-            pof = &fout_w;
-            for(int i=0;i<n_sr;i++)
-            {
-                if(i==n_sr-1)
-                    onx = nx_sr;
-                else
-                    onx = nx_sr-nx_ich/2;
-                if(i==0)
-                    onx0 = 0;
-                else
-                    onx0 = nx_ich/2;
-                if (i==n_sr-1)
-                    is_last_sr = 1;
-                else
-                    is_last_sr = 0;
-                psr[i].fout_w(pof,onx0,onx,is_last_sr);
-            }
-            ii = int(((xlength-x0fout)/dx - nx_ich)/(nx_sr - nx_ich));
-            if(ii<0) ii = 0;
-            psr[ii].fout_w_yzplane(pof,int((xlength-x0fout)/dx)-ii*(nx_sr-nx_ich));
-            //
-            file_name = data_folder+"/inv";
-            sprintf(file_num_pchar,"%g",int([](ddi* a) {double b=a->f*a->output_period; if(a->prev!=0) b+=(a->prev)->t_end; return b;} (p_current_ddi)/2/PI*file_name_accuracy)/file_name_accuracy);
-            file_name = file_name + file_num_pchar;
-            ofstream fout_inv(file_name.c_str());
-            pof = &fout_inv;
-            for(int i=0;i<n_sr;i++)
-            {
-                if(i==n_sr-1)
-                    onx = nx_sr;
-                else
-                    onx = nx_sr-nx_ich/2;
-                if(i==0)
-                    onx0 = 0;
-                else
-                    onx0 = nx_ich/2;
-                if (i==n_sr-1)
-                    is_last_sr = 1;
-                else
-                    is_last_sr = 0;
-                psr[i].fout_inv(pof,onx0,onx,is_last_sr);
-            }
-            ii = int(((xlength-x0fout)/dx - nx_ich)/(nx_sr - nx_ich));
-            if(ii<0) ii = 0;
-            psr[ii].fout_inv_yzplane(pof,int((xlength-x0fout)/dx)-ii*(nx_sr-nx_ich));
-            fout_w.close();
-            fout_inv.close();
-
+            
+            write_fields(); // Ex..Ez, Bx..Bz, w (field energy density), inv (E^2-B^2 - relativistic invariant)
+            
             cout<<"\t"<<"up: "<<(times(&tms_struct)-start_time)/100.0<<" s"<<endl;
             p_current_ddi->f++;
         }
+        
         if (l*dt>=p_current_ddi->t_end)
         {
             p_current_ddi = p_current_ddi->next;
