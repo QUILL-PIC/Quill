@@ -530,7 +530,7 @@ void spatial_region::add_beam(double cmr, double n0, double u0, double xb, doubl
     }
 }
 
-void spatial_region::film(double x0, double x1, double ne, bool ions, double
+void spatial_region::film(double x0, double x1, double ne_y0, double ne_y1, bool ions, double
         cmr, double gradwidth, double y0, double y1, double z0, double z1,
         double T, double vx, bool is_profiled,
         int xnpic_film, int ynpic_film, int znpic_film)
@@ -554,13 +554,14 @@ void spatial_region::film(double x0, double x1, double ne, bool ions, double
     if (i1<0) i1 = 0;
     if (i0>nx) i0 = nx;
     if (i1>nx) i1 = nx;
+    double film_ylen = double(int(y1/dy) - int(y0/dy) - 3);
     for(int i=i0;i<i1;i++)
     {
         for(int j=int(y0/dy)+1;j<int(y1/dy)-1;j++)
         {
+            double nes = ne_y1 * (j - int(y0/dy) - 1) / film_ylen + ne_y0 * (int(y1/dy) - 2 - j) / film_ylen;
             for(int k=int(z0/dz)+1;k<int(z1/dz)-1;k++)
             {
-                double nes;
                 if (is_profiled == 1) {
                     double tmp = (j * dy - ny * dy / 2) / (ny * dy / 2);
                     tmp = cos(0.5 * PI * tmp * tmp * tmp * tmp * tmp);
@@ -568,9 +569,9 @@ void spatial_region::film(double x0, double x1, double ne, bool ions, double
                     tmp =  (k * dz - nz * dz / 2) / (nz * dz / 2);
                     tmp = cos(0.5 * PI * tmp * tmp * tmp * tmp * tmp);
                     tr_env *= tmp * tmp;
-                    nes = ne * tr_env;
+                    nes = nes * tr_env;
                 } else {
-                    nes = ne;
+                    nes = nes;
                 }
                 //
                 a.i = i;

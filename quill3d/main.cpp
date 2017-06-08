@@ -1098,9 +1098,15 @@ void init_films()
             tmp_p_film->ynpic_film = ynpic;
             tmp_p_film->znpic_film = znpic;
         }
+        if (tmp_p_film->ne != 0)
+        {
+            tmp_p_film->ne_y0 = tmp_p_film->ne;
+            tmp_p_film->ne_y1 = tmp_p_film->ne;
+        }
         for(int i=0;i<n_sr;i++) 
             psr[i].film(tmp_p_film->x0-dx*i*(nx_sr-nx_ich), tmp_p_film->x0+tmp_p_film->filmwidth-dx*i*(nx_sr-nx_ich), 
-                tmp_p_film->ne/(1.11485e+13/lambda/lambda), ions=="on", 1/(proton_mass*tmp_p_film->mcr),
+                tmp_p_film->ne_y0/(1.11485e+13/lambda/lambda), tmp_p_film->ne_y1/(1.11485e+13/lambda/lambda),
+                ions=="on", 1/(proton_mass*tmp_p_film->mcr),
                 tmp_p_film->gradwidth, tmp_p_film->y0, tmp_p_film->y1, tmp_p_film->z0, tmp_p_film->z1,
                 tmp_p_film->T, tmp_p_film->vx, nelflow != 0 || nerflow != 0,
                 tmp_p_film->xnpic_film, tmp_p_film->ynpic_film, tmp_p_film->znpic_film);
@@ -2277,6 +2283,30 @@ int init()
             current->units = "cm^{-3}";
         }
         p_last_film->ne = current->value;
+        current = find("nfilm_y0",tmp);
+        if (current->units=="ncr")
+        {
+            current->value = current->value*1.11485e+13/lambda/lambda;
+            current->units = "cm^{-3}";
+        }
+        else if (current->units=="ne")
+        {
+            current->value = current->value*ne;
+            current->units = "cm^{-3}";
+        }
+        p_last_film->ne_y0 = current->value;
+        current = find("nfilm_y1",tmp);
+        if (current->units=="ncr")
+        {
+            current->value = current->value*1.11485e+13/lambda/lambda;
+            current->units = "cm^{-3}";
+        }
+        else if (current->units=="ne")
+        {
+            current->value = current->value*ne;
+            current->units = "cm^{-3}";
+        }
+        p_last_film->ne_y1 = current->value;
         current = find("mcr",tmp);
         if (current->value==0)
             current->value = 1;
