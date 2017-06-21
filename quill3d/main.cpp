@@ -1111,6 +1111,12 @@ void init_films()
 void start_tracking()
 {
     cout << "Tracking started for particles: " << particles_to_track << endl;
+    if (xtr1 < 0 || xtr2 < 0 || ytr1 < 0 || ytr2 < 0 || ztr1 < 0 || ztr2 < 0 ||
+        xtr1 >= xlength || xtr2 >= xlength || ytr1 >= ylength || ytr2 >= ylength || ztr1 >= zlength || ztr2 >= zlength)
+    {
+        cout << "Error - tracks outside of compulational domain" << endl;
+        return;
+    }
     long trn = 1; // trn = 0 for untracked particles
     if (tr_init==0) {
         int x1,y1,z1,x2,y2,z2;
