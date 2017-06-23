@@ -1110,7 +1110,7 @@ void init_films()
                 ions=="on", 1/(proton_mass*tmp_p_film->mcr),
                 tmp_p_film->gradwidth, tmp_p_film->y0, tmp_p_film->y1, tmp_p_film->z0, tmp_p_film->z1,
                 tmp_p_film->T, tmp_p_film->vx, nelflow != 0 || nerflow != 0,
-                tmp_p_film->xnpic_film, tmp_p_film->ynpic_film, tmp_p_film->znpic_film);
+                tmp_p_film->xnpic_film, tmp_p_film->ynpic_film, tmp_p_film->znpic_film, false);
         tmp_p_film = tmp_p_film->prev;
     }
 }
@@ -1372,6 +1372,18 @@ void add_moving_window_particles()
                     // psr[n_sr-1].fill_cell_by_particles(-1,cell_pos,v_npic,n); // bug??! this adds electrons, not ions; qwe
                 }
             }
+        }
+        
+        film* tmp_p_film = p_last_film;
+        while (tmp_p_film != 0)
+        {
+            psr[n_sr-1].film(tmp_p_film->x0-dx*(n_sr-1)*(nx_sr-nx_ich)-dx*nmw, tmp_p_film->x0+tmp_p_film->filmwidth-dx*(n_sr-1)*(nx_sr-nx_ich)-dx*nmw, 
+                tmp_p_film->ne_y0/(1.11485e+13/lambda/lambda), tmp_p_film->ne_y1/(1.11485e+13/lambda/lambda),
+                ions=="on", 1/(proton_mass*tmp_p_film->mcr),
+                tmp_p_film->gradwidth, tmp_p_film->y0, tmp_p_film->y1, tmp_p_film->z0, tmp_p_film->z1,
+                tmp_p_film->T, tmp_p_film->vx, nelflow != 0 || nerflow != 0,
+                tmp_p_film->xnpic_film, tmp_p_film->ynpic_film, tmp_p_film->znpic_film, true);
+            tmp_p_film = tmp_p_film->prev;
         }
     }
 }

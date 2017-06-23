@@ -533,7 +533,7 @@ void spatial_region::add_beam(double cmr, double n0, double u0, double xb, doubl
 void spatial_region::film(double x0, double x1, double ne_y0, double ne_y1, bool ions, double
         cmr, double gradwidth, double y0, double y1, double z0, double z1,
         double T, double vx, bool is_profiled,
-        int xnpic_film, int ynpic_film, int znpic_film)
+        int xnpic_film, int ynpic_film, int znpic_film, bool append_for_moving_window)
 { /* x0 - координата левой границы плёнки, x1 - правой, ne -
      концентрация электронов в плёнке, нормированная на критическую
      концентрацию */
@@ -550,10 +550,25 @@ void spatial_region::film(double x0, double x1, double ne_y0, double ne_y1, bool
     int i0,i1;
     i0 = x0/dx;
     i1 = x1/dx;
-    if (i0<0) i0 = 0;
-    if (i1<0) i1 = 0;
-    if (i0>nx) i0 = nx;
-    if (i1>nx) i1 = nx;
+    if (append_for_moving_window)
+    {
+        i0 = nx-3;
+        if (i0 < nx-2 && i1 >= nx-2)
+        {
+            i1 = nx-2;
+        }
+        else
+        {
+            i1 = i0; // the for loop is skipped
+        }
+    }
+    else
+    {
+        if (i0<0) i0 = 0;
+        if (i1<0) i1 = 0;
+        if (i0>nx) i0 = nx;
+        if (i1>nx) i1 = nx;
+    }
     double film_ylen = double(int(y1/dy) - int(y0/dy) - 3);
     for(int i=i0;i<i1;i++)
     {
