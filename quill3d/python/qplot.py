@@ -277,10 +277,10 @@ def tracks(space=['x','y'], particles='geip', t0=0, t1=0, colors='bgmrcyk', cmap
     for trackname in track_names:
         resread.t = ''
         tmp = resread.particles(trackname,space)
-        if t1!=0 and np.floor(t1/resread.dt)<len(tmp[0,:]):
-            tracks.append(tmp[:,np.floor(t0/resread.dt):np.floor(t1/resread.dt)])
+        if t1!=0 and int(np.floor(t1/resread.dt)) < len(tmp[0,:]):
+            tracks.append(tmp[:,int(np.floor(t0/resread.dt)):int(np.floor(t1/resread.dt))])
         else:
-            tracks.append(tmp[:,np.floor(t0/resread.dt):])
+            tracks.append(tmp[:,int(np.floor(t0/resread.dt)):])
         cmr.append(float( trackname[ trackname.find('_')+1 : trackname.find('_',trackname.find('_')+1) ] ))
     def cmr2int(a):
         'Converts cmr *a* to the int index of *colors* or *cmaps*'
@@ -837,13 +837,17 @@ def energy(data_folder=None, save2=None, catching=True, clf=False, **kwargs):
         plt.savefig(save2)
 
 
-def tracks2(space=['x', 'y'], tracks=None, save2=None, data_folder=None, **kwargs):
+def tracks2(space=['x', 'y'], tracks=None, particles='e', save2=None, data_folder=None, filter=None, clf=True, **kwargs):
     'Plots 2d tracks in the specified *space*'
     data_folder = __get_data_folder(data_folder, kwargs)
     if data_folder is not None:
         resread.data_folder = data_folder
     if not tracks:
-        tracks = resread.tracks()
+        if len(particles) > 1 or not particles[0] in 'epg':
+            raise ValueError('tracks2() does not support multiple particle species, as well as ions')
+        tracks = resread.tracks(particles, filter)
+    if clf:
+        plt.clf()
     if len(space) == 2:
         x = space[0]
         y = space[1]

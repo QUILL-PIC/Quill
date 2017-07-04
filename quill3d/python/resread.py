@@ -3,6 +3,7 @@
 import numpy as np
 import sys
 import os
+import expression_parser
 
 __doc__ = 'see source'
 
@@ -246,11 +247,15 @@ def t_data(name='energy', step=None, silent=False):
 
 
 
-def tracks():
+def tracks(particles='e', filter=None):
     'Returns a list of tracks from the data_folder. Each track is a dictionary with keys: t, x, y, z, ux, uy, uz, q, g, file'
     read_parameters()
-    track_names = [x for x in os.listdir(data_folder) if x.startswith('track')]
+    suffix_dict = {'e': '-1', 'p': '1', 'g': '0'}
+    track_names = [x for x in os.listdir(data_folder) if x.startswith('track_'+suffix_dict[particles[0]])]
     tracks = [read_track(x) for x in track_names]
+    if filter is not None:
+        filter_expr = expression_parser.to_polish(filter)
+        tracks = [t for t in tracks if expression_parser.evaluate(filter_expr, lambda var_name: t[var_name])]
     return tracks
 
 def read_track(track_name):
@@ -267,6 +272,7 @@ def read_track(track_name):
              'file' : data_folder + track_name,
              'q' : raw_track[0],
              'g' : raw_track[7],
+             'chi' : raw_track[8],
              't' : np.linspace(0, dt * track_size, track_size)}
     track['vx'] = track['ux'] / track['g']
     track['vy'] = track['uy'] / track['g']

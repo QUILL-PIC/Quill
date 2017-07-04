@@ -4,7 +4,7 @@ import numpy as np
 number_pattern = '^[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?$'
 variable_pattern = '^([x-z]|u[x-z]|v[x-z]|g|chi|t|xi|phi|theta)$'
 operator_pattern = '^([+\-*/\^<>=]|neq|geq|leq|&&|\|\||and|or)$'
-function_pattern = '^(sin|cos|exp|log|min|max)$'
+function_pattern = '^(sin|cos|exp|log|min|max|any|all)$'
 split_by_operator_pattern = '([+\-*/\^<>()=]|neq|geq|leq|&&|\|\||and|or|)'
 split_by_number_pattern = '([0-9]*\.?[0-9]+(?:[eE][-+]?[0-9]+)?)'
 
@@ -179,6 +179,12 @@ def evaluate(expr, var_evaluator=None, should_log=False):
                     stack.append(val)
                 else:
                     stack.append(np.max(val))
+            elif token == 'any' or token == 'all':
+                val = operand_to_float(stack.pop(), var_evaluator)
+                if isinstance(val, np.ndarray):
+                    stack.append(np.any(val) if token == 'any' else np.all(val))
+                else:
+                    stack.append(val)
         else:
             raise ValueError('Unrecognized function: {0}'.format(token))
     if len(stack) != 1:
