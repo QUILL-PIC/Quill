@@ -141,6 +141,28 @@ def density(t=0, plane='xy', max_w=0, max_e_density=0, max_p_density=0, max_g_de
         plt.savefig(save2)
 
 
+def filter_phspace(phs, expr, var_space):
+    mask = np.ones(phs.shape[1], dtype=bool).T
+    if expr:
+        mask &= expression_parser.evaluate(expr, lambda var_name: phs.T[:, var_space.index(var_name)])
+    return phs.T[mask].T
+
+
+def space_to_list(space, filter_expr):
+    params_list = ['ux', 'uy', 'uz', 'vx', 'vy', 'vz', 'theta', 'phi', 'chi', 'xi', 'x', 'y', 'z', 't', 'g', 'q']
+    if isinstance(space, str):
+        space_tmp = space
+        space_dict = OrderedDict({})
+        for token in params_list:
+            if space_tmp.find(token) > -1:
+                space_dict[space_tmp.find(token)] = token
+                space_tmp = space_tmp.replace(token, ' ' * len(token)) # need to preserve params absolute positions in space_tmp
+        if len(space_tmp.replace(' ', '')) > 0:
+            raise ValueError('Invalid space specified: {0}'.format(space))
+        space = list(OrderedDict(sorted(space_dict.items())).values())
+    return list(OrderedDict((v, i) for i, v in enumerate(space)).keys())
+
+
 def particles(t=0, space=['x','y'], particles='geip', colors='bgmrcyk', r=3, alpha=0.1, cmap='jet', gamma=0,
               data_folder=None, axis=[], save2=None, vmin=None, vmax=None, xlim=None, ylim=None, filter=None, clf=False, **kwargs):
     """
@@ -166,12 +188,6 @@ def particles(t=0, space=['x','y'], particles='geip', colors='bgmrcyk', r=3, alp
         else:
             return 'i'
 
-    def filter_phspace(phs, expr, var_space):
-        mask = np.ones(phs.shape[1], dtype=bool).T
-        if expr:
-            mask &= expression_parser.evaluate(expr, lambda var_name: phs.T[:, var_space.index(var_name)])
-        return phs.T[mask].T
-
     resread.t = '%g' % t
     data_folder = __get_data_folder(data_folder, kwargs)
     if data_folder is not None:
@@ -179,26 +195,14 @@ def particles(t=0, space=['x','y'], particles='geip', colors='bgmrcyk', r=3, alp
     resread.read_parameters()
 
     filter_expr = expression_parser.to_polish(filter)
-
-    params_list = ['ux', 'uy', 'uz', 'vx', 'vy', 'vz', 'theta', 'phi', 'chi', 'xi', 'x', 'y', 'z', 't', 'g']
-    if isinstance(space, str):
-        space_tmp = space
-        space_dict = OrderedDict({})
-        for token in params_list:
-            if space_tmp.find(token) > -1:
-                space_dict[space_tmp.find(token)] = token
-                space_tmp = space_tmp.replace(token, ' ' * len(token)) # need to preserve params absolute positions in space_tmp
-        if len(space_tmp.replace(' ', '')) > 0:
-            raise ValueError('Invalid space specified: {0}'.format(space))
-        space = list(OrderedDict(sorted(space_dict.items())).values())
-
+    space = space_to_list(space, filter_expr)
     if len(space) == 2:
         is_3d = False
     elif len(space) == 3:
         is_3d = True
     else:
         raise ValueError('Incorrect value for space parameter')
-    space = list(OrderedDict((v, i) for i, v in enumerate(space + expression_parser.get_vars(filter_expr))).keys())
+    space += expression_parser.get_vars(filter_expr)
 
     if clf:
         plt.clf()
@@ -249,6 +253,96 @@ def particles(t=0, space=['x','y'], particles='geip', colors='bgmrcyk', r=3, alp
         plt.xlim(xlim)
         plt.ylim(ylim)
         plt.colorbar()
+    if save2 is not None:
+        plt.savefig(save2)
+
+
+def dist_fn(t=0, data_folder=None, particles='e', space='x', energy=False, nbins=200, filter=None, clf=False, global_limits=True,
+            log_scale=None, save2=None, **kwargs):
+    """
+    Plots N and energy distribution functions over the specified space.
+
+    Parameters
+    ----------
+    data_folder : string
+        E.g. '../results/'. Use 'df' for shortcut.
+    particles : string
+        String of particle species to plot: 'e', 'p', 'g', or 'i'. Only one particle species at time is allowed.
+    space : string, list
+        One- or two-dimensional space over which the distribution function is calculated.
+    energy: bool
+        if False (by default), N (number of particles) distibution over space is shown.
+        if True, energy distribution is shown instead
+    nbins: int
+        The number of bins for calculating the histogram.
+    filter: string
+        Expression to filter the particles by. E. g.: 'x > 5 && y < 10', 'g > 0.1*max(g)'
+    global_limits: bool
+        If true, the distribution range is set to global min / max for each parameter (not for min / max of particles)
+        E. g. x ranges from 0 to nx*dx, phi --- from -pi to pi.
+    log_scale: string
+        None, 'x', 'y' or 'xy'
+    save2 : string
+        File to save the image to. If None, does nothing.
+    kwargs
+        parameters to be passed to the plotting methods (hist, imshow).
+    """
+    resread.t = '%g' % t
+    if len(particles) != 1:
+        raise ValueError('dist_fn supports only one type of particles')
+    data_folder = __get_data_folder(data_folder, kwargs)
+    if data_folder is not None:
+        resread.data_folder = data_folder
+    resread.read_parameters()
+
+    if particles == 'i' and len(resread.icmr) == 0:
+        raise ValueError('Ions data are missing')
+    file_suffixes = {'e': '', 'p': '_p', 'g': '_ph', 'i': '_' + str(resread.icmr[0]) + '_'}
+    caption_suffixes = {'e' : '_e', 'p': '_p', 'g': '_{ph}', 'i': '_i'}
+    c_suffix = caption_suffixes[particles[0]]
+    filter_expr = expression_parser.to_polish(filter)
+    space = space_to_list(space, filter_expr)
+    is_2d = len(space) > 1
+    space.append('q')  # need also to fetch pseudoparticle weight
+    if energy:
+        space.append('g')
+    space += expression_parser.get_vars(filter_expr)
+    phspace = resread.particles('phasespace' + file_suffixes[particles[0]], space)
+    phspace = filter_phspace(phspace, filter_expr, space)
+
+    if clf:
+        plt.clf()
+    limits_per_space = {
+        'x' : [0, resread.nx * resread.dx], 'y' : [0, resread.ny * resread.dy], 'z' : [0, resread.nz * resread.dz],
+        'phi' : [-np.pi, np.pi], 'theta' : [0, np.pi]
+    }
+    if global_limits:
+        if is_2d:
+            hist_range = [limits_per_space[space[0]] if space[0] in limits_per_space else [np.min(phspace[0,:]), np.max(phspace[0,:])], 
+                limits_per_space[space[1]] if space[1] in limits_per_space else [np.min(phspace[1,:]), np.max(phspace[1,:])]]
+        else:
+            hist_range = limits_per_space[space[0]] if space[0] in limits_per_space else None
+    else:
+        hist_range = None
+
+    if is_2d:
+        weight = np.abs(phspace[2,:]) * (phspace[3,:] - (1.0 if particles in 'ep' else 0.0) if energy else 1.0)
+        hist, xedges, yedges = np.histogram2d(phspace[0,:], phspace[1,:], range=hist_range, bins=nbins, weights=weight, normed=True)
+        plt.imshow(hist.T, origin='lower', aspect='auto', extent=(xedges[1], xedges[-1], yedges[1], yedges[-1]), **kwargs)
+        plt.colorbar()
+        plt.ylabel(tex_format(space[1]))
+        plt.title(tex_format(r'\varepsilon'+c_suffix if energy else 'N'+c_suffix) + '(' + tex_format(space[0]) + ', ' + tex_format(space[1]) + ')')
+    else:
+        weight = np.abs(phspace[1,:]) * (phspace[2,:] if energy else 1.0)
+        #hist, bin_edges = np.histogram(phspace[0,:], range=hist_range, bins=nbins, weights=weight, density=True)
+        #plt.plot(bin_edges[1:], hist)
+        plt.hist(phspace[0,:], range=hist_range, bins=nbins, weights=weight, normed=True, **kwargs)
+        plt.ylabel(tex_format(r'\varepsilon'+c_suffix if energy else 'N'+c_suffix) + '(' + tex_format(space[0]) + ')')
+    plt.xlabel(tex_format(space[0]))
+    if 'x' in log_scale:
+        plt.xscale('log')
+    if 'y' in log_scale:
+        plt.yscale('log')
     if save2 is not None:
         plt.savefig(save2)
 
