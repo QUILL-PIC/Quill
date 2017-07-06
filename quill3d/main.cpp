@@ -67,6 +67,7 @@ std::string lp_reflection,f_reflection;
 std::string ions;
 std::string data_folder;
 bool catching_enabled;
+bool verbose_logging = true;
 ios_base::openmode output_mode;
 int init();
 
@@ -1424,6 +1425,39 @@ void add_neutral_flow_particles(short direction, double neflow, double vflow, do
     xflow += dt*vflow/dx;
 }
 
+void print_number_of_quasiparticles()
+{
+    // logging number of pseudoparticles in each thread
+    int N_qp_e_total = 0;
+    int N_qp_p_total = 0;
+    int N_qp_g_total = 0;
+    int N_qp_i_total = 0;
+    for (int i=0; i<n_sr; i++)
+    {
+        N_qp_e_total += psr[i].N_qp_e;
+        N_qp_p_total += psr[i].N_qp_p;
+        N_qp_g_total += psr[i].N_qp_g;
+        cout << " Thread #" << i << ":\t" << psr[i].N_qp_e << " e, " << psr[i].N_qp_p << " p, " << psr[i].N_qp_g << " g";
+        if (n_ion_populations >= 0)
+        {
+            int N_qp_i = 0;
+            for (int j=0; j<n_ion_populations; j++)
+            {
+                N_qp_i += psr[i].N_qp_i[j];
+            }
+            N_qp_i_total += N_qp_i;
+            cout << ", " << N_qp_i << " i";
+        }
+        cout << endl;
+    }
+    cout << "Total:  \t" << N_qp_e_total << " e, " << N_qp_p_total << " p, " << N_qp_g_total << " g";
+    if (n_ion_populations >= 0)
+    {
+        cout << ", " << N_qp_i_total << " i";
+    }
+    cout << endl;
+}
+
 int main()
 {
     cout<<"\n\033[1m"<<"hi!"<<"\033[0m\n"<<endl;
@@ -1558,7 +1592,8 @@ int main()
 
         for(int i=0;i<n_sr;i++) pthread_mutex_lock(&sr_mutex1[i]);
 
-        if (!particles_to_track.empty() && l == int(tr_start/dt)) {
+        if (!particles_to_track.empty() && l == int(tr_start/dt)) 
+        {
             start_tracking();
         }
 
@@ -1599,6 +1634,11 @@ int main()
         // вывод данных в файлы (продолжение)
         if(l*dt>=[](ddi* a) {double b=a->f*a->output_period; if(a->prev!=0) b+=(a->prev)->t_end; return b;} (p_current_ddi))
         {
+            if (verbose_logging)
+            {
+                print_number_of_quasiparticles();
+            }
+            
             cout<<"output# "<<"\033[1m"<<int([](ddi* a) {double b=a->f*a->output_period; if(a->prev!=0) b+=(a->prev)->t_end; return b;} (p_current_ddi)/2/PI*file_name_accuracy)/file_name_accuracy<<"\033[0m"<<flush;
             
             write_fields(); // Ex..Ez, Bx..Bz, w (field energy density), inv (E^2-B^2 - relativistic invariant)
