@@ -164,7 +164,8 @@ def space_to_list(space, filter_expr):
 
 
 def particles(t=0, space=['x','y'], particles='geip', colors='bgmrcyk', r=3, alpha=0.1, cmap='jet', gamma=0,
-              data_folder=None, axis=[], save2=None, vmin=None, vmax=None, xlim=None, ylim=None, filter=None, clf=False, **kwargs):
+              data_folder=None, axis=[], save2=None, vmin=None, vmax=None, xlim=None, ylim=None, filter=None, clf=False,
+              include_deleted=False, every=1, **kwargs):
     """
     Plots particles as dots in (phase)*space*.
     Examples:
@@ -226,7 +227,13 @@ def particles(t=0, space=['x','y'], particles='geip', colors='bgmrcyk', r=3, alp
         c = list(colors)
         i = 0
         for suffix in s:
-            phspace = resread.particles('phasespace'+suffix, space)
+            phspace = resread.particles('phasespace'+suffix, space, every=every)
+            if (resread.catching or resread.dump_photons) and include_deleted:
+                for t1 in np.arange(0, t+0.001, resread.output_period):
+                    resread.t = '%g' % t1
+                    phspace_del = resread.particles('deleted'+suffix, space, every=every)
+                    phspace = np.append(phspace, phspace_del, axis=1)
+                resread.t = '%g' % t
             phspace = filter_phspace(phspace, filter_expr, space)
             print('Plotting {0}({1}) for {2}; vmin = {3}, vmax = {4}'
                   .format(space[1], space[0], particle_from_suffix(suffix), vmin, vmax))
@@ -240,7 +247,13 @@ def particles(t=0, space=['x','y'], particles='geip', colors='bgmrcyk', r=3, alp
     else:
         cmap = tcmap.get(cmap, gamma=gamma)
         plt.title(tex_format(space[2]))
-        phspace = resread.particles('phasespace'+s[0], space)  # 2 or more sorts of ions are not supported
+        phspace = resread.particles('phasespace'+s[0], space, every=every)  # 2 or more sorts of ions are not supported
+        if (resread.catching or resread.dump_photons) and include_deleted:
+            for t1 in np.arange(0, t+0.001, resread.output_period):
+                resread.t = '%g' % t1
+                phspace_del = resread.particles('deleted'+s[0], space, every=every)
+                phspace = np.append(phspace, phspace_del, axis=1)
+            resread.t = '%g' % t
         phspace = filter_phspace(phspace, filter_expr, space)
         if vmin is None:
             vmin = np.min(phspace[2,:])
@@ -258,7 +271,7 @@ def particles(t=0, space=['x','y'], particles='geip', colors='bgmrcyk', r=3, alp
 
 
 def dist_fn(t=0, data_folder=None, particles='e', space='x', energy=False, nbins=200, filter=None, clf=False, global_limits=True,
-            log_scale=None, save2=None, **kwargs):
+            log_scale=None, save2=None, every=1, **kwargs):
     """
     Plots N and energy distribution functions over the specified space.
 
@@ -284,6 +297,8 @@ def dist_fn(t=0, data_folder=None, particles='e', space='x', energy=False, nbins
         None, 'x', 'y' or 'xy'
     save2 : string
         File to save the image to. If None, does nothing.
+    every: int
+        Tells resread to take every n-th file (1 by default)
     kwargs
         parameters to be passed to the plotting methods (hist, imshow).
     """
@@ -307,7 +322,7 @@ def dist_fn(t=0, data_folder=None, particles='e', space='x', energy=False, nbins
     if energy:
         space.append('g')
     space += expression_parser.get_vars(filter_expr)
-    phspace = resread.particles('phasespace' + file_suffixes[particles[0]], space)
+    phspace = resread.particles('phasespace' + file_suffixes[particles[0]], space, every=every)
     phspace = filter_phspace(phspace, filter_expr, space)
 
     if clf:
@@ -339,16 +354,16 @@ def dist_fn(t=0, data_folder=None, particles='e', space='x', energy=False, nbins
         plt.hist(phspace[0,:], range=hist_range, bins=nbins, weights=weight, normed=True, **kwargs)
         plt.ylabel(tex_format(r'\varepsilon'+c_suffix if energy else 'N'+c_suffix) + '(' + tex_format(space[0]) + ')')
     plt.xlabel(tex_format(space[0]))
-    if 'x' in log_scale:
+    if not log_scale is None and 'x' in log_scale:
         plt.xscale('log')
-    if 'y' in log_scale:
+    if not log_scale is None and 'y' in log_scale:
         plt.yscale('log')
     if save2 is not None:
         plt.savefig(save2)
 
 
 def tracks(space=['x','y'], particles='geip', t0=0, t1=0, colors='bgmrcyk', cmaps=['jet'], clims2all=1, axis=[], save2=None,
-            r=2, data_folder=None, clf=False, **kwargs):
+            r=2, data_folder=None, clf=False, every=1, **kwargs):
     'Plots particle tracks as lines in 2D or dots in 3D (phase)*space*\n\
     at [tr_start+*t0*,tr_start+*t1*]\n\
     Examples:\n\
@@ -370,7 +385,7 @@ def tracks(space=['x','y'], particles='geip', t0=0, t1=0, colors='bgmrcyk', cmap
     cmr = []
     for trackname in track_names:
         resread.t = ''
-        tmp = resread.particles(trackname,space)
+        tmp = resread.particles(trackname, space, every=every)
         if t1!=0 and int(np.floor(t1/resread.dt)) < len(tmp[0,:]):
             tracks.append(tmp[:,int(np.floor(t0/resread.dt)):int(np.floor(t1/resread.dt))])
         else:
@@ -905,9 +920,9 @@ def energy(data_folder=None, save2=None, catching=True, clf=False, **kwargs):
         plt.plot(tmp[:,0],tmp[:,1]+tmp[:,2]+tmp[:,3]+tmp[:,4]+tmp[:,5],'--k') # sum energy
     else:
         plt.plot(tmp[:,0],tmp[:,1]+tmp[:,2]+tmp[:,3]+tmp[:,4],'--k') # sum energy
-        
-    if resread.catching and catching:
-        #deleted energy
+
+    if (resread.catching or resread.dump_photons) and include_deleted:
+        # deleted energy
         tmp_del = resread.t_data('energy_deleted')
         sum_e, min_len = safe_sum(tmp_del[:,1], tmp[:,2])
         plt.plot(tmp_del[:min_len,0], sum_e, '--g') # electrons

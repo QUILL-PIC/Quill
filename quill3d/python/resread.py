@@ -52,7 +52,7 @@ def read_parameters(log=None):
     'Reads nx, ny, etc. from *log*.'
     global dx,dy,dz,dt,nx,ny,nz,output_period,n_ion_populations,icmr,t_end,tr_start,\
     deps,deps_p,deps_ph,deps_i,a0y,a0z,lmbda,ne,xsigma,nfilm,filmwidth,nerflow,\
-    Tlflow, mcrlflow, vlflow, Trflow, vrflow, catching, particles_for_output, output_mode
+    Tlflow, mcrlflow, vlflow, Trflow, vrflow, catching, dump_photons, particles_for_output, output_mode
     if log is None:
         log = data_folder+'log'
     icmr = []
@@ -157,11 +157,11 @@ def density(name='rho',plane='xy', log=None):
         density = density.transpose()
         return density
 
-def particles(name='phasespace',s=['x','y','g']):
+def particles(name='phasespace', s=['x','y','g'], every=1):
     'Returns characteristics *s* for particles from the file\n\
     data_folder+*name*+t.'
     f = open(data_folder+name+t)
-    data = f.readlines()
+    data = f.readlines() if every == 1 else [line for i, line in enumerate(f.readlines()) if (i//9) % every == 0]
     f.close()
     n = len(data)//9
     m = len(s)
