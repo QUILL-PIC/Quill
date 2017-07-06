@@ -24,7 +24,7 @@ parallel: parallel.cpp
 
 .PHONY : clean
 clean:
-	-rm quill $(OBJECTS) conf parallel
+	-rm -f quill $(OBJECTS) conf parallel
 
 .PHONY : results_clean
 results_clean:
