@@ -123,16 +123,28 @@ def density(t=0, plane='xy', max_w=0, max_e_density=0, max_p_density=0, max_g_de
 
     for p in particles:
         if p == 'g' and 'g' in resread.particles_for_output:
-            plt.imshow(resread.density('rho_ph', plane), cmap=cmaps['g'], vmax=max_g_density, **kwargs)
+            g_density = resread.density('rho_ph', plane)
+            if max_g_density == 0:
+                max_g_density = g_density.max()
+                print('qplot.density: max_g_density = {0}'.format(max_g_density))
+            plt.imshow(g_density, cmap=cmaps['g'], vmax=max_g_density, **kwargs)
         elif p == 'w':
             plt.imshow(w, cmap=cmaps['w'], vmax=max_w, **kwargs)
         elif p == 'i' and resread.icmr != []:
-            plt.imshow(resread.density('irho_' + str(resread.icmr[0]) + '_', plane), cmap=cmaps['i'],
+            i_density = resread.density('irho_' + str(resread.icmr[0]) + '_', plane)
+            if max_i_density == 0:
+                max_i_density = i_density.max();
+                print('qplot.density: max_i_density = {0}'.format(max_i_density))
+            plt.imshow(i_density, cmap=cmaps['i'],
                        vmax=max_i_density, **kwargs)
         elif p == 'e' and 'e' in resread.particles_for_output:
             plt.imshow(edensity, cmap=cmaps['e'], vmax=max_e_density, **kwargs)
         elif p == 'p' and 'p' in resread.particles_for_output:
-            plt.imshow(resread.density('rho_p', plane), cmap=cmaps['p'], vmax=max_p_density, **kwargs)
+            p_density = resread.density('rho_p', plane)
+            if max_p_density == 0:
+                max_p_density = p_density.max()
+                print('qplot.density: max_p_density = {0}'.format(max_p_density))
+            plt.imshow(p_density, cmap=cmaps['p'], vmax=max_p_density, **kwargs)
         else:
             if p not in 'gwiep':
                 print("Warning: Particle '%c' is not a valid option. Possible options are: gwiep." % p)

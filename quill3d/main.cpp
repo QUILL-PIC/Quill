@@ -1418,20 +1418,16 @@ void add_neutral_flow_particles(short direction, double neflow, double vflow, do
                         x0 += 1;
                     }
                     double tmp = (j * dy - ylength / 2) / (ylength / 2);
-                    tmp = direction > 0 ? cos(0.5 * PI * tmp * tmp * tmp * tmp * tmp) : cos(0.5 * PI * tmp * tmp); //TODO: check - this might be a bug?
+                    tmp = cos(0.5 * PI * tmp * tmp * tmp * tmp * tmp);
                     double tr_env = tmp * tmp;
                     tmp =  (k * dz - zlength / 2) / (zlength / 2);
-                    tmp = direction > 0 ? cos(0.5 * PI * tmp * tmp * tmp * tmp * tmp) : cos(0.5 * PI * tmp * tmp);
+                    tmp = cos(0.5 * PI * tmp * tmp * tmp * tmp * tmp);
                     tr_env *= tmp * tmp;
                     
                     int index = direction > 0 ? 0 : n_sr - 1;
-                    if (vflow != 1) {
-                        psr[index].fill_cell_by_particles(-1,cell_pos,v_npic, n * tr_env, direction * vflow/sqrt(1-vflow*vflow),(direction > 0 ? x0 : 1-x0)-0.5,Tflow); // 0.5 - for a compensation in fill_cell... for xnpic = 1
-                        if (ions == "on")
-                            psr[index].fill_cell_by_particles(1/(proton_mass*mcrflow),cell_pos,v_npic, n * tr_env, direction * vflow/sqrt(1-vflow*vflow),(direction > 0 ? x0 : 1-x0)-0.5,Tflow / (proton_mass * mcrflow));
-                    } else {
-                        psr[index].fill_cell_by_particles(0, cell_pos, v_npic, n * tr_env, direction * Tflow, (direction > 0 ? x0 : 1-x0)-0.5);
-                    }
+                    psr[index].fill_cell_by_particles(-1,cell_pos,v_npic, n * tr_env, direction * vflow/sqrt(1-vflow*vflow), 0, (direction > 0 ? x0 : 1-x0)-0.5,Tflow); // 0.5 - for a compensation in fill_cell... for xnpic = 1
+                    if (ions == "on")
+                        psr[index].fill_cell_by_particles(1/(proton_mass*mcrflow),cell_pos,v_npic, n * tr_env, direction * vflow/sqrt(1-vflow*vflow), 0, (direction > 0 ? x0 : 1-x0)-0.5,Tflow / (proton_mass * mcrflow));
                 }
             }
         }
