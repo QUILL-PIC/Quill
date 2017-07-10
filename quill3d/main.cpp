@@ -389,7 +389,7 @@ void write_energy_deleted(ofstream& fout_energy_deleted)
 
 void write_density(bool write_x, bool write_y, bool write_z,
         std::string x_folder, std::string y_folder, std::string z_folder,
-        bool write_ions = false)
+        bool write_ions = false, bool scale_j = false)
 {
     std::string file_name;
     char file_num_pchar[20];
@@ -425,6 +425,9 @@ void write_density(bool write_x, bool write_y, bool write_z,
             onx0 = 0;
         else
             onx0 = nx_ich/2;
+        if (scale_j) {
+            psr[i].scale_j(dx / dt);
+        }
         psr[i].fout_rho(pof_x,pof_y,pof_z,onx0,onx, output_mode);
     }
     
@@ -1585,8 +1588,9 @@ int main()
         {
             for (int i=0; i<n_sr; i++) pthread_mutex_lock(&sr_mutex_j1[i]);
 
-            if (write_jx || write_jy || write_jz)
-                write_density(write_jx, write_jy, write_jz, "jx", "jy", "jz");
+            if (write_jx || write_jy || write_jz) {
+                write_density(write_jx, write_jy, write_jz, "jx", "jy", "jz", false, true);
+            }
 
             for (int i=0; i<n_sr; i++) pthread_mutex_unlock(&sr_mutex_j2[i]);
             for (int i=0; i<n_sr; i++) pthread_mutex_lock(&sr_mutex_rho1[i]);

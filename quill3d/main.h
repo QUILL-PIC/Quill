@@ -201,6 +201,7 @@ class spatial_region
     double mathcal_W(vector3d&,vector3d&);
     void pmerging(double*,string);
     double _ppd(double,double); // вспомогательная функция
+    void scale_j(double);
     
     private:
     void update_energy_deleted(plist::particle*);

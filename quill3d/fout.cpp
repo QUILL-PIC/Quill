@@ -730,3 +730,15 @@ void spatial_region::fout_tracks(double a, int nm) {
         }
     }
 }
+
+void spatial_region::scale_j(const double scale) {
+    for (int i = 0; i < nx; i++) {
+        for (int j = 0; j < ny; j++) {
+            for (int k = 0; k < nz; k++) {
+                cj[i][j][k].jx *= scale;
+                cj[i][j][k].jy *= scale;
+                cj[i][j][k].jz *= scale;
+            }
+        }
+    }
+}
