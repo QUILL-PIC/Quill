@@ -1,6 +1,8 @@
 #include <cmath>
 #include "main.h"
 
+extern bool qed_enabled;
+
 void spatial_region::fadvance_ndfx()
 {
     /* «Металлические» границы, наиболее быстрые циклы 'for'; для
@@ -243,6 +245,7 @@ void spatial_region::padvance(bool freezing)
     vector3d u_prev;
     double g_prev,chi_prev,g_interim;
     double a, r;
+    bool calc_qed;
     spatial_region::plist::particle* born;
     int_vector3d position;
     //
@@ -294,15 +297,21 @@ void spatial_region::padvance(bool freezing)
                      */
                     if (current->cmr==0) // *current - фотон
                     {
-                        u_interim.x = current->ux;
-                        u_interim.y = current->uy;
-                        u_interim.z = current->uz;
-                        g_prev = current->g;
-                        chi_prev = current->chi;
-                        current->chi = chi(e,b,u_interim,current->g); // chi_{n+1/2}
-                        a = 0.5*(current->chi + chi_prev);
-                        r = get_rand();
-                        if (get_rand()>=tilde_w(g_prev,r,a)*g_prev*dt)
+                        if (qed_enabled) {
+                            u_interim.x = current->ux;
+                            u_interim.y = current->uy;
+                            u_interim.z = current->uz;
+                            g_prev = current->g;
+                            chi_prev = current->chi;
+                            current->chi = chi(e, b, u_interim, current->g); // chi_{n+1/2}
+                            a = 0.5 * (current->chi + chi_prev);
+                            r = get_rand();
+                            calc_qed = !(get_rand()>=tilde_w(g_prev,r,a)*g_prev*dt);
+                        } else {
+                            calc_qed = false;
+                        }
+
+                        if (!calc_qed)
                         {
                             displ = current->get_displacement(dt);
                             displ.x=displ.x/dx;
@@ -394,20 +403,27 @@ void spatial_region::padvance(bool freezing)
                         }
                         else
                         {
-                            u_prev.x = current->ux;
-                            u_prev.y = current->uy;
-                            u_prev.z = current->uz;
-                            g_prev = current->g;
-                            chi_prev = current->chi;
-                            current->momentum_advance(e,b,dt); // p_n -> p_{n+1}
-                            u_interim.x = 0.5*(current->ux+u_prev.x);
-                            u_interim.y = 0.5*(current->uy+u_prev.y);
-                            u_interim.z = 0.5*(current->uz+u_prev.z);
-                            g_interim = 0.5*(current->g+g_prev);
-                            current->chi = chi(e,b,u_interim,g_interim); // chi_{n+1/2}
-                            a = 0.5*(current->chi + chi_prev); // chi_n
-                            r = get_rand();
-                            if (get_rand()>=w(g_prev,r,a)*g_prev*dt)
+                            if (qed_enabled) {
+                                u_prev.x = current->ux;
+                                u_prev.y = current->uy;
+                                u_prev.z = current->uz;
+                                g_prev = current->g;
+                                chi_prev = current->chi;
+                                current->momentum_advance(e, b, dt); // p_n -> p_{n+1}
+                                u_interim.x = 0.5 * (current->ux + u_prev.x);
+                                u_interim.y = 0.5 * (current->uy + u_prev.y);
+                                u_interim.z = 0.5 * (current->uz + u_prev.z);
+                                g_interim = 0.5 * (current->g + g_prev);
+                                current->chi = chi(e, b, u_interim, g_interim); // chi_{n+1/2}
+                                a = 0.5 * (current->chi + chi_prev); // chi_n
+                                r = get_rand();
+                                calc_qed = !(get_rand()>=w(g_prev,r,a)*g_prev*dt);
+                            } else {
+                                current->momentum_advance(e, b, dt); // p_n -> p_{n+1}
+                                calc_qed = false;
+                            }
+
+                            if (!calc_qed)
                             {
                                 displ = current->get_displacement(dt);
                                 displ.x=displ.x/dx;

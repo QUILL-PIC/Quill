@@ -68,6 +68,7 @@ std::string ions;
 std::string data_folder;
 bool catching_enabled;
 bool verbose_logging = true;
+bool qed_enabled = true;
 ios_base::openmode output_mode;
 int init();
 
@@ -2653,6 +2654,11 @@ int init()
         catching_enabled = true;
     }
 
+    current = find("qed", first);
+    if (current->units == "off") {
+        qed_enabled = false;
+    }
+
     current = find("output_mode", first);
     if (current->units == "binary")
         output_mode = ios_base::out | ios_base::binary;
@@ -2803,11 +2809,14 @@ int init()
     fout_log<<'\n';
     
     fout_log << "catching" << endl;
-    if (catching_enabled) 
-        fout_log << "on" << endl; 
-    else 
+    if (catching_enabled)
+        fout_log << "on" << endl;
+    else
         fout_log << "off" << endl;
     
+    fout_log << "qed" << endl;
+    fout_log << (qed_enabled ? "on" : "off") << endl;
+
     if (output_mode == (ios_base::out | ios_base::binary))
         fout_log << "output_mode\n" << 1 << '\n';
     else if (output_mode == ios_base::out)
