@@ -359,6 +359,7 @@ void write_deleted_particles(ofstream& fout_energy_deleted)
     {
         fout_deleted_i[m].close();
     }
+    delete [] fout_deleted_i;
 }
 
 void write_energy_deleted(ofstream& fout_energy_deleted)
@@ -1300,7 +1301,7 @@ void evaluate_merging_condition()
     if (pmerging=="ti") {
         int N_qp;
         N_qp = N_qp_e + N_qp_p + N_qp_g;
-        for (int i;i<n_ion_populations;i++)
+        for (int i = 0; i < n_ion_populations; i++)
             N_qp += N_qp_i[i];
         if (N_qp>(3+n_ion_populations)*crnp) {
             pmerging_now = "on";
@@ -2461,6 +2462,7 @@ int init()
         icmr = new double[m];
         for (int i=0;i<m;i++)
             icmr[i] = 1/(proton_mass*mcr[i]);
+        delete [] mcr;
     }
     else
     {
