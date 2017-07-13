@@ -240,7 +240,7 @@ def particles(t=0, space=['x','y'], particles='geip', colors='bgmrcyk', r=3, alp
         i = 0
         for suffix in s:
             phspace = resread.particles('phasespace'+suffix, space, every=every)
-            if (resread.catching or resread.dump_photons) and include_deleted:
+            if (resread.catching or (resread.dump_photons and suffix == '_ph')) and include_deleted:
                 for t1 in np.arange(0, t+0.001, resread.output_period):
                     resread.t = '%g' % t1
                     phspace_del = resread.particles('deleted'+suffix, space, every=every)
@@ -260,7 +260,7 @@ def particles(t=0, space=['x','y'], particles='geip', colors='bgmrcyk', r=3, alp
         cmap = tcmap.get(cmap, gamma=gamma)
         plt.title(tex_format(space[2]))
         phspace = resread.particles('phasespace'+s[0], space, every=every)  # 2 or more sorts of ions are not supported
-        if (resread.catching or resread.dump_photons) and include_deleted:
+        if (resread.catching or (resread.dump_photons and s[0] == '_ph')) and include_deleted:
             for t1 in np.arange(0, t+0.001, resread.output_period):
                 resread.t = '%g' % t1
                 phspace_del = resread.particles('deleted'+s[0], space, every=every)
@@ -283,7 +283,7 @@ def particles(t=0, space=['x','y'], particles='geip', colors='bgmrcyk', r=3, alp
 
 
 def dist_fn(t=0, data_folder=None, particles='e', space='x', energy=False, nbins=200, filter=None, clf=False, global_limits=True,
-            log_scale=None, save2=None, every=1, **kwargs):
+            log_scale=None, save2=None, every=1, include_deleted=False, **kwargs):
     """
     Plots N and energy distribution functions over the specified space.
 
@@ -335,6 +335,12 @@ def dist_fn(t=0, data_folder=None, particles='e', space='x', energy=False, nbins
         space.append('g')
     space += expression_parser.get_vars(filter_expr)
     phspace = resread.particles('phasespace' + file_suffixes[particles[0]], space, every=every)
+    if (resread.catching or (resread.dump_photons and particles[0] == 'g')) and include_deleted:
+        for t1 in np.arange(0, t+0.001, resread.output_period):
+            resread.t = '%g' % t1
+            phspace_del = resread.particles('deleted' + file_suffixes[particles[0]], space, every=every)
+            phspace = np.append(phspace, phspace_del, axis=1)
+        resread.t = '%g' % t
     phspace = filter_phspace(phspace, filter_expr, space)
 
     if clf:
@@ -552,7 +558,7 @@ def rpattern(t=None, particles='geip', colors='bgmrcyk', dphi=0.1, save2=None, d
         
         # Including particles that have been deleted at boundaries
         rp_withcatching = None
-        if resread.catching and catching:
+        if (resread.catching or (resread.dump_photons and suffix == '_ph')) and include_deleted:
             rp_withcatching = np.copy(rp)
             print ('Processing files with deleted particles')
             t_files = ['%g'%t1 for t1 in np.arange(0, t+0.0001, resread.output_period)]
@@ -682,7 +688,9 @@ def spectrum(t=None, particles='geip', colors='bgmrcyk', sptype='simple', axis=[
     ret_val = {}
     for i in np.arange(len(s)):
         sp = resread.t_data('spectrum'+s[i]+resread.t,deps[i])
-
+        if (resread.catching or (resread.dump_photons and s[i] == '_ph')) and include_deleted:
+            for t1 in np.arange(0, float(resread.t)+0.001, resread.output_period):
+                sp += resread.t_data('spectrum_deleted{0}{1:g}'.format(s[i], t1), deps[i])
         if multi_mev_threshold is not None:
             ret_val[s[i]] = {}
             multi_mev = 0.0
@@ -905,8 +913,9 @@ def field(t=0, field='ex', plane='xy', field2=None, fmax=None, data_folder=None,
         plt.savefig(save2)
 
 
-def energy(data_folder=None, save2=None, catching=True, clf=False, **kwargs):
+def energy(data_folder=None, save2=None, include_deleted=True, clf=False, species='epgiwt', **kwargs):
     'Plots energy of electrons, ions, etc. vs time'
+    'species - what should be plotted: e, p, g, i - particles, w - field energy, t - total'
     #Important: several types of ions are not supported
 
     def safe_sum(a, b):
@@ -923,33 +932,43 @@ def energy(data_folder=None, save2=None, catching=True, clf=False, **kwargs):
     tmp = resread.t_data('energy')
     if clf:
         plt.clf()
-    plt.plot(tmp[:,0],tmp[:,1],'k') # em fields
-    plt.plot(tmp[:,0],tmp[:,2],'g') # electrons
-    plt.plot(tmp[:,0],tmp[:,3],'r') # positrons
-    plt.plot(tmp[:,0],tmp[:,4],'b') # hard photons
+    if 'w' in species:
+        plt.plot(tmp[:,0], tmp[:,1], 'k') # em fields
+    if 'e' in species:
+        plt.plot(tmp[:,0], tmp[:,2], 'g') # electrons
+    if 'p' in species:
+        plt.plot(tmp[:,0], tmp[:,3], 'r') # positrons
+    if 'g' in species:
+        plt.plot(tmp[:,0], tmp[:,4], 'b') # hard photons
+    total_energy = np.sum(tmp[:,1:5], axis=1)
     if (resread.n_ion_populations>0):
-        plt.plot(tmp[:,0],tmp[:,5],'m') # ions
-        plt.plot(tmp[:,0],tmp[:,1]+tmp[:,2]+tmp[:,3]+tmp[:,4]+tmp[:,5],'--k') # sum energy
-    else:
-        plt.plot(tmp[:,0],tmp[:,1]+tmp[:,2]+tmp[:,3]+tmp[:,4],'--k') # sum energy
+        total_energy += tmp[:,5]
+        if 'i' in species:
+            plt.plot(tmp[:,0], tmp[:,5], 'm') # ions
+    if 't' in species:
+        plt.plot(tmp[:,0], total_energy,'--k')
 
-    if (resread.catching or resread.dump_photons) and include_deleted:
+    if (resread.catching or (resread.dump_photons and 'g' in species)) and include_deleted:
         # deleted energy
         tmp_del = resread.t_data('energy_deleted')
-        sum_e, min_len = safe_sum(tmp_del[:,1], tmp[:,2])
-        plt.plot(tmp_del[:min_len,0], sum_e, '--g') # electrons
-        sum_p, min_len = safe_sum(tmp_del[:,2], tmp[:,3])
-        plt.plot(tmp_del[:min_len,0], sum_p, '--r') # positrons
-        sum_g, min_len = safe_sum(tmp_del[:,3], tmp[:,4])
-        plt.plot(tmp_del[:min_len,0], sum_g, '--b') # hard photons
+        if 'e' in species:
+            sum_e, min_len = safe_sum(tmp_del[:,1], tmp[:,2])
+            plt.plot(tmp_del[:min_len,0], sum_e, '--g') # electrons
+        if 'p' in species:
+            sum_p, min_len = safe_sum(tmp_del[:,2], tmp[:,3])
+            plt.plot(tmp_del[:min_len,0], sum_p, '--r') # positrons
+        if 'g' in species:
+            sum_g, min_len = safe_sum(tmp_del[:,3], tmp[:,4])
+            plt.plot(tmp_del[:min_len,0], sum_g, '--b') # hard photons
         
+        total_del_energy, min_len = safe_sum(total_energy, np.sum(tmp_del[:,1:4], axis=1))
         if (resread.n_ion_populations>0):
+            total_del_energy, min_len = safe_sum(total_del_energy, tmp_del[:,4])
             sum_i, min_len = safe_sum(tmp_del[:,4], tmp[:,5])
-            plt.plot(tmp_del[:min_len,0], sum_i, '--m') # ions
-            total, min_len = safe_sum(tmp[:,1] + tmp[:,2] + tmp[:,3] + tmp[:,4] + tmp[:,5], tmp_del[:,1] + tmp_del[:,2] + tmp_del[:,3] + tmp_del[:,4])
-        else:
-            total, min_len = safe_sum(tmp[:,1] + tmp[:,2] + tmp[:,3] + tmp[:,4], tmp_del[:,1] + tmp_del[:,2] + tmp_del[:,3])
-        plt.plot(tmp[:min_len,0],total,':k') # sum energy
+            if 'i' in species:
+                plt.plot(tmp_del[:min_len,0], sum_i, '--m') # ions
+        if 't' in species:
+            plt.plot(tmp[:min_len,0], total_del_energy, ':k') # sum energy
     
     plt.xlabel('$ct/\lambda$')
     plt.ylabel('Energy, J')
