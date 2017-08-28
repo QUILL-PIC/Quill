@@ -70,6 +70,10 @@ bool catching_enabled;
 ios_base::openmode output_mode;
 int init();
 
+double* coord_for_densities;
+double* densities_input_value;
+double* densities_interpol_value;
+
 //------------------------------
 
 
@@ -1265,10 +1269,12 @@ int main()
             if (mwseed==1) {
                 double n;
                 n=1/(k0*k0);
-                if (nmw * dx < mw_transition_length)
+                if (type_of_interpolation!="none")
+                    n*=densities_interpol_value[nmw];
+/*                if (nmw * dx < mw_transition_length)
                 {
                     n *= nmw * dx / mw_transition_length;
-                }
+                }*/
                 int_vector3d cell_pos;
                 cell_pos.i = nx_sr - 3;
                 int_vector3d v_npic;
@@ -2560,6 +2566,39 @@ int init()
     }
     ztr2 = current->value*2*PI;
 
+    int t_end_temp, size_array;
+    double dx_temp, quantity;
+
+    dx_temp=dx/2/PI;
+    current = find("t_end",first);
+    t_end_temp = current->value;
+    quantity = t_end_temp*mwspeed/dx_temp;
+
+    current = find("coord_for_densities",first);
+    if (current->units=="lambda")
+    {
+        size_array = current->input_array.size();
+        coord_for_densities = new double[size_array];
+
+        for (int counter=0; counter<size_array; counter++)
+            coord_for_densities[counter] = current->input_array.at(counter);
+    }
+    current = find("densities_input_value",first);
+    if (current->units=="\%")
+    {
+        densities_input_value = new double[size_array];
+
+        for (int counter=0; counter<size_array;counter++)
+            densities_input_value[counter]=current->input_array.at(counter);
+    }
+
+    current = find("type_of_interpolation",first);
+    if (current->units=="linear")
+    {
+        densities_interpol_value= new double[900];
+        lin_interpolation(densities_input_value,coord_for_densities,densities_interpol_value, dx_temp, t_end_temp*mwspeed, size_array);
+    }
+
     current = find("data_folder",first);
     data_folder = current->units;
     if (data_folder == "")
@@ -2597,6 +2636,12 @@ int init()
     fout_log<<"nz\n"<<int(zlength/dz)<<"\n";
     fout_log<<"lambda\n"<<lambda<<"\n";
     fout_log<<"ne\n"<<ne<<"\n";
+    for(int counter=0;counter<size_array;counter++)
+        fout_log<<"coord_for_densities "<< counter<< " " << coord_for_densities[counter]<<"\n";
+    for(int counter=0;counter<size_array;counter++)
+        fout_log<<"densities_input_value "<< counter<< " " << densities_input_value[counter]<<"\n";
+    for(int counter=0;counter<quantity;counter++)
+        fout_log<<"densities_interpol_value "<< counter<< " " << densities_interpol_value[counter]<<"\n";
     ddi* tmp_ddi = p_last_ddi;
     while (tmp_ddi!=0) {
         fout_log<<"t_end\n"<<tmp_ddi->t_end/2/PI<<"\n";

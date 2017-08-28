@@ -567,8 +567,39 @@ int var::read()
     {
         cout<<name;
         cin>>tmp;
-        value = atof(tmp);
-        cout<<"..."<<value;
+        if (tmp[0]=='['){ //detecting the start of an array
+            int num=1; //character counter
+            int incr=0; //counter for calculating the length of the number
+            while (tmp[num]!=']'){ // checking the end of an array
+                if (tmp[num]!=';'){ // parsing
+                    incr++;
+                }
+                else {
+                    char tmp_1[10]={};
+                    for (int i=0;i<incr;i++)
+                        tmp_1[i]=tmp[num-incr+i];
+                    input_array.insert(input_array.end(),atof(tmp_1)); //adding a new number to a vector
+                    incr=0;
+                }
+                if (tmp[num+1]==']'){
+                        char tmp_1[10]={};
+                        int i=0;
+                        while (i<incr){
+                           tmp_1[i]=tmp[num-incr+1+i];
+                           i++;
+                        }
+                        input_array.insert(input_array.end(),atof(tmp_1));
+                        incr=0;
+                    }
+                num++;
+            }
+            for (int i=0;i<input_array.size();i++)
+                    cout<<"..."<<input_array.at(i);
+        }
+        else{
+            value = atof(tmp);
+            cout<<"..."<<value;
+        }
         cin>>units;
         cout<<"..."<<units<<"...";
         cin>>stmp;
@@ -621,4 +652,29 @@ film::film()
     xnpic_film = 0;
     ynpic_film = 0;
     znpic_film = 0;
+}
+
+void lin_interpolation(double *density_in,double *coord_for_density_in,double *density_out, double dx, double xlength, int size_array){
+    double x_inter=0;
+    double quantity;
+    int counter =0, i=0;
+
+    quantity=xlength/dx;
+    x_inter=i*dx;
+
+    while(x_inter<coord_for_density_in[size_array-1]){
+        while(x_inter<coord_for_density_in[counter])
+        {
+            if(x_inter<coord_for_density_in[0])
+                density_out[i]=density_in[counter];
+            else
+                density_out[i]=density_in[counter-1]+(density_in[counter]-density_in[counter-1])/(coord_for_density_in[counter]-coord_for_density_in[counter-1])*(x_inter-coord_for_density_in[counter-1]);
+            i++;
+            x_inter=i*dx;
+        }
+        counter++;
+    }
+    if(x_inter>=coord_for_density_in[size_array-1])
+        for(int j=0;j<=quantity-i;j++)
+            density_out[i+j]=density_in[size_array-1];
 }
