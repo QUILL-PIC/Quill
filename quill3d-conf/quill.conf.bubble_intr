@@ -78,7 +78,6 @@ b_components_for_output = xyz # default: none; possible: x, y, z, xy, xz, yz, xy
 # которой выводятся в файл;
 #x0fout = 10.2 # default value: xlength/2; default units: lambda; possible: um, fs
 
-type_of_interpolation = linear
 coord_for_densities = [20;25;30;32;35;40] lambda #default: lambda
 densities_input_value = [1;1;0.9;0.7;0.6;0.5] % # possible add in %
 

@@ -1269,12 +1269,8 @@ int main()
             if (mwseed==1) {
                 double n;
                 n=1/(k0*k0);
-                if (type_of_interpolation!="none")
-                    n*=densities_interpol_value[nmw];
-/*                if (nmw * dx < mw_transition_length)
-                {
-                    n *= nmw * dx / mw_transition_length;
-                }*/
+                n*=densities_interpol_value[nmw];
+
                 int_vector3d cell_pos;
                 cell_pos.i = nx_sr - 3;
                 int_vector3d v_npic;
@@ -2592,12 +2588,8 @@ int init()
             densities_input_value[counter]=current->input_array.at(counter);
     }
 
-    current = find("type_of_interpolation",first);
-    if (current->units=="linear")
-    {
-        densities_interpol_value= new double[900];
-        lin_interpolation(densities_input_value,coord_for_densities,densities_interpol_value, dx_temp, t_end_temp*mwspeed, size_array);
-    }
+    densities_interpol_value= new double[900];
+    lin_interpolation(densities_input_value,coord_for_densities,densities_interpol_value, dx_temp, t_end_temp*mwspeed, size_array);
 
     current = find("data_folder",first);
     data_folder = current->units;
