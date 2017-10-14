@@ -654,27 +654,32 @@ film::film()
     znpic_film = 0;
 }
 
-void lin_interpolation(double *density_in,double *coord_for_density_in,double *density_out, double dx, double xlength, int size_array){
+void lin_interpolation(std::vector<double>& density_in,std::vector<double>& coord_for_density_in,std::vector<double>& density_out, double dx, double xlength){
     double x_inter=0;
-    double quantity;
-    int counter =0, i=0;
+    double quantity_output_vector =0;
+    double temp_variable_for_result = 0;
+    int counter =0; //counter for input elements
+    int i=0; //counter for output elements
+    int size_input_vector = density_in.size();
 
-    quantity=xlength/dx;
-    x_inter=i*dx;
+    quantity_output_vector=xlength/dx;
 
-    while(x_inter<coord_for_density_in[size_array-1]){
+    while(x_inter<coord_for_density_in[size_input_vector-1]){
         while(x_inter<coord_for_density_in[counter])
         {
-            if(x_inter<coord_for_density_in[0])
-                density_out[i]=density_in[counter];
+            if(x_inter<coord_for_density_in[0]) // when the length x is less than the first x_interpol assign to outputs elements the value of first input element
+                density_out.insert(density_out.end(),density_in[counter]);
             else
-                density_out[i]=density_in[counter-1]+(density_in[counter]-density_in[counter-1])/(coord_for_density_in[counter]-coord_for_density_in[counter-1])*(x_inter-coord_for_density_in[counter-1]);
+            {
+                temp_variable_for_result =density_in[counter-1]+(density_in[counter]-density_in[counter-1])/(coord_for_density_in[counter]-coord_for_density_in[counter-1])*(x_inter-coord_for_density_in[counter-1]);
+                density_out.insert(density_out.end(),temp_variable_for_result);
+            }
             i++;
             x_inter=i*dx;
         }
         counter++;
     }
-    if(x_inter>=coord_for_density_in[size_array-1])
-        for(int j=0;j<=quantity-i;j++)
-            density_out[i+j]=density_in[size_array-1];
+    if(x_inter>=coord_for_density_in[size_input_vector-1]) //when the length x is last than the first x_interpol assign to outputs elements the value of last input element
+        for(int j=0;j<=quantity_output_vector-i;j++)
+            density_out.insert(density_out.end(), density_in[size_input_vector-1]);
 }

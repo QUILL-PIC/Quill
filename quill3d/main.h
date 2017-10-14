@@ -229,7 +229,6 @@ class var
     public:
         std::string name;
         std::vector<double> input_array;
-//        double *input_array;
         double value;
         std::string units;
         var* next;
@@ -241,4 +240,4 @@ vector3d regulate(double&, double&, double&);
 var* find(std::string, var*);
 void copy(spatial_region&,int,int,int,spatial_region&,int,int,int);
 void* listen_for_param_updates(void*);
-void lin_interpolation(double *density_in,double *coord_for_density_in,double *density_out, double dx, double xlength, int size_array);
+void lin_interpolation(std::vector<double>&,std::vector<double>&,std::vector<double>&,double,double);

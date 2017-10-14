@@ -17,3 +17,4 @@ cp ../quill3d-conf/quill.conf"$1" $folder/quill.conf"$1"
 stdbuf -o 0 python ./parse.py | { ./quill; } 2>&1 | awk '{ print strftime("%Y-%m-%d %H:%M:%S\t"), $0; fflush(); }' | tee $folder/quill_log.txt
 
 rm ./parse_temp
+rm ./temp
