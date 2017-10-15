@@ -1704,6 +1704,10 @@ int init()
     {
         // dx = dt/( 1 - 1/(k0*k0)*dt*dt/4.04 );
         dx = (1+1e-2)*dt/( 1 - 1/(k0*k0)*dt*dt/4.04 );
+        if (dx < 0) {
+            cout << "\033[31m" << "Cannot calculate stable dx, reduce dt. Aborting..." << "\033[0m" << endl;
+            return 1;
+        }
     }
     //
     current = find("xlength",first);
