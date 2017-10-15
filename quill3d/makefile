@@ -44,3 +44,9 @@ FILE := ""
 .PHONY : conf
 conf:
 	./parse.sh $(FILE) > conf
+
+.PHONY : chameleon
+chameleon:
+	$(MAKE) -C chameleon
+
+all: quill parallel chameleon
