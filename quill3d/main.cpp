@@ -2720,10 +2720,6 @@ int init()
     fout_log<<"nz\n"<<int(zlength/dz)<<"\n";
     fout_log<<"lambda\n"<<lambda<<"\n";
     fout_log<<"ne\n"<<ne<<"\n";
-    for(int counter=0;counter<(int)ne_profile_x_coords.size();counter++)
-        fout_log<<"ne_profile_x_coords "<< counter<< " " << ne_profile_x_coords[counter]<<"\n";
-    for(int counter=0;counter<(int)ne_profile_x_values.size();counter++)
-        fout_log<<"ne_profile_x_values "<< counter<< " " << ne_profile_x_values[counter]<<"\n";
 
     ddi* tmp_ddi = p_last_ddi;
     while (tmp_ddi!=0) {
