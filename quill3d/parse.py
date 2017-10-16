@@ -10,8 +10,10 @@ number_regex = r'([-+]?(\d+(\.\d*)?|\.\d+)([eE][-+]?\d+)?)'
 array_regex = r'(\[' + number_regex + r'(;' + number_regex + r')*\])'
 # value can be either a number or an array
 value_regex = '(' + number_regex + '|' + array_regex + ')'
-# dimension can contain word symbols or percent sign, as well as power e.g. "^{-3}"
-dimension_regex = r'(\w+|%)(\^{?[+-]?\d+}?)?'
+# basic dimension is word, possibly with power, e.g. cm, cm^{-3}, cm^2.
+simple_dimension_regex = r'\w+(\^({[+-]?\d+}|\d+))?'
+# dimension can contain multiple simple dimensions divided by / and *, or percent sign
+dimension_regex = '({0}([/*]{0})*|%)'.format(simple_dimension_regex)
 # value with the dimension are separated by space
 value_dimension_regex = value_regex + '\s+' + dimension_regex
 # text only values can contain word symbols, digits, dots, slashes, ampersands and hyphens
