@@ -274,6 +274,9 @@ crpc = 2.0
 # алгоритм «заморозки» частиц в магнитном поле
 freezing = off # default: off; possible: on
 
+# включение и выключение КЭД-эффектов
+qed = on # default: on; possible: off
+
 # имя папки для результатов
 data_folder = res_hb # default: results
 

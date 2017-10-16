@@ -24,7 +24,7 @@ parallel: parallel.cpp
 
 .PHONY : clean
 clean:
-	-rm quill $(OBJECTS) conf parallel
+	-rm -f quill $(OBJECTS) conf parallel
 
 .PHONY : results_clean
 results_clean:
@@ -44,3 +44,9 @@ FILE := ""
 .PHONY : conf
 conf:
 	./parse.sh $(FILE) > conf
+
+.PHONY : chameleon
+chameleon:
+	$(MAKE) -C chameleon
+
+all: quill parallel chameleon

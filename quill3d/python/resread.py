@@ -3,6 +3,7 @@
 import numpy as np
 import sys
 import os
+import expression_parser
 
 __doc__ = 'see source'
 
@@ -51,7 +52,7 @@ def read_parameters(log=None):
     'Reads nx, ny, etc. from *log*.'
     global dx,dy,dz,dt,nx,ny,nz,output_period,n_ion_populations,icmr,t_end,tr_start,\
     deps,deps_p,deps_ph,deps_i,a0y,a0z,lmbda,ne,xsigma,nfilm,filmwidth,nerflow,\
-    Tlflow, mcrlflow, vlflow, Trflow, vrflow, catching, particles_for_output, output_mode
+    Tlflow, mcrlflow, vlflow, Trflow, vrflow, catching, dump_photons, particles_for_output, output_mode
     if log is None:
         log = data_folder+'log'
     icmr = []
@@ -156,11 +157,11 @@ def density(name='rho',plane='xy', log=None):
         density = density.transpose()
         return density
 
-def particles(name='phasespace',s=['x','y','g']):
+def particles(name='phasespace', s=['x','y','g'], every=1):
     'Returns characteristics *s* for particles from the file\n\
     data_folder+*name*+t.'
     f = open(data_folder+name+t)
-    data = f.readlines()
+    data = f.readlines() if every == 1 else [line for i, line in enumerate(f.readlines()) if (i//9) % every == 0]
     f.close()
     n = len(data)//9
     m = len(s)
@@ -246,11 +247,15 @@ def t_data(name='energy', step=None, silent=False):
 
 
 
-def tracks():
+def tracks(particles='e', filter=None):
     'Returns a list of tracks from the data_folder. Each track is a dictionary with keys: t, x, y, z, ux, uy, uz, q, g, file'
     read_parameters()
-    track_names = [x for x in os.listdir(data_folder) if x.startswith('track')]
+    suffix_dict = {'e': '-1', 'p': '1', 'g': '0'}
+    track_names = [x for x in os.listdir(data_folder) if x.startswith('track_'+suffix_dict[particles[0]])]
     tracks = [read_track(x) for x in track_names]
+    if filter is not None:
+        filter_expr = expression_parser.to_polish(filter)
+        tracks = [t for t in tracks if expression_parser.evaluate(filter_expr, lambda var_name: t[var_name])]
     return tracks
 
 def read_track(track_name):
@@ -267,6 +272,7 @@ def read_track(track_name):
              'file' : data_folder + track_name,
              'q' : raw_track[0],
              'g' : raw_track[7],
+             'chi' : raw_track[8],
              't' : np.linspace(0, dt * track_size, track_size)}
     track['vx'] = track['ux'] / track['g']
     track['vy'] = track['uy'] / track['g']

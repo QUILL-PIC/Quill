@@ -16,7 +16,7 @@ libchameleon-R.so: chameleon-R.cpp libchameleon.so
 	$(CPP) -o $@ $(CPPOPTS) -I$(RPATH) $(LOPTS) chameleon-R.cpp -lchameleon
 
 clean:
-	rm libchameleon.so libchameleon-R.so
+	rm -f libchameleon.so libchameleon-R.so
 
 example-py: libchameleon.so
 	python chameleon-example.py

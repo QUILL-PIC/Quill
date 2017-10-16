@@ -6,4 +6,5 @@
 #PBS -q agolovanov
 
 cd $PBS_O_WORKDIR
+export LANG="en_US.UTF-8"
 ./run.sh $1

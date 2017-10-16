@@ -38,7 +38,7 @@ def tex_format(space_item):
 
 
 def density(t=0, plane='xy', max_w=0, max_e_density=0, max_p_density=0, max_g_density=0, max_i_density=0, axis=None,
-            extent=None, save2=None, data_folder=None, particles='geipw', cmaps={}, xlim=None, ylim=None, **kwargs):
+            extent=None, save2=None, data_folder=None, particles='geipw', cmaps={}, xlim=None, ylim=None, clf=False, **kwargs):
     """
     Plots density distributions of particles and the electromagnetic field w.
 
@@ -68,6 +68,8 @@ def density(t=0, plane='xy', max_w=0, max_e_density=0, max_p_density=0, max_g_de
         resread.data_folder = data_folder
     resread.read_parameters()
 
+    if clf:
+        plt.clf()
     plt.gca().set_title('Particle densities', fontsize='medium')
     plt.xlabel(tex_format(plane[0])[:-1] + '/\lambda$')
     plt.ylabel(tex_format(plane[1])[:-1] + '/\lambda$')
@@ -121,16 +123,28 @@ def density(t=0, plane='xy', max_w=0, max_e_density=0, max_p_density=0, max_g_de
 
     for p in particles:
         if p == 'g' and 'g' in resread.particles_for_output:
-            plt.imshow(resread.density('rho_ph', plane), cmap=cmaps['g'], vmax=max_g_density, **kwargs)
+            g_density = resread.density('rho_ph', plane)
+            if max_g_density == 0:
+                max_g_density = g_density.max()
+                print('qplot.density: max_g_density = {0}'.format(max_g_density))
+            plt.imshow(g_density, cmap=cmaps['g'], vmax=max_g_density, **kwargs)
         elif p == 'w':
             plt.imshow(w, cmap=cmaps['w'], vmax=max_w, **kwargs)
         elif p == 'i' and resread.icmr != []:
-            plt.imshow(resread.density('irho_' + str(resread.icmr[0]) + '_', plane), cmap=cmaps['i'],
+            i_density = resread.density('irho_' + str(resread.icmr[0]) + '_', plane)
+            if max_i_density == 0:
+                max_i_density = i_density.max();
+                print('qplot.density: max_i_density = {0}'.format(max_i_density))
+            plt.imshow(i_density, cmap=cmaps['i'],
                        vmax=max_i_density, **kwargs)
         elif p == 'e' and 'e' in resread.particles_for_output:
             plt.imshow(edensity, cmap=cmaps['e'], vmax=max_e_density, **kwargs)
         elif p == 'p' and 'p' in resread.particles_for_output:
-            plt.imshow(resread.density('rho_p', plane), cmap=cmaps['p'], vmax=max_p_density, **kwargs)
+            p_density = resread.density('rho_p', plane)
+            if max_p_density == 0:
+                max_p_density = p_density.max()
+                print('qplot.density: max_p_density = {0}'.format(max_p_density))
+            plt.imshow(p_density, cmap=cmaps['p'], vmax=max_p_density, **kwargs)
         else:
             if p not in 'gwiep':
                 print("Warning: Particle '%c' is not a valid option. Possible options are: gwiep." % p)
@@ -139,15 +153,38 @@ def density(t=0, plane='xy', max_w=0, max_e_density=0, max_p_density=0, max_g_de
         plt.savefig(save2)
 
 
+def filter_phspace(phs, expr, var_space):
+    mask = np.ones(phs.shape[1], dtype=bool).T
+    if expr:
+        mask &= expression_parser.evaluate(expr, lambda var_name: phs.T[:, var_space.index(var_name)])
+    return phs.T[mask].T
+
+
+def space_to_list(space, filter_expr):
+    params_list = ['ux', 'uy', 'uz', 'vx', 'vy', 'vz', 'theta', 'phi', 'chi', 'xi', 'x', 'y', 'z', 't', 'g', 'q']
+    if isinstance(space, str):
+        space_tmp = space
+        space_dict = OrderedDict({})
+        for token in params_list:
+            if space_tmp.find(token) > -1:
+                space_dict[space_tmp.find(token)] = token
+                space_tmp = space_tmp.replace(token, ' ' * len(token)) # need to preserve params absolute positions in space_tmp
+        if len(space_tmp.replace(' ', '')) > 0:
+            raise ValueError('Invalid space specified: {0}'.format(space))
+        space = list(OrderedDict(sorted(space_dict.items())).values())
+    return list(OrderedDict((v, i) for i, v in enumerate(space)).keys())
+
+
 def particles(t=0, space=['x','y'], particles='geip', colors='bgmrcyk', r=3, alpha=0.1, cmap='jet', gamma=0,
-              data_folder=None, axis=[], save2=None, vmin=None, vmax=None, xlim=None, ylim=None, filter=None, **kwargs):
+              data_folder=None, axis=[], save2=None, vmin=None, vmax=None, xlim=None, ylim=None, filter=None, clf=False,
+              include_deleted=False, every=1, **kwargs):
     """
     Plots particles as dots in (phase)*space*.
     Examples:
         qplot.particles(10,[\'x\',\'y\']),\n\
-        qplot.particles(15,[\'x\',\'y\',\'g\'],\'i\',gamma=1).
+        qplot.particles(15,\'xyg\',\'i\',gamma=1).
     :param t: time for which to plot the particle distribution
-    :param space: phasespace containing 2 or 3 variables (if 3, the third one is shown as color on a 2D plot)
+    :param space: phasespace containing 2 or 3 variables (if 3, the third one is shown as color on a 2D plot). Can be either list or string
     :param particles: particles to plot (g for photons, e for electrons, i for ions
     :param filter: condition for filtering the variables. E.g.: 'x > 5 && (theta > 0.5 || theta < -0.5)'
         Allowed operations: + - * / ^ () < > = != <= >= && || sin cos exp log min max
@@ -164,12 +201,6 @@ def particles(t=0, space=['x','y'], particles='geip', colors='bgmrcyk', r=3, alp
         else:
             return 'i'
 
-    def filter_phspace(phs, expr, var_space):
-        mask = np.ones(phs.shape[1], dtype=bool).T
-        if expr:
-            mask &= expression_parser.evaluate(expr, lambda var_name: phs.T[:, var_space.index(var_name)])
-        return phs.T[mask].T
-
     resread.t = '%g' % t
     data_folder = __get_data_folder(data_folder, kwargs)
     if data_folder is not None:
@@ -177,13 +208,17 @@ def particles(t=0, space=['x','y'], particles='geip', colors='bgmrcyk', r=3, alp
     resread.read_parameters()
 
     filter_expr = expression_parser.to_polish(filter)
+    space = space_to_list(space, filter_expr)
     if len(space) == 2:
         is_3d = False
     elif len(space) == 3:
         is_3d = True
     else:
         raise ValueError('Incorrect value for space parameter')
-    space = list(OrderedDict((v, i) for i, v in enumerate(space + expression_parser.get_vars(filter_expr))).keys())
+    space += expression_parser.get_vars(filter_expr)
+
+    if clf:
+        plt.clf()
     plt.xlabel(tex_format(space[0]))
     plt.ylabel(tex_format(space[1]))
     if axis:
@@ -204,7 +239,13 @@ def particles(t=0, space=['x','y'], particles='geip', colors='bgmrcyk', r=3, alp
         c = list(colors)
         i = 0
         for suffix in s:
-            phspace = resread.particles('phasespace'+suffix, space)
+            phspace = resread.particles('phasespace'+suffix, space, every=every)
+            if (resread.catching or (resread.dump_photons and suffix == '_ph')) and include_deleted:
+                for t1 in np.arange(0, t+0.001, resread.output_period):
+                    resread.t = '%g' % t1
+                    phspace_del = resread.particles('deleted'+suffix, space, every=every)
+                    phspace = np.append(phspace, phspace_del, axis=1)
+                resread.t = '%g' % t
             phspace = filter_phspace(phspace, filter_expr, space)
             print('Plotting {0}({1}) for {2}; vmin = {3}, vmax = {4}'
                   .format(space[1], space[0], particle_from_suffix(suffix), vmin, vmax))
@@ -218,7 +259,13 @@ def particles(t=0, space=['x','y'], particles='geip', colors='bgmrcyk', r=3, alp
     else:
         cmap = tcmap.get(cmap, gamma=gamma)
         plt.title(tex_format(space[2]))
-        phspace = resread.particles('phasespace'+s[0], space)  # 2 or more sorts of ions are not supported
+        phspace = resread.particles('phasespace'+s[0], space, every=every)  # 2 or more sorts of ions are not supported
+        if (resread.catching or (resread.dump_photons and s[0] == '_ph')) and include_deleted:
+            for t1 in np.arange(0, t+0.001, resread.output_period):
+                resread.t = '%g' % t1
+                phspace_del = resread.particles('deleted'+s[0], space, every=every)
+                phspace = np.append(phspace, phspace_del, axis=1)
+            resread.t = '%g' % t
         phspace = filter_phspace(phspace, filter_expr, space)
         if vmin is None:
             vmin = np.min(phspace[2,:])
@@ -235,7 +282,106 @@ def particles(t=0, space=['x','y'], particles='geip', colors='bgmrcyk', r=3, alp
         plt.savefig(save2)
 
 
-def tracks(space=['x','y'],particles='geip',t0=0,t1=0,colors='bgmrcyk',cmaps=['jet'],clims2all=1,axis=[],save2=None,r=2,data_folder=None,**kwargs):
+def dist_fn(t=0, data_folder=None, particles='e', space='x', energy=False, nbins=200, filter=None, clf=False, global_limits=True,
+            log_scale=None, save2=None, every=1, include_deleted=False, **kwargs):
+    """
+    Plots N and energy distribution functions over the specified space.
+
+    Parameters
+    ----------
+    data_folder : string
+        E.g. '../results/'. Use 'df' for shortcut.
+    particles : string
+        String of particle species to plot: 'e', 'p', 'g', or 'i'. Only one particle species at time is allowed.
+    space : string, list
+        One- or two-dimensional space over which the distribution function is calculated.
+    energy: bool
+        if False (by default), N (number of particles) distibution over space is shown.
+        if True, energy distribution is shown instead
+    nbins: int
+        The number of bins for calculating the histogram.
+    filter: string
+        Expression to filter the particles by. E. g.: 'x > 5 && y < 10', 'g > 0.1*max(g)'
+    global_limits: bool
+        If true, the distribution range is set to global min / max for each parameter (not for min / max of particles)
+        E. g. x ranges from 0 to nx*dx, phi --- from -pi to pi.
+    log_scale: string
+        None, 'x', 'y' or 'xy'
+    save2 : string
+        File to save the image to. If None, does nothing.
+    every: int
+        Tells resread to take every n-th file (1 by default)
+    kwargs
+        parameters to be passed to the plotting methods (hist, imshow).
+    """
+    resread.t = '%g' % t
+    if len(particles) != 1:
+        raise ValueError('dist_fn supports only one type of particles')
+    data_folder = __get_data_folder(data_folder, kwargs)
+    if data_folder is not None:
+        resread.data_folder = data_folder
+    resread.read_parameters()
+
+    if particles == 'i' and len(resread.icmr) == 0:
+        raise ValueError('Ions data are missing')
+    file_suffixes = {'e': '', 'p': '_p', 'g': '_ph', 'i': '_' + str(resread.icmr[0]) + '_'}
+    caption_suffixes = {'e' : '_e', 'p': '_p', 'g': '_{ph}', 'i': '_i'}
+    c_suffix = caption_suffixes[particles[0]]
+    filter_expr = expression_parser.to_polish(filter)
+    space = space_to_list(space, filter_expr)
+    is_2d = len(space) > 1
+    space.append('q')  # need also to fetch pseudoparticle weight
+    if energy:
+        space.append('g')
+    space += expression_parser.get_vars(filter_expr)
+    phspace = resread.particles('phasespace' + file_suffixes[particles[0]], space, every=every)
+    if (resread.catching or (resread.dump_photons and particles[0] == 'g')) and include_deleted:
+        for t1 in np.arange(0, t+0.001, resread.output_period):
+            resread.t = '%g' % t1
+            phspace_del = resread.particles('deleted' + file_suffixes[particles[0]], space, every=every)
+            phspace = np.append(phspace, phspace_del, axis=1)
+        resread.t = '%g' % t
+    phspace = filter_phspace(phspace, filter_expr, space)
+
+    if clf:
+        plt.clf()
+    limits_per_space = {
+        'x' : [0, resread.nx * resread.dx], 'y' : [0, resread.ny * resread.dy], 'z' : [0, resread.nz * resread.dz],
+        'phi' : [-np.pi, np.pi], 'theta' : [0, np.pi]
+    }
+    if global_limits:
+        if is_2d:
+            hist_range = [limits_per_space[space[0]] if space[0] in limits_per_space else [np.min(phspace[0,:]), np.max(phspace[0,:])], 
+                limits_per_space[space[1]] if space[1] in limits_per_space else [np.min(phspace[1,:]), np.max(phspace[1,:])]]
+        else:
+            hist_range = limits_per_space[space[0]] if space[0] in limits_per_space else None
+    else:
+        hist_range = None
+
+    if is_2d:
+        weight = np.abs(phspace[2,:]) * (phspace[3,:] - (1.0 if particles in 'ep' else 0.0) if energy else 1.0)
+        hist, xedges, yedges = np.histogram2d(phspace[0,:], phspace[1,:], range=hist_range, bins=nbins, weights=weight, normed=True)
+        plt.imshow(hist.T, origin='lower', aspect='auto', extent=(xedges[1], xedges[-1], yedges[1], yedges[-1]), **kwargs)
+        plt.colorbar()
+        plt.ylabel(tex_format(space[1]))
+        plt.title(tex_format(r'\varepsilon'+c_suffix if energy else 'N'+c_suffix) + '(' + tex_format(space[0]) + ', ' + tex_format(space[1]) + ')')
+    else:
+        weight = np.abs(phspace[1,:]) * (phspace[2,:] if energy else 1.0)
+        #hist, bin_edges = np.histogram(phspace[0,:], range=hist_range, bins=nbins, weights=weight, density=True)
+        #plt.plot(bin_edges[1:], hist)
+        plt.hist(phspace[0,:], range=hist_range, bins=nbins, weights=weight, normed=True, **kwargs)
+        plt.ylabel(tex_format(r'\varepsilon'+c_suffix if energy else 'N'+c_suffix) + '(' + tex_format(space[0]) + ')')
+    plt.xlabel(tex_format(space[0]))
+    if not log_scale is None and 'x' in log_scale:
+        plt.xscale('log')
+    if not log_scale is None and 'y' in log_scale:
+        plt.yscale('log')
+    if save2 is not None:
+        plt.savefig(save2)
+
+
+def tracks(space=['x','y'], particles='geip', t0=0, t1=0, colors='bgmrcyk', cmaps=['jet'], clims2all=1, axis=[], save2=None,
+            r=2, data_folder=None, clf=False, every=1, **kwargs):
     'Plots particle tracks as lines in 2D or dots in 3D (phase)*space*\n\
     at [tr_start+*t0*,tr_start+*t1*]\n\
     Examples:\n\
@@ -257,11 +403,11 @@ def tracks(space=['x','y'],particles='geip',t0=0,t1=0,colors='bgmrcyk',cmaps=['j
     cmr = []
     for trackname in track_names:
         resread.t = ''
-        tmp = resread.particles(trackname,space)
-        if t1!=0 and np.floor(t1/resread.dt)<len(tmp[0,:]):
-            tracks.append(tmp[:,np.floor(t0/resread.dt):np.floor(t1/resread.dt)])
+        tmp = resread.particles(trackname, space, every=every)
+        if t1!=0 and int(np.floor(t1/resread.dt)) < len(tmp[0,:]):
+            tracks.append(tmp[:,int(np.floor(t0/resread.dt)):int(np.floor(t1/resread.dt))])
         else:
-            tracks.append(tmp[:,np.floor(t0/resread.dt):])
+            tracks.append(tmp[:,int(np.floor(t0/resread.dt)):])
         cmr.append(float( trackname[ trackname.find('_')+1 : trackname.find('_',trackname.find('_')+1) ] ))
     def cmr2int(a):
         'Converts cmr *a* to the int index of *colors* or *cmaps*'
@@ -289,6 +435,9 @@ def tracks(space=['x','y'],particles='geip',t0=0,t1=0,colors='bgmrcyk',cmaps=['j
             return 0
         else:
             return 0
+
+    if clf:
+        plt.clf()
     if len(space)==2:
         if colors!='':
             for i in np.arange(len(track_names)):
@@ -367,7 +516,7 @@ def tracks(space=['x','y'],particles='geip',t0=0,t1=0,colors='bgmrcyk',cmaps=['j
         plt.savefig(save2)
 
 
-def rpattern(t=None,particles='geip',colors='bgmrcyk',dphi=0.1,save2=None,data_folder=None,catching=True,polar=True,**kwargs):
+def rpattern(t=None, particles='geip', colors='bgmrcyk', dphi=0.1, save2=None, data_folder=None, catching=True, polar=True, clf=False, **kwargs):
     'Plots radiation pattern of the emitted energy\n\
     Examples:\n\
     rpattern() # plots radiation patterns for all particles\n\
@@ -404,12 +553,12 @@ def rpattern(t=None,particles='geip',colors='bgmrcyk',dphi=0.1,save2=None,data_f
         n = len(phi)
         rp = np.zeros(n)
         for i in np.arange(len(qgphi[0,:])):
-            j = np.floor((qgphi[2,i]+np.pi)/dphi)
+            j = int(np.floor((qgphi[2,i]+np.pi)/dphi))
             rp[j] += np.fabs(qgphi[0,i])*qgphi[1,i]
         
         # Including particles that have been deleted at boundaries
         rp_withcatching = None
-        if resread.catching and catching:
+        if (resread.catching or (resread.dump_photons and suffix == '_ph')) and include_deleted:
             rp_withcatching = np.copy(rp)
             print ('Processing files with deleted particles')
             t_files = ['%g'%t1 for t1 in np.arange(0, t+0.0001, resread.output_period)]
@@ -421,7 +570,7 @@ def rpattern(t=None,particles='geip',colors='bgmrcyk',dphi=0.1,save2=None,data_f
                 except:
                     print ('Unable to access the file [deleted{0}{1}]'.format(suffix, t_file))
                 for i in np.arange(len(qgphi_del[0,:])):
-                    j = np.floor((qgphi_del[2,i]+np.pi)/dphi)
+                    j = int(np.floor((qgphi_del[2,i]+np.pi)/dphi))
                     rp_withcatching[j] += np.fabs(qgphi_del[0,i])*qgphi_del[1,i]
 
         rp[0] += rp[n-1]
@@ -453,8 +602,8 @@ def rpattern(t=None,particles='geip',colors='bgmrcyk',dphi=0.1,save2=None,data_f
         plt.savefig(save2)
 
 
-def spectrum(t=None,particles='geip',colors='bgmrcyk',sptype='simple',axis=[],save2=None,data_folder=None,smooth=True,xlim=None,ylim=None,
-        smooth_start=20,smooth_max=1000,smooth_width=50,window_type='triangular',multi_mev_threshold=None,**kwargs):
+def spectrum(t=None, particles='geip', colors='bgmrcyk', sptype='simple', axis=[], save2=None, data_folder=None, smooth=False, xlim=None, ylim=None,
+        smooth_start=20, smooth_max=1000, smooth_width=50, window_type='triangular', multi_mev_threshold=None, clf=False, **kwargs):
     'spectrum() # plots spectrum for all particles\n\
     at t_end\n\
     Examples:\n\
@@ -493,8 +642,13 @@ def spectrum(t=None,particles='geip',colors='bgmrcyk',sptype='simple',axis=[],sa
                     result[i] += x[i+j] * window(j, width, wtype) 
         return result
     
+    if clf:
+        plt.clf()
     plt.xlabel('kinetic energy, MeV')
-    plt.ylabel('dN/deps, a.u.')
+    if sptype=='energy' or sptype=='loglog':
+        plt.ylabel(r'$\varepsilon dN/d\varepsilon$, a.u.')
+    else:
+        plt.ylabel(r'$dN/d\varepsilon$, a.u.')
     if xlim is not None:
         plt.xlim(xlim)
     if ylim is not None:
@@ -531,18 +685,24 @@ def spectrum(t=None,particles='geip',colors='bgmrcyk',sptype='simple',axis=[],sa
                 s.append('_'+str(cmr)+'_')
                 deps.append(resread.deps_i)
                 ci.append(i%len(colors))
+    ret_val = {}
     for i in np.arange(len(s)):
         sp = resread.t_data('spectrum'+s[i]+resread.t,deps[i])
-
+        if (resread.catching or (resread.dump_photons and s[i] == '_ph')) and include_deleted:
+            for t1 in np.arange(0, float(resread.t)+0.001, resread.output_period):
+                sp += resread.t_data('spectrum_deleted{0}{1:g}'.format(s[i], t1), deps[i])
         if multi_mev_threshold is not None:
+            ret_val[s[i]] = {}
             multi_mev = 0.0
             for j in np.arange(len(sp[:,0])):
                 if sp[j,0] > multi_mev_threshold:
                     multi_mev = multi_mev + sp[j,1] * resread.deps
                     
             print ('Number of multi-MeV particles of type [{0}] (W > {1} MeV) = {2}'.format(s[i], multi_mev_threshold, multi_mev)) 
+            ret_val[s[i]]['multi_mev'] = multi_mev
             if s[i] == '' or s[i] == '_p':
                 print ('Total charge = {0} nC'.format(multi_mev * 1.6e-10))
+                ret_val[s[i]]['total_charge'] = multi_mev * 1.6e-10
 
         if smooth:
             sp[:,1] = smooth_array(sp[:,1], smooth_start, smooth_max, smooth_width, window_type)
@@ -553,22 +713,13 @@ def spectrum(t=None,particles='geip',colors='bgmrcyk',sptype='simple',axis=[],sa
                 sp[j,1] = sp[j,0]*sp[j,1]
         if sptype=='loglog':
             plt.xscale('log')
-            # for j in np.arange(len(sp[:,0])):
-                # sp[j,1] = sp[j,0]*sp[j,1]
-                # if sp[j,1]>0:
-                    # sp[j,1] = np.log10( sp[j,1] )
-                # else:
-                    # sp[j,1] = 0
-                # sp[j,0] = np.log10( sp[j,0] )
-        # for j in np.arange(len(sp[:,0])):
-            # if sp[j,1]>0:
-                # sp[j,1] = np.log(sp[j,1])/np.log(10.)
-            # else:
-                # sp[j,1] = 0
         plt.plot(sp[:,0],sp[:,1],colors[ci[i]])
 
     if save2 is not None:
         plt.savefig(save2)
+    if multi_mev_threshold is not None:
+        return ret_val
+
 
 directivity = 0
 directivity_lat = 0
@@ -579,7 +730,7 @@ directivity_lat2 = 0
 directivity_lng2 = 0
 
 
-def mollweide(t=None,nlongitude=80,nlatitude=40,Nlevels=15,save2=None,data_folder=None,data=None,**kwargs):
+def mollweide(t=None, nlongitude=80, nlatitude=40, Nlevels=15, save2=None, data_folder=None, data=None, clf=False, **kwargs):
     '''Plots photon radiation pattern in Mollweide projection and computes (antenna-like) directivity.
     
     In the Mollweide projection, z-axis sticks out of the north pole and y-axis sticks out of the\n\
@@ -683,6 +834,8 @@ def mollweide(t=None,nlongitude=80,nlatitude=40,Nlevels=15,save2=None,data_folde
             rp = data
             lat = np.linspace(-np.pi/2,np.pi/2,data.shape[0])
             lng = np.linspace(-np.pi,np.pi,data.shape[1])
+    if clf:
+        plt.clf()
     f = plt.figure()
     ax = f.add_subplot(111,projection='mollweide')
     ax.contour(lng,lat,rp,Nlevels,origin=None)
@@ -692,7 +845,7 @@ def mollweide(t=None,nlongitude=80,nlatitude=40,Nlevels=15,save2=None,data_folde
     return lng, lat, rp
 
 
-def field(t=0,field='ex',plane='xy',field2=None,fmax=None,data_folder=None,extent=None,xlim=None,ylim=None,axis=[],save2=None,**kwargs):
+def field(t=0, field='ex', plane='xy', field2=None, fmax=None, data_folder=None, extent=None, xlim=None, ylim=None, axis=[], save2=None, clf=False, **kwargs):
     '''Plots fields in the specified plane.
 
     Arguments:
@@ -709,6 +862,8 @@ def field(t=0,field='ex',plane='xy',field2=None,fmax=None,data_folder=None,exten
         resread.data_folder = data_folder
     resread.read_parameters()
     #
+    if clf:
+        plt.clf()
     title = tex_format(field)
     if field2 is not None:
         if field2[0] == '-':
@@ -758,8 +913,9 @@ def field(t=0,field='ex',plane='xy',field2=None,fmax=None,data_folder=None,exten
         plt.savefig(save2)
 
 
-def energy(data_folder=None,save2=None,catching=True, **kwargs):
+def energy(data_folder=None, save2=None, include_deleted=True, clf=False, species='epgiwt', **kwargs):
     'Plots energy of electrons, ions, etc. vs time'
+    'species - what should be plotted: e, p, g, i - particles, w - field energy, t - total'
     #Important: several types of ions are not supported
 
     def safe_sum(a, b):
@@ -774,33 +930,45 @@ def energy(data_folder=None,save2=None,catching=True, **kwargs):
         resread.data_folder = data_folder
     resread.read_parameters()
     tmp = resread.t_data('energy')
-    plt.plot(tmp[:,0],tmp[:,1],'k') # em fields
-    plt.plot(tmp[:,0],tmp[:,2],'g') # electrons
-    plt.plot(tmp[:,0],tmp[:,3],'r') # positrons
-    plt.plot(tmp[:,0],tmp[:,4],'b') # hard photons
+    if clf:
+        plt.clf()
+    if 'w' in species:
+        plt.plot(tmp[:,0], tmp[:,1], 'k') # em fields
+    if 'e' in species:
+        plt.plot(tmp[:,0], tmp[:,2], 'g') # electrons
+    if 'p' in species:
+        plt.plot(tmp[:,0], tmp[:,3], 'r') # positrons
+    if 'g' in species:
+        plt.plot(tmp[:,0], tmp[:,4], 'b') # hard photons
+    total_energy = np.sum(tmp[:,1:5], axis=1)
     if (resread.n_ion_populations>0):
-        plt.plot(tmp[:,0],tmp[:,5],'m') # ions
-        plt.plot(tmp[:,0],tmp[:,1]+tmp[:,2]+tmp[:,3]+tmp[:,4]+tmp[:,5],'--k') # sum energy
-    else:
-        plt.plot(tmp[:,0],tmp[:,1]+tmp[:,2]+tmp[:,3]+tmp[:,4],'--k') # sum energy
-        
-    if resread.catching and catching:
-        #deleted energy
+        total_energy += tmp[:,5]
+        if 'i' in species:
+            plt.plot(tmp[:,0], tmp[:,5], 'm') # ions
+    if 't' in species:
+        plt.plot(tmp[:,0], total_energy,'--k')
+
+    if (resread.catching or (resread.dump_photons and 'g' in species)) and include_deleted:
+        # deleted energy
         tmp_del = resread.t_data('energy_deleted')
-        sum_e, min_len = safe_sum(tmp_del[:,1], tmp[:,2])
-        plt.plot(tmp_del[:min_len,0], sum_e, '--g') # electrons
-        sum_p, min_len = safe_sum(tmp_del[:,2], tmp[:,3])
-        plt.plot(tmp_del[:min_len,0], sum_p, '--r') # positrons
-        sum_g, min_len = safe_sum(tmp_del[:,3], tmp[:,4])
-        plt.plot(tmp_del[:min_len,0], sum_g, '--b') # hard photons
+        if 'e' in species:
+            sum_e, min_len = safe_sum(tmp_del[:,1], tmp[:,2])
+            plt.plot(tmp_del[:min_len,0], sum_e, '--g') # electrons
+        if 'p' in species:
+            sum_p, min_len = safe_sum(tmp_del[:,2], tmp[:,3])
+            plt.plot(tmp_del[:min_len,0], sum_p, '--r') # positrons
+        if 'g' in species:
+            sum_g, min_len = safe_sum(tmp_del[:,3], tmp[:,4])
+            plt.plot(tmp_del[:min_len,0], sum_g, '--b') # hard photons
         
+        total_del_energy, min_len = safe_sum(total_energy, np.sum(tmp_del[:,1:4], axis=1))
         if (resread.n_ion_populations>0):
+            total_del_energy, min_len = safe_sum(total_del_energy, tmp_del[:,4])
             sum_i, min_len = safe_sum(tmp_del[:,4], tmp[:,5])
-            plt.plot(tmp_del[:min_len,0], sum_i, '--m') # ions
-            total, min_len = safe_sum(tmp[:,1] + tmp[:,2] + tmp[:,3] + tmp[:,4] + tmp[:,5], tmp_del[:,1] + tmp_del[:,2] + tmp_del[:,3] + tmp_del[:,4])
-        else:
-            total, min_len = safe_sum(tmp[:,1] + tmp[:,2] + tmp[:,3] + tmp[:,4], tmp_del[:,1] + tmp_del[:,2] + tmp_del[:,3])
-        plt.plot(tmp[:min_len,0],total,':k') # sum energy
+            if 'i' in species:
+                plt.plot(tmp_del[:min_len,0], sum_i, '--m') # ions
+        if 't' in species:
+            plt.plot(tmp[:min_len,0], total_del_energy, ':k') # sum energy
     
     plt.xlabel('$ct/\lambda$')
     plt.ylabel('Energy, J')
@@ -809,13 +977,17 @@ def energy(data_folder=None,save2=None,catching=True, **kwargs):
         plt.savefig(save2)
 
 
-def tracks2(space=['x', 'y'], tracks=None, save2=None, data_folder=None, **kwargs):
+def tracks2(space=['x', 'y'], tracks=None, particles='e', save2=None, data_folder=None, filter=None, clf=True, **kwargs):
     'Plots 2d tracks in the specified *space*'
     data_folder = __get_data_folder(data_folder, kwargs)
     if data_folder is not None:
         resread.data_folder = data_folder
     if not tracks:
-        tracks = resread.tracks()
+        if len(particles) > 1 or not particles[0] in 'epg':
+            raise ValueError('tracks2() does not support multiple particle species, as well as ions')
+        tracks = resread.tracks(particles, filter)
+    if clf:
+        plt.clf()
     if len(space) == 2:
         x = space[0]
         y = space[1]
@@ -837,7 +1009,7 @@ def tracks2(space=['x', 'y'], tracks=None, save2=None, data_folder=None, **kwarg
         plt.savefig(save2)
 
 
-def N(data_folder = None, particles = 'gep', save2 = None, **kwargs):
+def N(data_folder=None, particles='gep', save2=None, clf=False, **kwargs):
     'Plots number of particles over time. Ions are not currently supported'
     data_folder = __get_data_folder(data_folder, kwargs)
     if data_folder is not None:
@@ -850,6 +1022,8 @@ def N(data_folder = None, particles = 'gep', save2 = None, **kwargs):
     Ng = a[:,3]
 
     lw = 1.5 # linewidth
+    if clf:
+        plt.clf()
     if 'e' in particles:
         plt.plot(t, Ne, 'g--', linewidth = lw, label = r'$N_e$')
     if 'p' in particles:
@@ -866,8 +1040,8 @@ def N(data_folder = None, particles = 'gep', save2 = None, **kwargs):
         plt.savefig(save2)
 
 
-def onaxis(t, particles = 'we', colors = 'rgbcmyk', norm = 'true',
-        data_folder = None, save2 = None, plotargs = {}, rrargs = {}, **kwargs):
+def onaxis(t, particles='we', colors='rgbcmyk', norm='true',
+        data_folder=None, save2=None, plotargs={}, rrargs={}, clf=False, **kwargs):
     'Plot of particle density, fields etc. along the x-axis.\n\
     *norm* can be set to \'optimal\', \'true\' or to array of desired maximal values.\n\
     For rrargs see help(qplot.resread.onaxis),\n\
@@ -916,6 +1090,9 @@ def onaxis(t, particles = 'we', colors = 'rgbcmyk', norm = 'true',
     elif norm != 'true':
         for i, m in enumerate(norm):
             a[i] = norm[i] * a[i] / max(a[i])
+
+    if clf:
+        plt.clf()
     for i, b in enumerate(a):
         plt.plot(x, b, color = colors[i % len(colors)], **plotargs)
     plt.xlabel('$x$')
@@ -947,14 +1124,14 @@ if not plt.isinteractive() and not hasattr(__main__, '__file__'):
 
 lw = 0.7 # linewidth for border
 lwl = 1.0 # linewidth for lines in plots
-font = {'family' : 'Liberation Serif',
-        'weight' : 'normal',
-        'size'   : 9}
+font = {'family' : 'serif', 'serif' : 'cmr10', 'size' : 9}
 rc_backup = mpl.rcParams.copy()
 mpl.rc('font', **font)
 mpl.rc('lines', linewidth=lwl)
 mpl.rc('axes', linewidth=lw)
+mpl.rc('axes', unicode_minus=False)
 mpl.rc('figure', figsize=(3.5,2.5), dpi=200, autolayout=True)
+mpl.rc('mathtext' ,fontset='cm')
 mpl.rc('savefig',dpi=300)
 
 tcmap.red()

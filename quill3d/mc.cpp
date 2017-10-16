@@ -1,6 +1,8 @@
 #include <cmath>
 #include "main.h"
 
+extern bool qed_enabled;
+
 double spatial_region::get_rand()
 {
     // Метод Фибоначчи с запаздываниями
@@ -131,6 +133,8 @@ spatial_region::plist::particle* spatial_region::bear_particle(double cmr, vecto
 
 void spatial_region::birth_from_vacuum(double q)
 {
+    if (!qed_enabled)
+        return;
     vector3d e,b;
     vector3d position;
     vector3d direction;
