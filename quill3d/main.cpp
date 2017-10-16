@@ -51,7 +51,6 @@ bool tr_init;
 double tr_start,xtr1,ytr1,ztr1,xtr2,ytr2,ztr2;
 double mwspeed,nelflow,vlflow,mcrlflow,Tlflow,nerflow,vrflow,mcrrflow,Trflow;
 double mw_channel_radius;
-double mw_transition_length;
 int i_particle, i_particle_p, i_particle_ph, i_particle_i;  // for "writing down every i-th electron, positron, etc."
 std::string e_components_for_output;
 std::string b_components_for_output;
@@ -2116,8 +2115,6 @@ int init()
     if (current->units=="off") mwindow = 0;
     current = find("mw_channel_radius", first);
     mw_channel_radius = current->value * 2 * PI;
-    current = find("mw_transition_length", first);
-    mw_transition_length = current->value * 2 * PI;
     current = find("mwspeed",first);
     mwspeed = current->value;
     if (mwindow==1 && mwspeed==0)

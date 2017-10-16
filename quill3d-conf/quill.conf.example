@@ -25,6 +25,10 @@ lambda = 0.91 um # default: cm; possible: um; lambda_p
 # не задан явно
 ne = 100 ncr # default: cm^{-3}; possible: ncr
 
+# массивы координат и относительных значений плотностей плазмы при добавлении частиц.
+ne_profile_x_coords = [5;10;20] lambda # default: lambda; possible: um
+ne_profile_x_values = [0.3;0.5;1.0] % # default: %
+
 # размеры области моделирования
 xlength = 18 # default: lambda; possible: um, fs
 ylength = 18 # default: lambda; possible: um
@@ -126,8 +130,6 @@ mwindow = off # default: on; possible: on, off
 # радиус канала, не заполняемого плазмой, при добавлении частиц на передней
 # границе области
 #mw_channel_radius = 3 # default: 0; default units: lambda; possible: um
-# длина перехода, на котором концентрация плазмы линейно нарастает
-#mw_transition_length = 10 # default: 0; default units: lambda; possible: um
 
 # компоненты полей для вывода в файл
 e_components_for_output = xyz # default: none; possible: x, y, z, xy, xz, yz, xyz
