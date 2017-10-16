@@ -71,8 +71,8 @@ bool catching_enabled;
 ios_base::openmode output_mode;
 int init();
 
-std::vector<double> coord_for_densities;
-std::vector<double> densities_input_value;
+std::vector<double> ne_profile_x_coords;
+std::vector<double> ne_profile_x_values;
 std::vector<double> densities_interpol_value;
 
 //------------------------------
@@ -2580,20 +2580,31 @@ int init()
     //cout<<"quantity - " <<quantity << endl;
     //std::cout << "nums contains " << densities_interpol_value.size() << " elements.\n";
 
-    current = find("coord_for_densities",first);
-    if (current->units=="lambda")
-    {
-        for (int counter=0; counter<current->input_array.size(); counter++)
-            coord_for_densities.insert(coord_for_densities.end(), current->input_array.at(counter));
+    current = find("ne_profile_x_coords",first);
+    if (current->units == "um") {
+        for (double & v : current->input_array) {
+            v *= 1e-4/lambda;
+        }
+        current->units = "lambda";
     }
-    current = find("densities_input_value",first);
-    if (current->units=="\%")
-    {
-        for (int counter=0; counter<current->input_array.size();counter++)
-            densities_input_value.insert(densities_input_value.end(), current->input_array.at(counter));
+    ne_profile_x_coords = current->input_array;
+    if (ne_profile_x_coords.empty()) {
+        ne_profile_x_coords = {0.0};
     }
 
-    lin_interpolation(densities_input_value,coord_for_densities, densities_interpol_value, dx_temp, t_end_temp*mwspeed);
+    current = find("ne_profile_x_values",first);
+    ne_profile_x_values = current->input_array;
+    if (ne_profile_x_values.empty()) {
+        ne_profile_x_values = {1.0};
+    }
+
+    if (ne_profile_x_coords.size() != ne_profile_x_values.size()) {
+        cout << "\033[31m" << "The size of ne_profile_x_coords " << ne_profile_x_coords.size()
+                << " is not equal to the size of ne_profile_x_values " << ne_profile_x_values.size() << ". Aborting...";
+        return 1;
+    }
+
+    lin_interpolation(ne_profile_x_values,ne_profile_x_coords, densities_interpol_value, dx_temp, t_end_temp*mwspeed);
 
     //std::cout << "nums contains " << densities_interpol_value.size() << " elements.\n";
 
@@ -2634,10 +2645,10 @@ int init()
     fout_log<<"nz\n"<<int(zlength/dz)<<"\n";
     fout_log<<"lambda\n"<<lambda<<"\n";
     fout_log<<"ne\n"<<ne<<"\n";
-    for(int counter=0;counter<(int)coord_for_densities.size();counter++)
-        fout_log<<"coord_for_densities "<< counter<< " " << coord_for_densities[counter]<<"\n";
-    for(int counter=0;counter<(int)densities_input_value.size();counter++)
-        fout_log<<"densities_input_value "<< counter<< " " << densities_input_value[counter]<<"\n";
+    for(int counter=0;counter<(int)ne_profile_x_coords.size();counter++)
+        fout_log<<"ne_profile_x_coords "<< counter<< " " << ne_profile_x_coords[counter]<<"\n";
+    for(int counter=0;counter<(int)ne_profile_x_values.size();counter++)
+        fout_log<<"ne_profile_x_values "<< counter<< " " << ne_profile_x_values[counter]<<"\n";
     //for(int counter=0;counter<(int)densities_interpol_value.size();counter++)
     //    cout<<"densities_interpol_value "<< counter<< " " << densities_interpol_value[counter]<<"\n";
     ddi* tmp_ddi = p_last_ddi;
