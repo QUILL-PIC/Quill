@@ -560,7 +560,7 @@ var::var()
 
 int var::read()
 {
-    char tmp[100];
+    std::string tmp;
     std::string stmp;
     cin>>name;
     if (name!="$")
@@ -575,29 +575,29 @@ int var::read()
                     incr++;
                 }
                 else {
-                    char tmp_1[10]={};
+                    char tmp_1[100]={};
                     for (int i=0;i<incr;i++)
                         tmp_1[i]=tmp[num-incr+i];
-                    input_array.insert(input_array.end(),atof(tmp_1)); //adding a new number to a vector
+                    input_array.push_back(atof(tmp_1)); //adding a new number to a vector
                     incr=0;
                 }
                 if (tmp[num+1]==']'){
-                        char tmp_1[10]={};
-                        int i=0;
-                        while (i<incr){
-                           tmp_1[i]=tmp[num-incr+1+i];
-                           i++;
-                        }
-                        input_array.insert(input_array.end(),atof(tmp_1));
-                        incr=0;
+                    char tmp_1[100]={};
+                    int i=0;
+                    while (i<incr){
+                       tmp_1[i]=tmp[num-incr+1+i];
+                       i++;
                     }
+                    input_array.push_back(atof(tmp_1));
+                    incr=0;
+                }
                 num++;
             }
             for (int i=0;i<input_array.size();i++)
                     cout<<"..."<<input_array.at(i);
         }
         else{
-            value = atof(tmp);
+            value = (tmp != "#" ? stof(tmp) : 0.0);
             cout<<"..."<<value;
         }
         cin>>units;
