@@ -1,6 +1,7 @@
 #include <iostream>
 #include <fstream>
 #include <cmath>
+#include <algorithm>
 #include <sys/times.h>
 #include <numa.h>
 #include <unistd.h>
@@ -74,7 +75,6 @@ int init();
 
 std::vector<double> ne_profile_x_coords;
 std::vector<double> ne_profile_x_values;
-std::vector<double> densities_interpol_value;
 
 //------------------------------
 
@@ -1350,7 +1350,7 @@ void add_moving_window_particles()
         if (mwseed==1) {
             double n;
             n=1/(k0*k0);
-            n*=densities_interpol_value[nmw];
+            n *= lin_interpolation((nmw-1)*dx/2.0/PI, ne_profile_x_coords, ne_profile_x_values);
 
             int_vector3d cell_pos;
             cell_pos.i = nx_sr - 3;
@@ -2651,19 +2651,6 @@ int init()
     }
     ztr2 = current->value*2*PI;
 
-    int t_end_temp;
-    double dx_temp, quantity;
-
-    dx_temp=dx/2/PI;
-    current = find("t_end",first);
-    t_end_temp = current->value;
-    quantity = t_end_temp*mwspeed/dx_temp;
-
-    //cout << "t_end " <<t_end_temp << endl;
-    //cout << "mwspeed" << mwspeed << endl;
-    //cout<<"quantity - " <<quantity << endl;
-    //std::cout << "nums contains " << densities_interpol_value.size() << " elements.\n";
-
     current = find("ne_profile_x_coords",first);
     if (current->units == "um") {
         for (double & v : current->input_array) {
@@ -2684,13 +2671,15 @@ int init()
 
     if (ne_profile_x_coords.size() != ne_profile_x_values.size()) {
         cout << "\033[31m" << "The size of ne_profile_x_coords " << ne_profile_x_coords.size()
-                << " is not equal to the size of ne_profile_x_values " << ne_profile_x_values.size() << ". Aborting...";
+                << " is not equal to the size of ne_profile_x_values " << ne_profile_x_values.size() << ". Aborting..."
+                << "\033[0m" << endl;
         return 1;
     }
 
-    lin_interpolation(ne_profile_x_values,ne_profile_x_coords, densities_interpol_value, dx_temp, t_end_temp*mwspeed);
-
-    //std::cout << "nums contains " << densities_interpol_value.size() << " elements.\n";
+    if (!is_sorted(ne_profile_x_coords.begin(), ne_profile_x_coords.end())) {
+        cout << "\033[31m" << "The array ne_profile_x_coords is not sorted. Aborting..." "\033[0m" << endl;
+        return 1;
+    }
 
     current = find("data_folder",first);
     data_folder = current->units;
@@ -2738,8 +2727,7 @@ int init()
         fout_log<<"ne_profile_x_coords "<< counter<< " " << ne_profile_x_coords[counter]<<"\n";
     for(int counter=0;counter<(int)ne_profile_x_values.size();counter++)
         fout_log<<"ne_profile_x_values "<< counter<< " " << ne_profile_x_values[counter]<<"\n";
-    //for(int counter=0;counter<(int)densities_interpol_value.size();counter++)
-    //    cout<<"densities_interpol_value "<< counter<< " " << densities_interpol_value[counter]<<"\n";
+
     ddi* tmp_ddi = p_last_ddi;
     while (tmp_ddi!=0) {
         fout_log<<"t_end\n"<<tmp_ddi->t_end/2/PI<<"\n";

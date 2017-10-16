@@ -1,4 +1,5 @@
 #include <iostream>
+#include <algorithm>
 #include <numa.h>
 #include "main.h"
 
@@ -654,32 +655,18 @@ film::film()
     znpic_film = 0;
 }
 
-void lin_interpolation(std::vector<double>& density_in,std::vector<double>& coord_for_density_in,std::vector<double>& density_out, double dx, double xlength){
-    double x_inter=0;
-    double quantity_output_vector =0;
-    double temp_variable_for_result = 0;
-    int counter =0; //counter for input elements
-    int i=0; //counter for output elements
-    int size_input_vector = density_in.size();
-
-    quantity_output_vector=xlength/dx;
-
-    while(x_inter<coord_for_density_in[size_input_vector-1]){
-        while(x_inter<coord_for_density_in[counter])
-        {
-            if(x_inter<coord_for_density_in[0]) // when the length x is less than the first x_interpol assign to outputs elements the value of first input element
-                density_out.insert(density_out.end(),density_in[counter]);
-            else
-            {
-                temp_variable_for_result =density_in[counter-1]+(density_in[counter]-density_in[counter-1])/(coord_for_density_in[counter]-coord_for_density_in[counter-1])*(x_inter-coord_for_density_in[counter-1]);
-                density_out.insert(density_out.end(),temp_variable_for_result);
-            }
-            i++;
-            x_inter=i*dx;
-        }
-        counter++;
+double lin_interpolation(double coordinate, std::vector<double>& density_coords, std::vector<double>& density_values)
+{
+    if (coordinate < density_coords[0]) {
+        return density_values[0];
+    } else if (coordinate > density_coords[density_coords.size()-1]) {
+        return density_values[density_values.size()-1];
+    } else {
+        int i = lower_bound(density_coords.begin(), density_coords.end(), coordinate) - density_coords.begin();
+        const double left = density_values[i-1];
+        const double right = density_values[i];
+        const double x_rel = (coordinate - density_coords[i-1]);
+        const double dx = (density_coords[i] - density_coords[i-1]);
+        return left + (right - left) * x_rel / dx;
     }
-    if(x_inter>=coord_for_density_in[size_input_vector-1]) //when the length x is last than the first x_interpol assign to outputs elements the value of last input element
-        for(int j=0;j<=quantity_output_vector-i;j++)
-            density_out.insert(density_out.end(), density_in[size_input_vector-1]);
 }

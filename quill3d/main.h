@@ -241,4 +241,4 @@ vector3d regulate(double&, double&, double&);
 var* find(std::string, var*);
 void copy(spatial_region&,int,int,int,spatial_region&,int,int,int);
 void* listen_for_param_updates(void*);
-void lin_interpolation(std::vector<double>&,std::vector<double>&,std::vector<double>&,double,double);
+double lin_interpolation(double, std::vector<double>&, std::vector<double>&);
