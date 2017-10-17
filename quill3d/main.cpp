@@ -1349,7 +1349,7 @@ void add_moving_window_particles()
         if (mwseed==1) {
             double n;
             n=1/(k0*k0);
-            n *= lin_interpolation((nmw-1)*dx/2.0/PI, ne_profile_x_coords, ne_profile_x_values);
+            n *= lin_interpolation((nmw-1)*dx, ne_profile_x_coords, ne_profile_x_values);
 
             int_vector3d cell_pos;
             cell_pos.i = nx_sr - 3;
@@ -2658,6 +2658,9 @@ int init()
     ne_profile_x_coords = current->input_array;
     if (ne_profile_x_coords.empty()) {
         ne_profile_x_coords = {0.0};
+    }
+    for (double & v : ne_profile_x_coords) {
+        v *= 2*PI;
     }
 
     current = find("ne_profile_x_values",first);
