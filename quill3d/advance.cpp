@@ -2,6 +2,7 @@
 #include "main.h"
 
 extern bool qed_enabled;
+extern void (*pusher)(spatial_region::plist::particle* p, vector3d& e_field, vector3d& b_field, double& dt);
 
 void spatial_region::fadvance_ndfx()
 {
@@ -628,34 +629,5 @@ void spatial_region::plist::particle::coordinate_advance(vector3d& a)
 
 void spatial_region::plist::particle::momentum_advance(vector3d& e_field, vector3d& b_field, double& dt)
 {
-    // See PoP, J.-L. Vay, 2008
-    vector3d e;
-    vector3d b;
-    double tmp;
-    double wx,wy,wz;
-    double bw;
-    tmp = dt*cmr;
-    e.x = e_field.x*tmp;
-    e.y = e_field.y*tmp;
-    e.z = e_field.z*tmp;
-    //
-    tmp = 0.5*tmp;
-    b.x = b_field.x*tmp;
-    b.y = b_field.y*tmp;
-    b.z = b_field.z*tmp;
-    //
-    wx = ux + e.x + (uy*b.z-uz*b.y)/g;
-    wy = uy + e.y + (uz*b.x-ux*b.z)/g;
-    wz = uz + e.z + (ux*b.y-uy*b.x)/g;
-    //
-    tmp = b.x*b.x + b.y*b.y + b.z*b.z;
-    bw = b.x*wx+b.y*wy+b.z*wz;
-    g = 1 + wx*wx + wy*wy + wz*wz - tmp;
-    g = sqrt( 0.5*(g+sqrt(g*g+4*(tmp+bw*bw))) );
-    //
-    tmp = 1/(1+tmp/(g*g));
-    bw = bw/(g*g);
-    ux = (wx+(wy*b.z-wz*b.y)/g+b.x*bw)*tmp;
-    uy = (wy+(wz*b.x-wx*b.z)/g+b.y*bw)*tmp;
-    uz = (wz+(wx*b.y-wy*b.x)/g+b.z*bw)*tmp;
+    pusher(this, e_field, b_field, dt);
 }

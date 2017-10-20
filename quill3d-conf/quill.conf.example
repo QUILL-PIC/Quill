@@ -279,6 +279,9 @@ freezing = off # default: off; possible: on
 # включение и выключение КЭД-эффектов
 qed = on # default: on; possible: off
 
+# выбор пушера частиц
+pusher = vay # default: vay; possible: boris
+
 # имя папки для результатов
 data_folder = res_hb # default: results
 

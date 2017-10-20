@@ -6,6 +6,7 @@
 #include <numa.h>
 #include <unistd.h>
 #include "main.h"
+#include "pusher.h"
 
 using namespace std;
 
@@ -74,6 +75,8 @@ int init();
 
 std::vector<double> ne_profile_x_coords;
 std::vector<double> ne_profile_x_values;
+
+void (*pusher)(spatial_region::plist::particle* p, vector3d& e_field, vector3d& b_field, double& dt);
 
 //------------------------------
 
@@ -2703,6 +2706,23 @@ int init()
     else
         output_mode = ios_base::out;
     //
+
+    current = find("pusher", first);
+
+    // the default pusher is Vay
+    if (current->units.empty()) {
+        current->units = "vay";
+    }
+
+    if (current->units == "boris") {
+        pusher = pusher_boris;
+    } else if (current->units == "vay") {
+        pusher = pusher_vay;
+    } else {
+        cout << "\033[31m" << "Pusher unknown: " << current->units << ". Aborting..." << "\033[0m" << endl;
+        return 1;
+    }
+
     current = first;
     while (current->next!=0)
     {
