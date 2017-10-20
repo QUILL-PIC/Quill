@@ -1,0 +1,289 @@
+% !TeX spellcheck = en_US
+\documentclass[12pt,a4paper,DIV=calc]{scrartcl}
+\usepackage[utf8]{inputenc}
+\usepackage[T2A]{fontenc}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{siunitx}
+\usepackage{textcomp}
+\usepackage[english]{babel}
+\usepackage{microtype}
+\usepackage{enumitem}
+\linespread{1.05}
+\KOMAoptions{DIV=last}
+\usepackage{mathtools}
+\usepackage{physics}
+\usepackage{tikz}
+\usetikzlibrary{calc}
+\usepackage[colorlinks,linkcolor=blue,citecolor=blue,urlcolor=blue]{hyperref}
+\frenchspacing
+
+\begin{document}
+
+This document describes how the formulas used in the lecture notes \cite{PukhovLectures} and the paper \cite{PukhovCERN} by Prof. Pukhov, which are used as a basis for Quill, are applied in Quill.
+
+\tableofcontents
+
+\newpage
+
+\section{Grid in Quill} \label{sec:grid}
+
+Unlike the grid described in \cite{PukhovLectures, PukhovCERN}, where the charge was in the centers of the cells, in Quill, the charge is in the nodes.
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}
+    \def\len{5};
+    \def\ldx{2};
+    \def\ldy{1};
+    \coordinate (A) at (0,0);
+    \coordinate (B) at (\len,0);
+    \coordinate (C) at ({\len+\ldx},\ldy);
+    \coordinate (D) at (\ldx,\ldy);
+    \coordinate (A1) at (0,\len);
+    \coordinate (B1) at (\len,\len);
+    \coordinate (C1) at ({\len+\ldx},{\len+\ldy});
+    \coordinate (D1) at (\ldx,{\len+\ldy});
+    \draw (A) -- (B);
+    \draw (B) -- (C);
+    \draw [dashed] (C) -- (D);
+    \draw [dashed] (A) -- (D);
+    \draw (A) -- (A1);
+    \draw (B) -- (B1);
+    \draw (C) -- (C1);
+    \draw [dashed] (D) -- (D1);
+    \draw (A1) -- (B1);
+    \draw (B1) -- (C1);
+    \draw (C1) -- (D1);
+    \draw (A1) -- (D1);
+    \node at (A) {\textbullet};
+    \node[anchor=north east] at (A) {$\rho^{i,j,k}$};
+    \node at (C1) {\textbullet};
+    \node[anchor=south west] at (C1) {$\rho^{i+1,j+1,k+1}$};
+    \coordinate (AB) at ($(A)!0.5!(B)$);
+    \node at (AB) {\textbullet};
+    \node[anchor=north] at (AB) {$E_x^{i,j,k}$};
+    \coordinate (AC) at ($(A)!0.5!(C)$);
+    \node at (AC) {\textbullet};
+    \node[anchor=west] at (AC) {$B_z^{i,j,k}$};
+    \coordinate (AD) at ($(A)!0.5!(D)$);
+    \node at (AD) {\textbullet};
+    \node[anchor=south] at (AD) {$E_y^{i,j,k}$};
+    \coordinate (AA1) at ($(A)!0.5!(A1)$);
+    \node at (AA1) {\textbullet};
+    \node[anchor=east] at (AA1) {$E_z^{i,j,k}$};
+    \coordinate (AD1) at ($(A)!0.5!(D1)$);
+    \node at (AD1) {\textbullet};
+    \node[anchor=south] at (AD1) {$B_x^{i,j,k}$};
+    \coordinate (AB1) at ($(A)!0.5!(B1)$);
+    \node at (AB1) {\textbullet};
+    \node[anchor=west] at (AB1) {$B_y^{i,j,k}$};
+\end{tikzpicture}
+\caption{Depiction of one cell of the grid used in Quill.}
+\label{fig:cell}
+\end{figure}
+
+\section{Indices used in Quill}\label{sec:indices}
+The papers use half-integer indices, which is impossible to do in the code.
+Below is the table describing how to translate indices from Quill to the indices used in the papers for different fields.
+
+\begin{tabular}{ l | l l | l l }
+    Field & Quill &  Papers & Papers & Quill\\
+    \hline
+    $\rho$ & $i,j,k$ & $\lbrace i,j,k\rbrace-1/2$ & $\lbrace i,j,k\rbrace + 1/2$ & $\lbrace i,j,k\rbrace+1$ \\
+    &&&&\\
+    $j_x$, $E_x$ & $i,j,k$ & $i,j-1/2,k-1/2$ & $i,j+1/2,k+1/2$ & $i,j+1,k+1$ \\
+    $j_y$, $E_y$ & $i,j,k$ & $i-1/2,j,k-1/2$ & $i+1/2,j,k+1/2$ & $i+1,j,k+1$ \\
+    $j_z$, $E_z$ & $i,j,k$ & $i-1/2,j-1/2,k$ & $i+1/2,j+1/2,k$ & $i+1,j+1,k$ \\
+    &&&&\\
+    $B_x$ & $i,j,k$ & $i-1/2,j,k$ & $i+1/2,j,k$ & $i+1,j,k$\\
+    $B_y$ & $i,j,k$ & $i,j-1/2,k$ & $i,j+1/2,k$ & $i,j+1,k$\\
+    $B_z$ & $i,j,k$ & $i,j,k-1/2$ & $i,j,k+1/2$ & $i,j,k+1$
+\end{tabular}
+
+\section{Maxwell solver}
+Using the table from Sec.~\ref{sec:indices}, we write the formulas for the NDFX solver with indices used in the PIC code.
+As the time scheme is of little interest here, the indices will be in superscripts. 
+\begin{align}
+    \frac{\Delta B_x^{i,j,k}}{\Delta t} = &-\frac{1}{\Delta y}\big[b_z \left(E_z^{i,j+1,k} - E_z^{i,j,k} \right) + \nonumber \\
+    &+a_z \left(E_z^{i,j+1,k+1} - E_z^{i,j,k+1} + E_z^{i,j+1,k-1} - E_z^{i,j,k-1}\right)\big] + \nonumber \\
+    &+\frac{1}{\Delta z} \big[b_y \left(E_y^{i,j,k+1} - E_y^{i,j,k}\right) + \nonumber \\
+    &+a_y \left(E_y^{i,j+1,k+1}-E_y^{i,j+1,k} + E_y^{i,j-1,k+1} - E_y^{i,j-1,k}\right)
+\end{align}
+\begin{align}
+    \frac{\Delta B_y^{i,j,k}}{\Delta t} = &\frac{1}{\Delta x}\big[b_z \left(E_z^{i+1,j,k} - E_z^{i,j,k} \right) + \nonumber \\
+    &+a_z \left(E_z^{i+1,j,k+1} - E_z^{i,j,k+1} + E_z^{i+1,j,k-1} - E_z^{i,j,k-1}\right) - \nonumber \\
+    &-\frac{1}{\Delta z} \big[ b_x \left(E_x^{i,j,k+1} - E_x^{i,j,k}\right) + \nonumber \\
+    &+a_x \left(E_x^{i+1,j,k+1} - E_x^{i+1,j,k} + E_x^{i-1,j,k+1} - E_x^{i-1,j,k}\right)
+\end{align}
+\begin{align}
+    \frac{\Delta B_z^{i,j,k}}{\Delta t} = &\frac{1}{\Delta y}\big[b_x\left(E_x^{i,j+1,k} - E_x^{i,j,k} \right) + \nonumber \\
+    &+a_x \left(E_x^{i+1,j+1,k} - E_x^{i+1,j,k} + E_x^{i-1,j+1,k} - E_x^{i-1,j,k}\right) \big] - \nonumber \\
+    &-\frac{1}{\Delta x} \big[ b_y \left(E_y^{i+1,j,k} - E_y^{i,j,k}\right) + \nonumber \\
+    &+a_y \left(E_y^{i+1,j+1,k} - E_y^{i,j+1,k} + E_y^{i+1,j-1,k} - E_y^{i,j-1,k} \right) \big]
+\end{align}
+\begin{align}
+    \frac{\Delta E_x^{i,j,k}}{\Delta t} = &\frac{1}{\Delta y}\big[b_z \left(B_z^{i,j,k} - B_z^{i,j-1,k} \right) + \nonumber\\
+    &+ a_z \left(B_z^{i,j,k+1} - B_z^{i,j-1,k+1} + B_z^{i,j,k-1} - B_z^{i,j-1,k-1}\right) \big] - \nonumber\\
+    &- \frac{1}{\Delta z}\big[ b_y \left(B_y^{i,j,k}-B_y^{i,j,k-1}\right) + \nonumber\\
+    &+ a_y \left(B_y^{i,j+1,k} - B_y^{i,j+1,k-1} + B_y^{i,j-1,k} - B_y^{i,j-1,k-1}\right) \big] - \nonumber\\
+    &- j_x^{i,j,k}
+\end{align}
+\begin{align}
+    \frac{\Delta E_y^{i,j,k}}{\Delta t} = &-\frac{1}{\Delta x}\big[b_z\left(B_z^{i,j,k} - B_z^{i-1,j,k}\right) + \nonumber \\
+    &+ a_z \left(B_z^{i,j,k+1} - B_z^{i-1,j,k} + B_z^{i,j,k-1} - B_z^{i-1,j,k-1}\right)\big] + \nonumber \\
+    &+ \frac{1}{\Delta z}\big[ b_x \left(B_x^{i,j,k} - B_x^{i,j,k-1}\right) + \nonumber \\
+    &+ a_x\left(B_x^{i+1,j,k} - B_x^{i+1,j,k-1} + B_x^{i-1,j,k} - B_x^{i-1,j,k-1}\right)\big] - \nonumber \\
+    &- j_y^{i,j,k}
+\end{align}
+\begin{align}
+    \frac{\Delta E_z^{i,j,k}}{\Delta t} = &\frac{1}{\Delta x}\big[b_y\left(B_y^{i,j,k} - B_y^{i-1,j,k}\right) + \nonumber \\
+    &+ a_y \left(B_y^{i,j+1,k} -B_y^{i-1,j+1,k} + B_y^{i,j-1,k} - B_y^{i-1,j-1,k} \right)\big] - \nonumber \\
+    &- \frac{1}{\Delta y}\big[ b_x\left(B_x^{i,j,k} - B_x^{i,j-1,k}\right) + \nonumber \\
+    &+ a_x \left(B_x^{i+1,j,k} - B_x^{i+1,j-1,k} + B_x^{i-1,j,k} - B_x^{i-1,j-1,k} \right)\big] - \nonumber \\
+    &- j_z^{i,j,k}
+\end{align}
+
+The simple FDTD solver is obtained by replacing $b_{x,y,z}$ with $1/2$ and $a_{x,y,z}$ with $0$.
+
+\section{Interpolation of magnetic field on E-field positions}
+
+The magnetic field needs to be interpolated to the positions of the electric field to be used in the particle pusher.
+The simplest interpolation (averaging over the 8 closest point) leads to
+\begin{multline}
+    \hat{B}_x^{i,j,k} = \frac{1}{8} \big(B_x^{i,j,k} + B_x^{i+1,j,k} + B_x^{i,j-1,k} + B_x^{i,j,k-1} + \\
+    + B_x^{i+1,j-1,k} + B_x^{i+1,j,k-1} + B_x^{i,j-1,k-1} + B_x^{i+1,j-1,k-1} \big),
+\end{multline}
+\begin{multline}
+    \hat{B}_y^{i,j,k} = \frac{1}{8} \big(B_y^{i,j,k} + B_y^{i-1,j,k} + B_y^{i,j+1,k} + B_y^{i,j,k-1} + \\
+    + B_y^{i-1,j+1,k} + B_y^{i-1,j,k-1} + B_y^{i,j+1,k-1} + B_y^{i-1,j+1,k-1} \big),
+\end{multline}
+\begin{multline}
+    \hat{B}_z^{i,j,k} = \frac{1}{8} \big(B_z^{i,j,k} + B_z^{i-1,j,k} + B_z^{i,j-1,k} + B_z^{i,j,k+1} + \\
+    + B_z^{i-1,j-1,k} + B_z^{i-1,j,k+1} + B_z^{i,j-1,k+1} + B_z^{i-1,j-1,k+1}\big).
+\end{multline}
+
+\section{Shape function}
+In PIC methods, the distribution function $f(\vb{r},\vb{p},t)$ is represented as a set of macroparticles
+\begin{equation}
+    f(\vb{r},\vb{p},t) = \sum_n W_n S(\vb{r} - \vb{r}_n) \delta(\vb{p} - \vb{p}_n).
+\end{equation}
+In Quill,
+\begin{align}
+    &S(\vb{r}) = S_x(x) S_y(y) S_z(z),\\
+    &S_\alpha(\alpha) = \begin{cases}
+        1,&\abs{\alpha} < \Delta \alpha/2,\\
+        0,&\abs{\alpha} > \Delta \alpha/2.
+    \end{cases}
+\end{align}
+Here, $\alpha$ can be $x,y,z$.
+
+\section{Density deposition}
+
+The density is calculated as
+\begin{equation}
+    \rho(\vb{r},t) = \int f(t, \vb{r}, \vb{p}) \dd{\vb{p}} = \sum_n W_n S(\vb{r} - \vb{r}_n).
+\end{equation}
+The interpolation of this density on the grid is made using the volume integration
+\begin{multline}
+    \rho^{i,j,k} = \frac{1}{\Delta x \Delta y \Delta z} \int_{x^i-\Delta x/2}^{x^i+\Delta x/2} \int_{y^j-\Delta y/2}^{y^j+\Delta y/2} \int_{z^k-\Delta z/2}^{z^k+\Delta z/2} \rho(\vb{r},t)\dd{t} = \\ 
+    =\sum_n W_n S^{\rho}(\vb{r}^{i,j,k} - \vb{r}_n),
+\end{multline}
+where $\vb{r}^{i,j,k} = (x^i, y^j, z^k) = (i \Delta x, j \Delta y, k \Delta z)$,
+\begin{align}
+    &S^\rho(\vb{r}) = S_x^\rho(x) S_y^\rho(y) S_z^\rho(z),\\
+    &S_\alpha^\rho(\alpha) = \frac{1}{\Delta \alpha} \int_{\alpha-\Delta \alpha/2}^{\alpha + \Delta \alpha/2} S_0(\alpha')\dd{\alpha'} = \begin{dcases}
+        1 - \frac{\abs{\alpha}}{\Delta \alpha},& \abs{\alpha} < \Delta\alpha,\\
+        0,& \abs{\alpha} > \Delta \alpha.
+    \end{dcases}
+\end{align}
+
+Hence, a single particle located in the cell shown in Fig.~\ref{fig:cell} induces densities at 8 points
+\begin{equation}
+\begin{aligned}
+    &\rho^{i,j,k} = W b_x b_y b_z, && \rho^{i,j,k+1} = W b_x b_y a_z,\\
+    &\rho^{i,j+1,k} = W b_x a_y b_z, && \rho^{i,j+1,k+1} = W b_x a_y a_z,\\
+    &\rho^{i+1,j,k} = W a_x b_y b_z, && \rho^{i+1,j,k+1} = W a_x b_y a_z,\\
+    &\rho^{i+1,j+1,k} = W a_x a_y b_z, && \rho^{i+1,j+1,k+1} = W a_x a_y a_z,
+\end{aligned}
+\end{equation}
+where $a_\alpha = (\alpha - \alpha^{i,j,k}) / \Delta \alpha$, $b_\alpha = 1 - a_\alpha$.
+E.g., if the particle is located at $\vb{r}^{i,j,k}$, then all $a_\alpha = 1$, and the only non-zero density is $\rho^{i,j,k}$.
+
+\section{Currents deposition}
+
+Currents are calculated so that the charge is preserved.
+For each current position on the grid, a plane perpendicular to the current direction is taken, and a the charge flow through a square with sides corresponding to the cell size is calculated.
+For example, for $j_x$ we have
+\begin{equation}
+    j_x^{i,j,k} \delta t \Delta y \Delta z = \int_t^{t+\delta t} \dd{t'} \int_{y^j-\Delta y/2}^{y^j + \Delta y /2}\int_{z^k-\Delta z/2}^{z^k + \Delta z /2} \dd{y}\dd{z} v_x \sum_n W_n S(\vb{r}-\vb{r}_n),
+\end{equation}
+where $\vb{r} = (x^i+\Delta x /2, y, z)$, $\vb{r}_n = \vb{r}_n(t')$.
+Now we can calculate the integrals in $y$ and $z$, getting
+\begin{equation}
+    j_x^{i,j,k} \delta t = \sum_n W_n \int_t^{t+\delta t} \dd{t'} v_x S_x(x^i + \Delta x/2 - x_n) S^\rho_y(y^j - y_n) S^\rho_z(z^k - z_n).
+\end{equation}
+Similar expressions are obtained for $j_y$ and $j_z$.
+
+Up to that point, the trajectory $\vb{r}_n(t)$ does not matter.
+For simplicity, we will consider a single macroparticle which does not leave the $(i,j,k)$ cell.
+In a typical scheme, the motion of a particle on a timestep is linear, so that $\vb{r}(t') = \vb{r}_1 + \vb{v} (t'-t)$.
+In this case, particle induces currents only in 12 points.
+Let us rigorously calculate $j_x^{i,j,k}$, induced by such a particle.
+First, 
+\begin{equation}
+    S_x(x^i + \Delta x/2 - x(t')) = 1,
+\end{equation}
+because the particle never leaves the cell.
+Also, $y^j - y(t') < 0$, $z^k - z(t') < 0$, so the answer is
+\begin{multline}
+    j_x^{i,j,k} \delta t = W \int_0^{\delta t} \dd{t'} v_x \left(1 - \frac{y_0+v_y t' - y^j}{\Delta y}\right)\left(1 - \frac{z_0+v_z t' - z^k}{\Delta z}\right) = \\
+    = W \int_0^{\delta t}\dd{t'} v_x \left(a_y + \frac{v_y (t'-\delta t/2)}{\Delta y}\right)\left(a_z + \frac{v_z (t'-\delta t/2)}{\Delta z}\right) = \\
+    = W \delta x \left( b_y b_z + \frac{\delta y\delta z}{12\Delta y \Delta z}\right),
+\end{multline}
+where 
+\begin{equation}
+    b_y = 1 - \frac{y_0 + \delta y / 2 - y^j}{\Delta y},\quad b_z = 1 - \frac{y_0 + \delta z / 2 - z^k}{\Delta z}.
+\end{equation}
+
+Now we can write down all 12 currents generated by a macroparticle
+\begin{equation}
+\begin{aligned}
+    j_x^{i,j,k} \delta t &= W \delta x (b_y b_z + A_{yz}), & j_x^{i,j+1,k} &= W \delta x (a_y b_z - A_{yz}),\\
+    j_x^{i,j,k+1} \delta t &= W \delta x(b_y a_z - A_{yz}), & j_x^{i,j+1,k+1} &= W \delta x(a_y a_z + A_{yz}),\\
+    j_y^{i,j,k} \delta t &= W \delta y (b_x b_z + A_{xz}), & j_y^{i+1,j,k} &= W \delta y (a_x b_z - A_{xz}),\\
+    j_y^{i,j,k+1} \delta t &= W \delta y (b_x a_z - A_{xz}), & j_y^{i+1,j,k+1} &= W \delta y (a_x a_z + A_{xz}),\\
+    j_z^{i,j,k} \delta t &= W \delta z (b_x b_y + A_{xy}), & j_z^{i+1,j,k} &= W \delta z (a_x b_y - A_{xy}),\\
+    j_z^{i,j+1,k} \delta t &= W \delta z(b_x a_y - A_{xy}), & j_z^{i+1,j+1,k} &= W \delta z(a_x a_y + A_{xy}),
+\end{aligned}
+\end{equation}
+where
+\begin{equation}
+    a_\alpha = \frac{\alpha - \alpha^{i,j,k} + 0.5 \delta \alpha}{\Delta \alpha},
+    \quad b_\alpha = 1 - a_\alpha,
+    \quad A_{\alpha \beta} = \frac{\delta\alpha \delta\beta}{12\Delta\alpha\Delta\beta}.
+\end{equation}
+If a particle leaves the cell, its trajectory should be separated into several pieces.
+
+\section{Interpolation of fields on particles}
+Fields need to be interpolated from the field on particles.
+In Quill, the formulas should be
+\begin{align}
+    &E_x^p = E_x^{i,j+1,k+1} a_y a_z + E_x^{i,j,k+1} b_y a_z + E_x^{i,j+1,k} a_y b_z + E_x^{i,j,k} b_y b_z,\\
+    &E_y^p = E_y^{i+1,j,k+1} a_x a_z + E_y^{i,j,k+1} b_x a_z + E_y^{i+1,j,k} a_x b_z + E_y^{i,j,k} b_x b_z,\\
+    &E_z^p = E_z^{i+1,j+1,k} a_y a_x + E_z^{i+1,j,k} b_y a_x + E_z^{i,j+1,k} a_y b_x + E_z^{i,j,k} b_y b_x.
+\end{align}
+Here, $b_{x,y,z} = 1 - a_{x,y,z}$.
+
+\begin{thebibliography}{9}
+    \bibitem{PukhovLectures}
+    A. Pukhov, Three-Dimensional Particle-in-Cell Simulations of Relativistic Laser-Plasma Interactions. Lecture Notes. (1999).
+    
+    \bibitem{PukhovCERN}
+    A. Pukhov, Particle-In-Cell Codes for Plasma-based Particle Acceleration. \href{https://e-publishing.cern.ch/index.php/CYR/article/view/220}{\textit{CERN Yellow Rep.} \textbf{1}, 181 (2016)}.
+\end{thebibliography}
+
+
+
+\end{document}
