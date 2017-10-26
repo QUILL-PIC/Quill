@@ -463,8 +463,8 @@ vector3d spatial_region::b_to_particle(double& x, double& y, double& z)
     zb = 1 - za;
 
     b.x = cbe[i][j][k].bex*yb*zb + cbe[i][j+1][k].bex*ya*zb + cbe[i][j][k+1].bex*yb*za + cbe[i][j+1][k+1].bex*ya*za;
-    b.y = cbe[i][j][k].bey*xb*yb + cbe[i+1][j][k].bey*xa*yb + cbe[i][j+1][k].bey*xb*ya + cbe[i+1][j+1][k].bey*xa*ya;
-    b.z = cbe[i][j][k].bez*xb*zb + cbe[i+1][j][k].bez*xa*zb + cbe[i][j][k+1].bez*xb*za + cbe[i+1][j][k+1].bez*xa*za;
+    b.y = cbe[i][j][k].bey*xb*zb + cbe[i+1][j][k].bey*xa*zb + cbe[i][j][k+1].bey*xb*za + cbe[i+1][j][k+1].bey*xa*za;
+    b.z = cbe[i][j][k].bez*xb*yb + cbe[i+1][j][k].bez*xa*yb + cbe[i][j+1][k].bez*xb*ya + cbe[i+1][j+1][k].bez*xa*ya;
 
     return b;
 }

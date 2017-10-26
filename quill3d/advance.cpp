@@ -80,7 +80,7 @@ void spatial_region::fadvance_ndfx()
     }
     for(int i=2;i<nx-1;i++) {
         for(int j=2;j<ny-1;j++) {
-            {int k=0;
+            {int k=1;
                 ce[i][j][k].ez = ce[i][j][k].ez   +   dtdx*( by*(cb[i][j][k].by-cb[i-1][j][k].by) + ay*(cb[i][j+1][k].by-cb[i-1][j+1][k].by+cb[i][j-1][k].by-cb[i-1][j-1][k].by) )  -   dtdy*( bx*(cb[i][j][k].bx-cb[i][j-1][k].bx) + ax*(cb[i+1][j][k].bx-cb[i+1][j-1][k].bx+cb[i-1][j][k].bx-cb[i-1][j-1][k].bx) )  -   cj[i][j][k].jz*dz;
             }
         }
@@ -120,8 +120,6 @@ void spatial_region::fadvance_ndfx()
         }
     }
     // b in locations of e for magnetic field interpolation
-    double a=0.565;
-    double b=-0.065;
     for(int i=2;i<nx-1;i++)
     {
         for(int j=2;j<ny-1;j++)
@@ -129,8 +127,8 @@ void spatial_region::fadvance_ndfx()
             for(int k=2;k<nz-1;k++)
             {
                 cbe[i][j][k].bex = 0.125*(cb[i][j][k].bx + cb[i+1][j][k].bx + cb[i][j][k-1].bx + cb[i+1][j][k-1].bx + cb[i][j-1][k].bx + cb[i+1][j-1][k].bx + cb[i][j-1][k-1].bx + cb[i+1][j-1][k-1].bx);
-                cbe[i][j][k].bey = a*(cb[i][j][k].by+cb[i-1][j][k].by) + b*(cb[i+1][j][k].by+cb[i-2][j][k].by);
-                cbe[i][j][k].bez = a*(cb[i][j][k].bz+cb[i-1][j][k].bz) + b*(cb[i+1][j][k].bz+cb[i-2][j][k].bz);
+                cbe[i][j][k].bey = 0.125*(cb[i][j][k].by + cb[i-1][j][k].by + cb[i][j][k-1].by + cb[i-1][j][k-1].by + cb[i][j+1][k].by + cb[i-1][j+1][k].by + cb[i][j+1][k-1].by + cb[i-1][j+1][k-1].by);
+                cbe[i][j][k].bez = 0.125*(cb[i][j][k].bz + cb[i-1][j][k].bz + cb[i][j][k+1].bz + cb[i-1][j][k+1].bz + cb[i][j-1][k].bz + cb[i-1][j-1][k].bz + cb[i][j-1][k+1].bz + cb[i-1][j-1][k+1].bz);
             }
         }
     }
