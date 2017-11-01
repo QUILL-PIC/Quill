@@ -5,8 +5,10 @@
 #include <sys/times.h>
 #include <numa.h>
 #include <unistd.h>
+#include <memory>
 #include "main.h"
 #include "pusher.h"
+#include "maxwell.h"
 
 using namespace std;
 
@@ -77,6 +79,7 @@ std::vector<double> ne_profile_x_coords;
 std::vector<double> ne_profile_x_values;
 
 void (*pusher)(spatial_region::plist::particle* p, vector3d& e_field, vector3d& b_field, double& dt);
+std::shared_ptr<maxwell_solver> solver;
 
 //------------------------------
 
@@ -123,7 +126,7 @@ void* thread_function(void* arg)
         psr[i].compute_N(nm*(i!=0),nm*(i!=n_sr-1),dx*dy*dz*1.11485e13*lambda/(8*PI*PI*PI));
         psr[i].compute_energy(nm*(i!=0),nm*(i!=n_sr-1),0.5*dx*dy*dz*3.691e4*lambda/1e7,8.2e-14*dx*dy*dz*1.11485e13*lambda/(8*PI*PI*PI)); // энергия в Джоулях
         psr[i].fout_tracks((i*(nx_sr-nx_ich)+nmw)*dx/2/PI,nm);
-        psr[i].fadvance_ndfx();
+        psr[i].fadvance();
         if (mwindow==1) psr[i].moving_window(l,nmw,mwspeed);
 
         // обмен данными на приграничной области слоёв
@@ -2720,6 +2723,22 @@ int init()
         pusher = pusher_vay;
     } else {
         cout << "\033[31m" << "Pusher unknown: " << current->units << ". Aborting..." << "\033[0m" << endl;
+        return 1;
+    }
+
+    current = find("solver", first);
+
+    //the default is NDFX
+    if (current->units.empty()) {
+        current->units = "ndfx";
+    }
+
+    if (current->units == "ndfx") {
+        solver = make_shared<ndfx_solver>();
+    } else if (current->units == "fdtd") {
+        solver = make_shared<fdtd_solver>();
+    } else {
+        cout << "\033[31m" << "Solver unknown: " << current->units << ". Aborting..." << "\033[0m" << endl;
         return 1;
     }
 

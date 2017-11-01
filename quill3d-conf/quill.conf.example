@@ -282,6 +282,9 @@ qed = on # default: on; possible: off
 # выбор пушера частиц
 pusher = vay # default: vay; possible: boris
 
+# выбор метода моделирования ЭМ поля
+solver = ndfx # default: ndfx; possible: fdtd
+
 # имя папки для результатов
 data_folder = res_hb # default: results
 
