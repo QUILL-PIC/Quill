@@ -2711,15 +2711,16 @@ int init()
     //
 
     current = find("pusher", first);
+    string pusher_str = current->units;
 
     // the default pusher is Vay
-    if (current->units.empty()) {
-        current->units = "vay";
+    if (pusher_str.empty()) {
+        pusher_str = "vay";
     }
 
-    if (current->units == "boris") {
+    if (pusher_str == "boris") {
         pusher = pusher_boris;
-    } else if (current->units == "vay") {
+    } else if (pusher_str == "vay") {
         pusher = pusher_vay;
     } else {
         cout << "\033[31m" << "Pusher unknown: " << current->units << ". Aborting..." << "\033[0m" << endl;
@@ -2727,15 +2728,16 @@ int init()
     }
 
     current = find("solver", first);
+    string solver_str = current->units;
 
     //the default is NDFX
-    if (current->units.empty()) {
-        current->units = "ndfx";
+    if (solver_str.empty()) {
+        solver_str = "ndfx";
     }
 
-    if (current->units == "ndfx") {
+    if (solver_str == "ndfx") {
         solver = make_shared<ndfx_solver>();
-    } else if (current->units == "fdtd") {
+    } else if (solver_str == "fdtd") {
         solver = make_shared<fdtd_solver>();
     } else {
         cout << "\033[31m" << "Solver unknown: " << current->units << ". Aborting..." << "\033[0m" << endl;
