@@ -1085,8 +1085,6 @@ void init_fields()
             for (int i=0;i<n_sr;i++) psr[i].f_init_cos((1-2*(f_reflection1=="y"))*a0y,(1-2*(f_reflection1=="z"))*a0z,xsigma,ysigma,zsigma,-x0+xlength/2-dx*i*(nx_sr - nx_ich),sscos,b_sign,-x0,phase,y00,z00,1,0,xtarget,ytarget,ztarget);
         }
     }
-    
-    for(int i=0;i<n_sr;i++) psr[i].f_zeroing_on_boundaries();
 }
 
 void init_beam()
@@ -1541,7 +1539,12 @@ int main()
     }
 
     init_films();
-    
+
+    for (int i=0; i<n_sr; i++) {
+        psr[i].f_zeroing_on_boundaries();
+        psr[i].interpolate_be();
+    }
+
     main_thread_time = times(&tms_struct) - main_thread_time;
     seconds = main_thread_time/100.0;
     cout<<"done!"<<endl;
