@@ -101,7 +101,8 @@ spatial_region* psr; // указатель на массив областей, �
 
 int n_sr; // число слоёв и потоков
 int n_numa_nodes; // number of NUMA nodes
-int nx_sr; // число ячеек (по x) в слое
+vector<int> nx_sr; // число ячеек (по x) в слое
+vector<int> x0_sr; // индексы левых границ слоев
 int nx_ich; /* число ячеек для приграничной области слоёв, данные в
                которой замещаются данными соседнего слоя; должно
                быть чётным */
@@ -110,6 +111,34 @@ int nm; /* используется при обмене данными межд�
            числа частиц */
 
 int nmw = 1;
+
+// номер слоя, отвечающий индексу i
+inline int get_sr_for_index(int i)
+{
+    //   return lower_bound(x0_sr.begin(), x0_sr.end(), i) - x0_sr.begin();
+   for (int j=n_sr-1; j>0; j--) {
+       if (i >= x0_sr[j])
+           return j;
+   }
+   return 0;
+}
+
+// номер слоя, отвечающий координате x
+inline int get_sr_for_x(double x)
+{
+   return get_sr_for_index(int(x / dx));
+}
+
+// индекс, соответствующий координате x в заданном слое 
+inline int get_xindex_in_sr(double x, int sr_i) {
+    int ix = int(x / dx);
+    return ix - x0_sr[sr_i];
+}
+
+// индекс, соответствующий координате x в слое, где она находится 
+inline int get_xindex_in_sr(double x) {
+    return get_xindex_in_sr(x, get_sr_for_x(x));
+}
 
 void* thread_function(void* arg)
 {
@@ -126,7 +155,7 @@ void* thread_function(void* arg)
         psr[i].padvance(freezing);
         psr[i].compute_N(nm*(i!=0),nm*(i!=n_sr-1),dx*dy*dz*1.11485e13*lambda/(8*PI*PI*PI));
         psr[i].compute_energy(nm*(i!=0),nm*(i!=n_sr-1),0.5*dx*dy*dz*3.691e4*lambda/1e7,8.2e-14*dx*dy*dz*1.11485e13*lambda/(8*PI*PI*PI)); // энергия в Джоулях
-        psr[i].fout_tracks((i*(nx_sr-nx_ich)+nmw)*dx/2/PI,nm);
+        psr[i].fout_tracks((x0_sr[i]+nmw)*dx/2/PI,nm);
         psr[i].fadvance();
         if (mwindow==1) psr[i].moving_window(l,nmw,mwspeed);
 
@@ -147,9 +176,9 @@ void* thread_function(void* arg)
                     for (int ii=0;ii<nm+1;ii++) {
                         for (int j=0;j<int(ylength/dy);j++) {
                             for (int k=0;k<int(zlength/dz);k++) {
-                                copy(psr[i+1],nm-1+ii,j,k,psr[i],nx_sr-nm-1+ii,j,k);
-                                psr[i].copy(psr[i+1].cp[nm-1+ii][j][k].pl,psr[i].cp[nx_sr-nm-1+ii][j][k].pl);
-                                psr[i].cp[nx_sr-nm-1+ii][j][k].pl.xplus(nx_sr-nx_ich);
+                                copy(psr[i+1],nm-1+ii,j,k,psr[i],nx_sr[i]-nm-1+ii,j,k);
+                                psr[i].copy(psr[i+1].cp[nm-1+ii][j][k].pl,psr[i].cp[nx_sr[i]-nm-1+ii][j][k].pl);
+                                psr[i].cp[nx_sr[i]-nm-1+ii][j][k].pl.xplus(nx_sr[i]-nx_ich);
                             }
                         }
                     }
@@ -158,9 +187,9 @@ void* thread_function(void* arg)
                     for(int ii=0;ii<nm-1;ii++) {
                         for(int j=0;j<int(ylength/dy);j++) {
                             for(int k=0;k<int(zlength/dz);k++) {
-                                copy(psr[i-1],nx_sr-nx_ich+ii,j,k,psr[i],ii,j,k);
-                                psr[i].copy(psr[i-1].cp[nx_sr-nx_ich+ii][j][k].pl,psr[i].cp[ii][j][k].pl);
-                                psr[i].cp[ii][j][k].pl.xplus(-nx_sr+nx_ich);
+                                copy(psr[i-1],nx_sr[i-1]-nx_ich+ii,j,k,psr[i],ii,j,k);
+                                psr[i].copy(psr[i-1].cp[nx_sr[i-1]-nx_ich+ii][j][k].pl,psr[i].cp[ii][j][k].pl);
+                                psr[i].cp[ii][j][k].pl.xplus(-nx_sr[i-1]+nx_ich);
                             }
                         }
                     }
@@ -175,9 +204,9 @@ void* thread_function(void* arg)
                     for (int ii=0;ii<nm;ii++) {
                         for (int j=0;j<int(ylength/dy);j++) {
                             for (int k=0;k<int(zlength/dz);k++) {
-                                copy(psr[i+1],nm+ii,j,k,psr[i],nx_sr-nm+ii,j,k);
-                                psr[i].copy(psr[i+1].cp[nm+ii][j][k].pl,psr[i].cp[nx_sr-nm+ii][j][k].pl);
-                                psr[i].cp[nx_sr-nm+ii][j][k].pl.xplus(nx_sr-nx_ich);
+                                copy(psr[i+1],nm+ii,j,k,psr[i],nx_sr[i]-nm+ii,j,k);
+                                psr[i].copy(psr[i+1].cp[nm+ii][j][k].pl,psr[i].cp[nx_sr[i]-nm+ii][j][k].pl);
+                                psr[i].cp[nx_sr[i]-nm+ii][j][k].pl.xplus(nx_sr[i]-nx_ich);
                             }
                         }
                     }
@@ -186,9 +215,9 @@ void* thread_function(void* arg)
                     for(int ii=0;ii<nm;ii++) {
                         for(int j=0;j<int(ylength/dy);j++) {
                             for(int k=0;k<int(zlength/dz);k++) {
-                                copy(psr[i-1],nx_sr-nx_ich+ii,j,k,psr[i],ii,j,k);
-                                psr[i].copy(psr[i-1].cp[nx_sr-nx_ich+ii][j][k].pl,psr[i].cp[ii][j][k].pl);
-                                psr[i].cp[ii][j][k].pl.xplus(-nx_sr+nx_ich);
+                                copy(psr[i-1],nx_sr[i-1]-nx_ich+ii,j,k,psr[i],ii,j,k);
+                                psr[i].copy(psr[i-1].cp[nx_sr[i-1]-nx_ich+ii][j][k].pl,psr[i].cp[ii][j][k].pl);
+                                psr[i].cp[ii][j][k].pl.xplus(-nx_sr[i-1]+nx_ich);
                             }
                         }
                     }
@@ -312,7 +341,7 @@ void write_deleted_particles(ofstream& fout_energy_deleted, bool write_p, bool w
                 {
                     i_particle = 0;
                     fout_deleted_e << (*it).q << endl;
-                    fout_deleted_e << dx*((*it).x + n*(nx_sr-nx_ich))/(2*PI) << endl;
+                    fout_deleted_e << dx*((*it).x + x0_sr[n])/(2*PI) << endl;
                     fout_deleted_e << dy*((*it).y)/(2*PI) << endl << dz*((*it).z)/(2*PI) << endl;
                     fout_deleted_e << (*it).ux << endl << (*it).uy << endl <<(*it).uz << endl;
                     fout_deleted_e << (*it).g << endl << (*it).chi << endl;
@@ -325,7 +354,7 @@ void write_deleted_particles(ofstream& fout_energy_deleted, bool write_p, bool w
                 {
                     i_particle_ph = 0;
                     fout_deleted_p << (*it).q << endl;
-                    fout_deleted_p << dx*((*it).x + n*(nx_sr-nx_ich))/(2*PI) << endl;
+                    fout_deleted_p << dx*((*it).x + x0_sr[n])/(2*PI) << endl;
                     fout_deleted_p << dy*((*it).y)/(2*PI) << endl << dz*((*it).z)/(2*PI) << endl;
                     fout_deleted_p << (*it).ux << endl << (*it).uy << endl <<(*it).uz << endl;
                     fout_deleted_p << (*it).g << endl << (*it).chi << endl;
@@ -342,7 +371,7 @@ void write_deleted_particles(ofstream& fout_energy_deleted, bool write_p, bool w
                 {
                     i_particle_ph = 0;
                     fout_deleted_ph << (*it).q << endl;
-                    fout_deleted_ph << dx*((*it).x + n*(nx_sr-nx_ich))/(2*PI) << endl;
+                    fout_deleted_ph << dx*((*it).x + x0_sr[n])/(2*PI) << endl;
                     fout_deleted_ph << dy*((*it).y)/(2*PI) << endl << dz*((*it).z)/(2*PI) << endl;
                     fout_deleted_ph << (*it).ux << endl << (*it).uy << endl <<(*it).uz << endl;
                     fout_deleted_ph << (*it).g << endl << (*it).chi << endl;
@@ -359,7 +388,7 @@ void write_deleted_particles(ofstream& fout_energy_deleted, bool write_p, bool w
                         {
                             i_particle_i = 0;
                             fout_deleted_i[j] << (*it).q << endl;
-                            fout_deleted_i[j] << dx*((*it).x + n*(nx_sr-nx_ich))/(2*PI) << endl;
+                            fout_deleted_i[j] << dx*((*it).x + x0_sr[n])/(2*PI) << endl;
                             fout_deleted_i[j] << dy*((*it).y)/(2*PI) << endl << dz*((*it).z)/(2*PI) << endl;
                             fout_deleted_i[j] << (*it).ux << endl << (*it).uy << endl <<(*it).uz << endl;
                             fout_deleted_i[j] << (*it).g << endl << (*it).chi << endl;
@@ -451,9 +480,9 @@ void write_density(bool write_x, bool write_y, bool write_z,
     for(int i=0;i<n_sr;i++)
     {
         if(i==n_sr-1)
-            onx = nx_sr;
+            onx = nx_sr[i];
         else
-            onx = nx_sr-nx_ich/2;
+            onx = nx_sr[i]-nx_ich/2;
         if(i==0)
             onx0 = 0;
         else
@@ -464,9 +493,8 @@ void write_density(bool write_x, bool write_y, bool write_z,
         psr[i].fout_rho(pof_x,pof_y,pof_z,onx0,onx, output_mode);
     }
     
-    int ii = int(((xlength-x0fout)/dx - nx_ich)/(nx_sr - nx_ich));
-    if(ii<0) ii = 0;
-    psr[ii].fout_rho_yzplane(pof_x,pof_y,pof_z,int((xlength-x0fout)/dx)-ii*(nx_sr-nx_ich), output_mode);
+    int ii = get_sr_for_x(xlength-x0fout);
+    psr[ii].fout_rho_yzplane(pof_x,pof_y,pof_z,get_xindex_in_sr(xlength-x0fout, ii), output_mode);
 
     if (write_ions && (ions=="on"))
     {
@@ -482,18 +510,17 @@ void write_density(bool write_x, bool write_y, bool write_z,
             for(int i=0;i<n_sr;i++)
             {
                 if(i==n_sr-1)
-                    onx = nx_sr;
+                    onx = nx_sr[i];
                 else
-                    onx = nx_sr-nx_ich/2;
+                    onx = nx_sr[i]-nx_ich/2;
                 if(i==0)
                     onx0 = 0;
                 else
                     onx0 = nx_ich/2;
                 psr[i].fout_irho(n,&fout_irho,onx0,onx, output_mode);
             }
-            ii = int(((xlength-x0fout)/dx - nx_ich)/(nx_sr - nx_ich));
-            if(ii<0) ii = 0;
-            psr[ii].fout_irho_yzplane(n,&fout_irho,int((xlength-x0fout)/dx)-ii*(nx_sr-nx_ich), output_mode);
+            ii = get_sr_for_x(xlength-x0fout);
+            psr[ii].fout_irho_yzplane(n,&fout_irho,get_xindex_in_sr(xlength-x0fout, ii), output_mode);
             fout_irho.close();
         }
     }
@@ -559,7 +586,7 @@ void write_spectrum_phasespace(bool write_p, bool write_ph)
     spatial_region::plist::particle* current;
     for(int n=0;n<n_sr;n++)
     {
-        for(int i=nm*(n!=0);i<nx_sr-nm*(n!=n_sr-1);i++)
+        for(int i=nm*(n!=0);i<nx_sr[n]-nm*(n!=n_sr-1);i++)
         {
             for(int j=0;j<int(ylength/dy);j++)
             {
@@ -582,7 +609,7 @@ void write_spectrum_phasespace(bool write_p, bool write_ph)
                                  * нормированными на лазерную
                                  * длину волны */
                                 fout_phasespace<<current->q<<"\n";
-                                fout_phasespace<<dx*(current->x+n*(nx_sr-nx_ich))/(2*PI)<<"\n";
+                                fout_phasespace<<dx*(current->x+x0_sr[n])/(2*PI)<<"\n";
                                 fout_phasespace<<dy*(current->y)/(2*PI)<<"\n"<<dz*(current->z)/(2*PI)<<"\n";
                                 fout_phasespace<<current->ux<<"\n"<<current->uy<<"\n"<<current->uz<<"\n";
                                 fout_phasespace<<current->g<<"\n";
@@ -599,7 +626,7 @@ void write_spectrum_phasespace(bool write_p, bool write_ph)
                             {
                                 i_particle_p = 0;
                                 fout_phasespace_p<<current->q<<"\n";
-                                fout_phasespace_p<<dx*(current->x+n*(nx_sr-nx_ich))/(2*PI)<<"\n";
+                                fout_phasespace_p<<dx*(current->x+x0_sr[n])/(2*PI)<<"\n";
                                 fout_phasespace_p<<dy*(current->y)/(2*PI)<<"\n"<<dz*(current->z)/(2*PI)<<"\n";
                                 fout_phasespace_p<<current->ux<<"\n"<<current->uy<<"\n"<<current->uz<<"\n";
                                 fout_phasespace_p<<current->g<<"\n";
@@ -616,7 +643,7 @@ void write_spectrum_phasespace(bool write_p, bool write_ph)
                             {
                                 i_particle_ph = 0;
                                 fout_phasespace_ph<<current->q<<"\n";
-                                fout_phasespace_ph<<dx*(current->x+n*(nx_sr-nx_ich))/(2*PI)<<"\n";
+                                fout_phasespace_ph<<dx*(current->x+x0_sr[n])/(2*PI)<<"\n";
                                 fout_phasespace_ph<<dy*(current->y)/(2*PI)<<"\n"<<dz*(current->z)/(2*PI)<<"\n";
                                 fout_phasespace_ph<<current->ux<<"\n"<<current->uy<<"\n"<<current->uz<<"\n";
                                 fout_phasespace_ph<<current->g<<"\n";
@@ -639,7 +666,7 @@ void write_spectrum_phasespace(bool write_p, bool write_ph)
                                     {
                                         i_particle_i = 0;
                                         fout_phasespace_i[m]<<current->q<<"\n";
-                                        fout_phasespace_i[m]<<dx*(current->x+n*(nx_sr-nx_ich))/(2*PI)<<"\n";
+                                        fout_phasespace_i[m]<<dx*(current->x+x0_sr[n])/(2*PI)<<"\n";
                                         fout_phasespace_i[m]<<dy*(current->y)/(2*PI)<<"\n"<<dz*(current->z)/(2*PI)<<"\n";
                                         fout_phasespace_i[m]<<current->ux<<"\n"<<current->uy<<"\n"<<current->uz<<"\n";
                                         fout_phasespace_i[m]<<current->g<<"\n";
@@ -736,18 +763,17 @@ void write_fields()
         for(int i=0;i<n_sr;i++)
         {
             if(i==n_sr-1)
-                onx = nx_sr;
+                onx = nx_sr[i];
             else
-                onx = nx_sr-nx_ich/2;
+                onx = nx_sr[i]-nx_ich/2;
             if(i==0)
                 onx0 = 0;
             else
                 onx0 = nx_ich/2;
             psr[i].fout_ex(pof,onx0,onx, output_mode);
         }
-        ii = int(((xlength-x0fout)/dx - nx_ich)/(nx_sr - nx_ich));
-        if(ii<0) ii = 0;
-        psr[ii].fout_ex_yzplane(pof,int((xlength-x0fout)/dx)-ii*(nx_sr-nx_ich), output_mode);
+        ii = get_sr_for_x(xlength-x0fout);
+        psr[ii].fout_ex_yzplane(pof,get_xindex_in_sr(xlength-x0fout, ii), output_mode);
         fout_ex.close();
     }
     //
@@ -761,18 +787,17 @@ void write_fields()
         for(int i=0;i<n_sr;i++)
         {
             if(i==n_sr-1)
-                onx = nx_sr;
+                onx = nx_sr[i];
             else
-                onx = nx_sr-nx_ich/2;
+                onx = nx_sr[i]-nx_ich/2;
             if(i==0)
                 onx0 = 0;
             else
                 onx0 = nx_ich/2;
             psr[i].fout_ey(pof,onx0,onx, output_mode);
         }
-        ii = int(((xlength-x0fout)/dx - nx_ich)/(nx_sr - nx_ich));
-        if(ii<0) ii = 0;
-        psr[ii].fout_ey_yzplane(pof,int((xlength-x0fout)/dx)-ii*(nx_sr-nx_ich), output_mode);
+        ii = get_sr_for_x(xlength-x0fout);
+        psr[ii].fout_ey_yzplane(pof,get_xindex_in_sr(xlength-x0fout, ii), output_mode);
         fout_ey.close();
     }
     //
@@ -786,18 +811,17 @@ void write_fields()
         for(int i=0;i<n_sr;i++)
         {
             if(i==n_sr-1)
-                onx = nx_sr;
+                onx = nx_sr[i];
             else
-                onx = nx_sr-nx_ich/2;
+                onx = nx_sr[i]-nx_ich/2;
             if(i==0)
                 onx0 = 0;
             else
                 onx0 = nx_ich/2;
             psr[i].fout_ez(pof,onx0,onx, output_mode);
         }
-        ii = int(((xlength-x0fout)/dx - nx_ich)/(nx_sr - nx_ich));
-        if(ii<0) ii = 0;
-        psr[ii].fout_ez_yzplane(pof,int((xlength-x0fout)/dx)-ii*(nx_sr-nx_ich), output_mode);
+        ii = get_sr_for_x(xlength-x0fout);
+        psr[ii].fout_ez_yzplane(pof,get_xindex_in_sr(xlength-x0fout, ii), output_mode);
         fout_ez.close();
     }
     //
@@ -811,18 +835,17 @@ void write_fields()
         for(int i=0;i<n_sr;i++)
         {
             if(i==n_sr-1)
-                onx = nx_sr;
+                onx = nx_sr[i];
             else
-                onx = nx_sr-nx_ich/2;
+                onx = nx_sr[i]-nx_ich/2;
             if(i==0)
                 onx0 = 0;
             else
                 onx0 = nx_ich/2;
             psr[i].fout_bx(pof,onx0,onx, output_mode);
         }
-        ii = int(((xlength-x0fout)/dx - nx_ich)/(nx_sr - nx_ich));
-        if(ii<0) ii = 0;
-        psr[ii].fout_bx_yzplane(pof,int((xlength-x0fout)/dx)-ii*(nx_sr-nx_ich), output_mode);
+        ii = get_sr_for_x(xlength-x0fout);
+        psr[ii].fout_bx_yzplane(pof,get_xindex_in_sr(xlength-x0fout, ii), output_mode);
         fout_bx.close();
     }
     //
@@ -836,18 +859,17 @@ void write_fields()
         for(int i=0;i<n_sr;i++)
         {
             if(i==n_sr-1)
-                onx = nx_sr;
+                onx = nx_sr[i];
             else
-                onx = nx_sr-nx_ich/2;
+                onx = nx_sr[i]-nx_ich/2;
             if(i==0)
                 onx0 = 0;
             else
                 onx0 = nx_ich/2;
             psr[i].fout_by(pof,onx0,onx, output_mode);
         }
-        ii = int(((xlength-x0fout)/dx - nx_ich)/(nx_sr - nx_ich));
-        if(ii<0) ii = 0;
-        psr[ii].fout_by_yzplane(pof,int((xlength-x0fout)/dx)-ii*(nx_sr-nx_ich), output_mode);
+        ii = get_sr_for_x(xlength-x0fout);
+        psr[ii].fout_by_yzplane(pof,get_xindex_in_sr(xlength-x0fout, ii), output_mode);
         fout_by.close();
     }
     //
@@ -861,18 +883,17 @@ void write_fields()
         for(int i=0;i<n_sr;i++)
         {
             if(i==n_sr-1)
-                onx = nx_sr;
+                onx = nx_sr[i];
             else
-                onx = nx_sr-nx_ich/2;
+                onx = nx_sr[i]-nx_ich/2;
             if(i==0)
                 onx0 = 0;
             else
                 onx0 = nx_ich/2;
             psr[i].fout_bz(pof,onx0,onx, output_mode);
         }
-        ii = int(((xlength-x0fout)/dx - nx_ich)/(nx_sr - nx_ich));
-        if(ii<0) ii = 0;
-        psr[ii].fout_bz_yzplane(pof,int((xlength-x0fout)/dx)-ii*(nx_sr-nx_ich), output_mode);
+        ii = get_sr_for_x(xlength-x0fout);
+        psr[ii].fout_bz_yzplane(pof,get_xindex_in_sr(xlength-x0fout, ii), output_mode);
         fout_bz.close();
     }
     //
@@ -884,9 +905,9 @@ void write_fields()
     for(int i=0;i<n_sr;i++)
     {
         if(i==n_sr-1)
-            onx = nx_sr;
+            onx = nx_sr[i];
         else
-            onx = nx_sr-nx_ich/2;
+            onx = nx_sr[i]-nx_ich/2;
         if(i==0)
             onx0 = 0;
         else
@@ -897,9 +918,8 @@ void write_fields()
             is_last_sr = 0;
         psr[i].fout_w(pof,onx0,onx,is_last_sr);
     }
-    ii = int(((xlength-x0fout)/dx - nx_ich)/(nx_sr - nx_ich));
-    if(ii<0) ii = 0;
-    psr[ii].fout_w_yzplane(pof,int((xlength-x0fout)/dx)-ii*(nx_sr-nx_ich));
+    ii = get_sr_for_x(xlength-x0fout);
+    psr[ii].fout_w_yzplane(pof,get_xindex_in_sr(xlength-x0fout, ii));
     //
     file_name = data_folder+"/inv";
     sprintf(file_num_pchar,"%g",int([](ddi* a) {double b=a->f*a->output_period; if(a->prev!=0) b+=(a->prev)->t_end; return b;} (p_current_ddi)/2/PI*file_name_accuracy)/file_name_accuracy);
@@ -909,9 +929,9 @@ void write_fields()
     for(int i=0;i<n_sr;i++)
     {
         if(i==n_sr-1)
-            onx = nx_sr;
+            onx = nx_sr[i];
         else
-            onx = nx_sr-nx_ich/2;
+            onx = nx_sr[i]-nx_ich/2;
         if(i==0)
             onx0 = 0;
         else
@@ -922,9 +942,8 @@ void write_fields()
             is_last_sr = 0;
         psr[i].fout_inv(pof,onx0,onx,is_last_sr);
     }
-    ii = int(((xlength-x0fout)/dx - nx_ich)/(nx_sr - nx_ich));
-    if(ii<0) ii = 0;
-    psr[ii].fout_inv_yzplane(pof,int((xlength-x0fout)/dx)-ii*(nx_sr-nx_ich));
+    ii = get_sr_for_x(xlength-x0fout);
+    psr[ii].fout_inv_yzplane(pof,get_xindex_in_sr(xlength-x0fout, ii));
     fout_w.close();
     fout_inv.close();
 }
@@ -975,52 +994,52 @@ void init_fields()
             }
         }
         if (shenergy == 0) 
-            for (int i=0;i<n_sr;i++) psr[i].f_init_focused(a0y,a0z,xsigma,sigma0,xlength/2+x0-dx*i*(nx_sr - nx_ich),x0,b_sign,phase,y00,z00,0,0,sscos,1,xtarget,ytarget,ztarget);
+            for (int i=0;i<n_sr;i++) psr[i].f_init_focused(a0y,a0z,xsigma,sigma0,xlength/2+x0-dx*x0_sr[i],x0,b_sign,phase,y00,z00,0,0,sscos,1,xtarget,ytarget,ztarget);
         else  // adding second harmonic
         {
             double alpha, beta;
             alpha = sqrt(1 - shenergy);
             beta = sqrt(shenergy);
             for (int i=0;i<n_sr;i++)
-                psr[i].f_init_focused(a0y * alpha, a0z * alpha, xsigma,sigma0,xlength/2+x0-dx*i*(nx_sr - nx_ich),x0,b_sign,phase,y00,z00,0,0,sscos,1,xtarget,ytarget,ztarget);
+                psr[i].f_init_focused(a0y * alpha, a0z * alpha, xsigma,sigma0,xlength/2+x0-dx*x0_sr[i],x0,b_sign,phase,y00,z00,0,0,sscos,1,xtarget,ytarget,ztarget);
             for (int i=0;i<n_sr;i++)
-                psr[i].f_init_focused(a0y * beta, a0z * beta, xsigma,sigma0,xlength/2+x0-dx*i*(nx_sr - nx_ich),x0,b_sign, shphase,y00,z00, 1, 0,sscos, 2,xtarget,ytarget,ztarget);
+                psr[i].f_init_focused(a0y * beta, a0z * beta, xsigma,sigma0,xlength/2+x0-dx*x0_sr[i],x0,b_sign, shphase,y00,z00, 1, 0,sscos, 2,xtarget,ytarget,ztarget);
         }
         if (phi!=0) {
-            for (int i=0;i<n_sr;i++) psr[i].f_init_focused(a0y,a0z,xsigma,sigma0,xlength/2-x0-dx*i*(nx_sr - nx_ich),-x0,b_sign,phase,-y00,-z00,1,phi,sscos,1,xtarget,ytarget,ztarget);
+            for (int i=0;i<n_sr;i++) psr[i].f_init_focused(a0y,a0z,xsigma,sigma0,xlength/2-x0-dx*x0_sr[i],-x0,b_sign,phase,-y00,-z00,1,phi,sscos,1,xtarget,ytarget,ztarget);
         }
         else if (lp_reflection1=="xy") {
-            for (int i=0;i<n_sr;i++) psr[i].f_init_focused((1-2*(f_reflection1=="y"))*a0y,(1-2*(f_reflection1=="z"))*a0z,xsigma,sigma0,xlength/2+x0-dx*i*(nx_sr - nx_ich),x0,b_sign,phase,y00,-z00,1,0,sscos,1,xtarget,ytarget,ztarget);
+            for (int i=0;i<n_sr;i++) psr[i].f_init_focused((1-2*(f_reflection1=="y"))*a0y,(1-2*(f_reflection1=="z"))*a0z,xsigma,sigma0,xlength/2+x0-dx*x0_sr[i],x0,b_sign,phase,y00,-z00,1,0,sscos,1,xtarget,ytarget,ztarget);
             if (lp_reflection2=="xz") {
-                for (int i=0;i<n_sr;i++) psr[i].f_init_focused((1-2*(f_reflection2=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,sigma0,xlength/2+x0-dx*i*(nx_sr - nx_ich),x0,b_sign,phase,-y00,z00,1,0,sscos,1,xtarget,ytarget,ztarget);
-                for (int i=0;i<n_sr;i++) psr[i].f_init_focused((1-2*(f_reflection2=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,sigma0,xlength/2+x0-dx*i*(nx_sr - nx_ich),x0,b_sign,phase,-y00,-z00,1,0,sscos,1,xtarget,ytarget,ztarget);
+                for (int i=0;i<n_sr;i++) psr[i].f_init_focused((1-2*(f_reflection2=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,sigma0,xlength/2+x0-dx*x0_sr[i],x0,b_sign,phase,-y00,z00,1,0,sscos,1,xtarget,ytarget,ztarget);
+                for (int i=0;i<n_sr;i++) psr[i].f_init_focused((1-2*(f_reflection2=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,sigma0,xlength/2+x0-dx*x0_sr[i],x0,b_sign,phase,-y00,-z00,1,0,sscos,1,xtarget,ytarget,ztarget);
                 if (lp_reflection3=="yz") {
-                    for (int i=0;i<n_sr;i++) psr[i].f_init_focused((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,sigma0,xlength/2-x0-dx*i*(nx_sr - nx_ich),-x0,b_sign,phase,y00,z00,1,0,sscos,1,xtarget,ytarget,ztarget);
-                    for (int i=0;i<n_sr;i++) psr[i].f_init_focused((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,sigma0,xlength/2-x0-dx*i*(nx_sr - nx_ich),-x0,b_sign,phase,y00,-z00,1,0,sscos,1,xtarget,ytarget,ztarget);
-                    for (int i=0;i<n_sr;i++) psr[i].f_init_focused((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,sigma0,xlength/2-x0-dx*i*(nx_sr - nx_ich),-x0,b_sign,phase,-y00,z00,1,0,sscos,1,xtarget,ytarget,ztarget);
-                    for (int i=0;i<n_sr;i++) psr[i].f_init_focused((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,sigma0,xlength/2-x0-dx*i*(nx_sr - nx_ich),-x0,b_sign,phase,-y00,-z00,1,0,sscos,1,xtarget,ytarget,ztarget);
+                    for (int i=0;i<n_sr;i++) psr[i].f_init_focused((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,sigma0,xlength/2-x0-dx*x0_sr[i],-x0,b_sign,phase,y00,z00,1,0,sscos,1,xtarget,ytarget,ztarget);
+                    for (int i=0;i<n_sr;i++) psr[i].f_init_focused((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,sigma0,xlength/2-x0-dx*x0_sr[i],-x0,b_sign,phase,y00,-z00,1,0,sscos,1,xtarget,ytarget,ztarget);
+                    for (int i=0;i<n_sr;i++) psr[i].f_init_focused((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,sigma0,xlength/2-x0-dx*x0_sr[i],-x0,b_sign,phase,-y00,z00,1,0,sscos,1,xtarget,ytarget,ztarget);
+                    for (int i=0;i<n_sr;i++) psr[i].f_init_focused((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,sigma0,xlength/2-x0-dx*x0_sr[i],-x0,b_sign,phase,-y00,-z00,1,0,sscos,1,xtarget,ytarget,ztarget);
                 }
             }
             else if (lp_reflection2=="yz") {
-                for (int i=0;i<n_sr;i++) psr[i].f_init_focused((1-2*(f_reflection2=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,sigma0,xlength/2-x0-dx*i*(nx_sr - nx_ich),-x0,b_sign,phase,y00,z00,1,0,sscos,1,xtarget,ytarget,ztarget);
-                for (int i=0;i<n_sr;i++) psr[i].f_init_focused((1-2*(f_reflection2=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,sigma0,xlength/2-x0-dx*i*(nx_sr - nx_ich),-x0,b_sign,phase,y00,-z00,1,0,sscos,1,xtarget,ytarget,ztarget);
+                for (int i=0;i<n_sr;i++) psr[i].f_init_focused((1-2*(f_reflection2=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,sigma0,xlength/2-x0-dx*x0_sr[i],-x0,b_sign,phase,y00,z00,1,0,sscos,1,xtarget,ytarget,ztarget);
+                for (int i=0;i<n_sr;i++) psr[i].f_init_focused((1-2*(f_reflection2=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,sigma0,xlength/2-x0-dx*x0_sr[i],-x0,b_sign,phase,y00,-z00,1,0,sscos,1,xtarget,ytarget,ztarget);
                 if (lp_reflection3=="xz") {
-                    for (int i=0;i<n_sr;i++) psr[i].f_init_focused((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,sigma0,xlength/2-x0-dx*i*(nx_sr - nx_ich),-x0,b_sign,phase,-y00,z00,1,0,sscos,1,xtarget,ytarget,ztarget);
-                    for (int i=0;i<n_sr;i++) psr[i].f_init_focused((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,sigma0,xlength/2+x0-dx*i*(nx_sr - nx_ich),x0,b_sign,phase,-y00,z00,1,0,sscos,1,xtarget,ytarget,ztarget);
-                    for (int i=0;i<n_sr;i++) psr[i].f_init_focused((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,sigma0,xlength/2-x0-dx*i*(nx_sr - nx_ich),-x0,b_sign,phase,-y00,-z00,1,0,sscos,1,xtarget,ytarget,ztarget);
-                    for (int i=0;i<n_sr;i++) psr[i].f_init_focused((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,sigma0,xlength/2+x0-dx*i*(nx_sr - nx_ich),x0,b_sign,phase,-y00,-z00,1,0,sscos,1,xtarget,ytarget,ztarget);
+                    for (int i=0;i<n_sr;i++) psr[i].f_init_focused((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,sigma0,xlength/2-x0-dx*x0_sr[i],-x0,b_sign,phase,-y00,z00,1,0,sscos,1,xtarget,ytarget,ztarget);
+                    for (int i=0;i<n_sr;i++) psr[i].f_init_focused((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,sigma0,xlength/2+x0-dx*x0_sr[i],x0,b_sign,phase,-y00,z00,1,0,sscos,1,xtarget,ytarget,ztarget);
+                    for (int i=0;i<n_sr;i++) psr[i].f_init_focused((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,sigma0,xlength/2-x0-dx*x0_sr[i],-x0,b_sign,phase,-y00,-z00,1,0,sscos,1,xtarget,ytarget,ztarget);
+                    for (int i=0;i<n_sr;i++) psr[i].f_init_focused((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,sigma0,xlength/2+x0-dx*x0_sr[i],x0,b_sign,phase,-y00,-z00,1,0,sscos,1,xtarget,ytarget,ztarget);
                 }
             }
         }
         else if (lp_reflection1=="xz") {
-            for (int i=0;i<n_sr;i++) psr[i].f_init_focused((1-2*(f_reflection1=="y"))*a0y,(1-2*(f_reflection1=="z"))*a0z,xsigma,sigma0,xlength/2+x0-dx*i*(nx_sr - nx_ich),x0,b_sign,phase,-y00,z00,1,0,sscos,1,xtarget,ytarget,ztarget);
+            for (int i=0;i<n_sr;i++) psr[i].f_init_focused((1-2*(f_reflection1=="y"))*a0y,(1-2*(f_reflection1=="z"))*a0z,xsigma,sigma0,xlength/2+x0-dx*x0_sr[i],x0,b_sign,phase,-y00,z00,1,0,sscos,1,xtarget,ytarget,ztarget);
             if (lp_reflection2=="yz") {
-                for (int i=0;i<n_sr;i++) psr[i].f_init_focused((1-2*(f_reflection2=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,sigma0,xlength/2-x0-dx*i*(nx_sr - nx_ich),-x0,b_sign,phase,-y00,z00,1,0,sscos,1,xtarget,ytarget,ztarget);
-                for (int i=0;i<n_sr;i++) psr[i].f_init_focused((1-2*(f_reflection2=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,sigma0,xlength/2-x0-dx*i*(nx_sr - nx_ich),-x0,b_sign,phase,y00,z00,1,0,sscos,1,xtarget,ytarget,ztarget);
+                for (int i=0;i<n_sr;i++) psr[i].f_init_focused((1-2*(f_reflection2=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,sigma0,xlength/2-x0-dx*x0_sr[i],-x0,b_sign,phase,-y00,z00,1,0,sscos,1,xtarget,ytarget,ztarget);
+                for (int i=0;i<n_sr;i++) psr[i].f_init_focused((1-2*(f_reflection2=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,sigma0,xlength/2-x0-dx*x0_sr[i],-x0,b_sign,phase,y00,z00,1,0,sscos,1,xtarget,ytarget,ztarget);
             }
         }
         else if (lp_reflection1=="yz") {
-            for (int i=0;i<n_sr;i++) psr[i].f_init_focused((1-2*(f_reflection1=="y"))*a0y,(1-2*(f_reflection1=="z"))*a0z,xsigma,sigma0,xlength/2-x0-dx*i*(nx_sr - nx_ich),-x0,b_sign,phase,y00,z00,1,0,sscos,1,xtarget,ytarget,ztarget);
+            for (int i=0;i<n_sr;i++) psr[i].f_init_focused((1-2*(f_reflection1=="y"))*a0y,(1-2*(f_reflection1=="z"))*a0z,xsigma,sigma0,xlength/2-x0-dx*x0_sr[i],-x0,b_sign,phase,y00,z00,1,0,sscos,1,xtarget,ytarget,ztarget);
         }
     } else if (f_envelope == "uniformB") {
         for (int i = 0; i < n_sr; ++i)
@@ -1069,42 +1088,42 @@ void init_fields()
                 f_reflection3 += tmpf[jj];
             }
         }
-        for (int i=0;i<n_sr;i++) psr[i].f_init_cos(a0y,a0z,xsigma,ysigma,zsigma,xlength/2+x0-dx*i*(nx_sr - nx_ich),sscos,b_sign,x0,phase,y00,z00,true,0,xtarget,ytarget,ztarget);
+        for (int i=0;i<n_sr;i++) psr[i].f_init_cos(a0y,a0z,xsigma,ysigma,zsigma,xlength/2+x0-dx*x0_sr[i],sscos,b_sign,x0,phase,y00,z00,true,0,xtarget,ytarget,ztarget);
         if (phi!=0) {
-            for (int i=0;i<n_sr;i++) psr[i].f_init_cos(a0y,a0z,xsigma,ysigma,zsigma,xlength/2-x0-dx*i*(nx_sr - nx_ich),sscos,b_sign,-x0,phase,-y00,-z00,1,phi,xtarget,ytarget,ztarget);
+            for (int i=0;i<n_sr;i++) psr[i].f_init_cos(a0y,a0z,xsigma,ysigma,zsigma,xlength/2-x0-dx*x0_sr[i],sscos,b_sign,-x0,phase,-y00,-z00,1,phi,xtarget,ytarget,ztarget);
         }
         else if (lp_reflection1=="xy") {
-            for (int i=0;i<n_sr;i++) psr[i].f_init_cos((1-2*(f_reflection1=="y"))*a0y,(1-2*(f_reflection1=="z"))*a0z,xsigma,ysigma,zsigma,xlength/2+x0-dx*i*(nx_sr - nx_ich),sscos,b_sign,x0,phase,y00,-z00,1,0,xtarget,ytarget,ztarget);
+            for (int i=0;i<n_sr;i++) psr[i].f_init_cos((1-2*(f_reflection1=="y"))*a0y,(1-2*(f_reflection1=="z"))*a0z,xsigma,ysigma,zsigma,xlength/2+x0-dx*x0_sr[i],sscos,b_sign,x0,phase,y00,-z00,1,0,xtarget,ytarget,ztarget);
             if (lp_reflection2=="xz") {
-                for (int i=0;i<n_sr;i++) psr[i].f_init_cos((1-2*(f_reflection2=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,xlength/2+x0-dx*i*(nx_sr - nx_ich),sscos,b_sign,x0,phase,-y00,z00,1,0,xtarget,ytarget,ztarget);
-                for (int i=0;i<n_sr;i++) psr[i].f_init_cos((1-2*(f_reflection2=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,xlength/2+x0-dx*i*(nx_sr - nx_ich),sscos,b_sign,x0,phase,-y00,-z00,1,0,xtarget,ytarget,ztarget);
+                for (int i=0;i<n_sr;i++) psr[i].f_init_cos((1-2*(f_reflection2=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,xlength/2+x0-dx*x0_sr[i],sscos,b_sign,x0,phase,-y00,z00,1,0,xtarget,ytarget,ztarget);
+                for (int i=0;i<n_sr;i++) psr[i].f_init_cos((1-2*(f_reflection2=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,xlength/2+x0-dx*x0_sr[i],sscos,b_sign,x0,phase,-y00,-z00,1,0,xtarget,ytarget,ztarget);
                 if (lp_reflection3=="yz") {
-                    for (int i=0;i<n_sr;i++) psr[i].f_init_cos((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,-x0+xlength/2-dx*i*(nx_sr - nx_ich),sscos,b_sign,-x0,phase,y00,z00,1,0,xtarget,ytarget,ztarget);
-                    for (int i=0;i<n_sr;i++) psr[i].f_init_cos((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,-x0+xlength/2-dx*i*(nx_sr - nx_ich),sscos,b_sign,-x0,phase,y00,-z00,1,0,xtarget,ytarget,ztarget);
-                    for (int i=0;i<n_sr;i++) psr[i].f_init_cos((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,-x0+xlength/2-dx*i*(nx_sr - nx_ich),sscos,b_sign,-x0,phase,-y00,z00,1,0,xtarget,ytarget,ztarget);
-                    for (int i=0;i<n_sr;i++) psr[i].f_init_cos((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,-x0+xlength/2-dx*i*(nx_sr - nx_ich),sscos,b_sign,-x0,phase,-y00,-z00,1,0,xtarget,ytarget,ztarget);
+                    for (int i=0;i<n_sr;i++) psr[i].f_init_cos((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,-x0+xlength/2-dx*x0_sr[i],sscos,b_sign,-x0,phase,y00,z00,1,0,xtarget,ytarget,ztarget);
+                    for (int i=0;i<n_sr;i++) psr[i].f_init_cos((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,-x0+xlength/2-dx*x0_sr[i],sscos,b_sign,-x0,phase,y00,-z00,1,0,xtarget,ytarget,ztarget);
+                    for (int i=0;i<n_sr;i++) psr[i].f_init_cos((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,-x0+xlength/2-dx*x0_sr[i],sscos,b_sign,-x0,phase,-y00,z00,1,0,xtarget,ytarget,ztarget);
+                    for (int i=0;i<n_sr;i++) psr[i].f_init_cos((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,-x0+xlength/2-dx*x0_sr[i],sscos,b_sign,-x0,phase,-y00,-z00,1,0,xtarget,ytarget,ztarget);
                 }
             }
             else if (lp_reflection2=="yz") {
-                for (int i=0;i<n_sr;i++) psr[i].f_init_cos((1-2*(f_reflection2=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,-x0+xlength/2-dx*i*(nx_sr - nx_ich),sscos,b_sign,-x0,phase,y00,z00,1,0,xtarget,ytarget,ztarget);
-                for (int i=0;i<n_sr;i++) psr[i].f_init_cos((1-2*(f_reflection2=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,-x0+xlength/2-dx*i*(nx_sr - nx_ich),sscos,b_sign,-x0,phase,y00,-z00,1,0,xtarget,ytarget,ztarget);
+                for (int i=0;i<n_sr;i++) psr[i].f_init_cos((1-2*(f_reflection2=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,-x0+xlength/2-dx*x0_sr[i],sscos,b_sign,-x0,phase,y00,z00,1,0,xtarget,ytarget,ztarget);
+                for (int i=0;i<n_sr;i++) psr[i].f_init_cos((1-2*(f_reflection2=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,-x0+xlength/2-dx*x0_sr[i],sscos,b_sign,-x0,phase,y00,-z00,1,0,xtarget,ytarget,ztarget);
                 if (lp_reflection3=="xz") {
-                    for (int i=0;i<n_sr;i++) psr[i].f_init_cos((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,-x0+xlength/2-dx*i*(nx_sr - nx_ich),sscos,b_sign,-x0,phase,-y00,z00,1,0,xtarget,ytarget,ztarget);
-                    for (int i=0;i<n_sr;i++) psr[i].f_init_cos((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,x0+xlength/2-dx*i*(nx_sr - nx_ich),sscos,x0,b_sign,phase,-y00,z00,1,0,xtarget,ytarget,ztarget);
-                    for (int i=0;i<n_sr;i++) psr[i].f_init_cos((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,-x0+xlength/2-dx*i*(nx_sr - nx_ich),sscos,b_sign,-x0,phase,-y00,-z00,1,0,xtarget,ytarget,ztarget);
-                    for (int i=0;i<n_sr;i++) psr[i].f_init_cos((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,x0+xlength/2-dx*i*(nx_sr - nx_ich),sscos,b_sign,x0,phase,-y00,-z00,1,0,xtarget,ytarget,ztarget);
+                    for (int i=0;i<n_sr;i++) psr[i].f_init_cos((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,-x0+xlength/2-dx*x0_sr[i],sscos,b_sign,-x0,phase,-y00,z00,1,0,xtarget,ytarget,ztarget);
+                    for (int i=0;i<n_sr;i++) psr[i].f_init_cos((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,x0+xlength/2-dx*x0_sr[i],sscos,x0,b_sign,phase,-y00,z00,1,0,xtarget,ytarget,ztarget);
+                    for (int i=0;i<n_sr;i++) psr[i].f_init_cos((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,-x0+xlength/2-dx*x0_sr[i],sscos,b_sign,-x0,phase,-y00,-z00,1,0,xtarget,ytarget,ztarget);
+                    for (int i=0;i<n_sr;i++) psr[i].f_init_cos((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,x0+xlength/2-dx*x0_sr[i],sscos,b_sign,x0,phase,-y00,-z00,1,0,xtarget,ytarget,ztarget);
                 }
             }
         }
         else if (lp_reflection1=="xz") {
-            for (int i=0;i<n_sr;i++) psr[i].f_init_cos((1-2*(f_reflection1=="y"))*a0y,(1-2*(f_reflection1=="z"))*a0z,xsigma,ysigma,zsigma,xlength/2+x0-dx*i*(nx_sr - nx_ich),sscos,b_sign,x0,phase,-y00,z00,1,0,xtarget,ytarget,ztarget);
+            for (int i=0;i<n_sr;i++) psr[i].f_init_cos((1-2*(f_reflection1=="y"))*a0y,(1-2*(f_reflection1=="z"))*a0z,xsigma,ysigma,zsigma,xlength/2+x0-dx*x0_sr[i],sscos,b_sign,x0,phase,-y00,z00,1,0,xtarget,ytarget,ztarget);
             if (lp_reflection2=="yz") {
-                for (int i=0;i<n_sr;i++) psr[i].f_init_cos((1-2*(f_reflection2=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,-x0+xlength/2-dx*i*(nx_sr - nx_ich),sscos,b_sign,-x0,phase,-y00,z00,1,0,xtarget,ytarget,ztarget);
-                for (int i=0;i<n_sr;i++) psr[i].f_init_cos((1-2*(f_reflection2=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,-x0+xlength/2-dx*i*(nx_sr - nx_ich),sscos,b_sign,-x0,phase,y00,z00,1,0,xtarget,ytarget,ztarget);
+                for (int i=0;i<n_sr;i++) psr[i].f_init_cos((1-2*(f_reflection2=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,-x0+xlength/2-dx*x0_sr[i],sscos,b_sign,-x0,phase,-y00,z00,1,0,xtarget,ytarget,ztarget);
+                for (int i=0;i<n_sr;i++) psr[i].f_init_cos((1-2*(f_reflection2=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,-x0+xlength/2-dx*x0_sr[i],sscos,b_sign,-x0,phase,y00,z00,1,0,xtarget,ytarget,ztarget);
             }
         }
         else if (lp_reflection1=="yz") {
-            for (int i=0;i<n_sr;i++) psr[i].f_init_cos((1-2*(f_reflection1=="y"))*a0y,(1-2*(f_reflection1=="z"))*a0z,xsigma,ysigma,zsigma,-x0+xlength/2-dx*i*(nx_sr - nx_ich),sscos,b_sign,-x0,phase,y00,z00,1,0,xtarget,ytarget,ztarget);
+            for (int i=0;i<n_sr;i++) psr[i].f_init_cos((1-2*(f_reflection1=="y"))*a0y,(1-2*(f_reflection1=="z"))*a0z,xsigma,ysigma,zsigma,-x0+xlength/2-dx*x0_sr[i],sscos,b_sign,-x0,phase,y00,z00,1,0,xtarget,ytarget,ztarget);
         }
     }
 }
@@ -1112,11 +1131,11 @@ void init_fields()
 void init_beam()
 {
     if (beam_particles=="p")
-        for(int i=0;i<n_sr;i++) psr[i].add_beam(1,Nb*1.061e-11/(xb*rb*rb*lambda),((epsb>0)-(epsb<0))*sqrt(epsb*epsb/(0.511*0.511)-1),xb,rb,xlength-x0b-dx*i*(nx_sr - nx_ich),y0b,phib);
+        for(int i=0;i<n_sr;i++) psr[i].add_beam(1,Nb*1.061e-11/(xb*rb*rb*lambda),((epsb>0)-(epsb<0))*sqrt(epsb*epsb/(0.511*0.511)-1),xb,rb,xlength-x0b-dx*x0_sr[i],y0b,phib);
     else if (beam_particles=="ph")
-        for(int i=0;i<n_sr;i++) psr[i].add_beam(0,Nb*1.061e-11/(xb*rb*rb*lambda),epsb/0.511,xb,rb,xlength-x0b-dx*i*(nx_sr - nx_ich),y0b,phib);
+        for(int i=0;i<n_sr;i++) psr[i].add_beam(0,Nb*1.061e-11/(xb*rb*rb*lambda),epsb/0.511,xb,rb,xlength-x0b-dx*x0_sr[i],y0b,phib);
     else
-        for(int i=0;i<n_sr;i++) psr[i].add_beam(-1,Nb*1.061e-11/(xb*rb*rb*lambda),((epsb>0)-(epsb<0))*sqrt(epsb*epsb/(0.511*0.511)-1),xb,rb,xlength-x0b-dx*i*(nx_sr - nx_ich),y0b,phib);
+        for(int i=0;i<n_sr;i++) psr[i].add_beam(-1,Nb*1.061e-11/(xb*rb*rb*lambda),((epsb>0)-(epsb<0))*sqrt(epsb*epsb/(0.511*0.511)-1),xb,rb,xlength-x0b-dx*x0_sr[i],y0b,phib);
 }
 
 void init_films()
@@ -1139,7 +1158,7 @@ void init_films()
             tmp_p_film->ne_y1 = tmp_p_film->ne;
         }
         for(int i=0;i<n_sr;i++) 
-            psr[i].film(tmp_p_film->x0-dx*i*(nx_sr-nx_ich), tmp_p_film->x0+tmp_p_film->filmwidth-dx*i*(nx_sr-nx_ich), 
+            psr[i].film(tmp_p_film->x0-dx*x0_sr[i], tmp_p_film->x0+tmp_p_film->filmwidth-dx*x0_sr[i],
                 tmp_p_film->ne_y0/(1.11485e+13/lambda/lambda), tmp_p_film->ne_y1/(1.11485e+13/lambda/lambda),
                 ions=="on", 1/(proton_mass*tmp_p_film->mcr),
                 tmp_p_film->gradwidth, tmp_p_film->y0, tmp_p_film->y1, tmp_p_film->z0, tmp_p_film->z1,
@@ -1173,11 +1192,11 @@ void start_tracking()
                 y1 = y2;
                 z1 = z2;
                 int n,x;
-                n = x2/(nx_sr-nx_ich);
-                x = x2%(nx_sr-nx_ich);
+                n = get_sr_for_index(x2);
+                x = x2 - x0_sr[n];
                 if (n>0 && x<nm) {
                     n = n - 1;
-                    x = x + nx_sr - nx_ich;
+                    x = x + nx_sr[n] - nx_ich;
                 }
                 spatial_region::plist::particle* h = psr[n].cp[x][y2][z2].pl.head;
                 spatial_region::plist::particle* p = h;
@@ -1243,11 +1262,11 @@ void start_tracking()
             y1 = ( ytr1 + ( ytr2 - ytr1 ) * rand( ) / RAND_MAX ) / dy;
             z1 = ( ztr1 + ( ztr2 - ztr1 ) * rand( ) / RAND_MAX ) / dz;
             int n,x;
-            n = x1/(nx_sr-nx_ich);
-            x = x1%(nx_sr-nx_ich);
+            n = get_sr_for_index(x1);
+            x = x1 - x0_sr[n];
             if (i!=0 && x<nm) {
                 n = n - 1;
-                x = x + nx_sr - nx_ich;
+                x = x + nx_sr[n] - nx_ich;
             }
             spatial_region::plist::particle* h = psr[n].cp[x][y1][z1].pl.head;
             spatial_region::plist::particle* p = h;
@@ -1378,7 +1397,7 @@ void add_moving_window_particles()
             n *= lin_interpolation((nmw-1)*dx, ne_profile_x_coords, ne_profile_x_values);
 
             int_vector3d cell_pos;
-            cell_pos.i = nx_sr - 3;
+            cell_pos.i = nx_sr[n_sr-1] - 3;
             int_vector3d v_npic;
             v_npic.i = xnpic;
             v_npic.j = ynpic;
@@ -1409,7 +1428,7 @@ void add_moving_window_particles()
         film* tmp_p_film = p_last_film;
         while (tmp_p_film != 0)
         {
-            psr[n_sr-1].film(tmp_p_film->x0-dx*(n_sr-1)*(nx_sr-nx_ich)-dx*nmw, tmp_p_film->x0+tmp_p_film->filmwidth-dx*(n_sr-1)*(nx_sr-nx_ich)-dx*nmw, 
+            psr[n_sr-1].film(tmp_p_film->x0-dx*x0_sr[n_sr-1]-dx*nmw, tmp_p_film->x0+tmp_p_film->filmwidth-dx*x0_sr[n_sr-1]-dx*nmw,
                 tmp_p_film->ne_y0/(1.11485e+13/lambda/lambda), tmp_p_film->ne_y1/(1.11485e+13/lambda/lambda),
                 ions=="on", 1/(proton_mass*tmp_p_film->mcr),
                 tmp_p_film->gradwidth, tmp_p_film->y0, tmp_p_film->y1, tmp_p_film->z0, tmp_p_film->z1,
@@ -1439,11 +1458,13 @@ void add_neutral_flow_particles(short direction, double neflow, double vflow, do
                 cell_pos.k=k;
                 for (int ii=0; ii<xnpic; ii++) {
                     double x0;
+                    int index = direction > 0 ? 0 : n_sr - 1;
+
                     x0 = xrflow - float(ii)/xnpic;
                     if ( x0 >= 0 ) {
-                        cell_pos.i = direction > 0 ? 3 : nx_sr - 4;
+                        cell_pos.i = direction > 0 ? 3 : nx_sr[index] - 4;
                     } else {
-                        cell_pos.i = direction > 0 ? 2 : nx_sr - 3;
+                        cell_pos.i = direction > 0 ? 2 : nx_sr[index] - 3;
                         x0 += 1;
                     }
                     double tmp = (j * dy - ylength / 2) / (ylength / 2);
@@ -1453,7 +1474,6 @@ void add_neutral_flow_particles(short direction, double neflow, double vflow, do
                     tmp = cos(0.5 * PI * tmp * tmp * tmp * tmp * tmp);
                     tr_env *= tmp * tmp;
                     
-                    int index = direction > 0 ? 0 : n_sr - 1;
                     psr[index].fill_cell_by_particles(-1,cell_pos,v_npic, n * tr_env, direction * vflow/sqrt(1-vflow*vflow), 0, (direction > 0 ? x0 : 1-x0)-0.5,Tflow); // 0.5 - for a compensation in fill_cell... for xnpic = 1
                     if (ions == "on")
                         psr[index].fill_cell_by_particles(1/(proton_mass*mcrflow),cell_pos,v_npic, n * tr_env, direction * vflow/sqrt(1-vflow*vflow), 0, (direction > 0 ? x0 : 1-x0)-0.5,Tflow / (proton_mass * mcrflow));
@@ -1525,7 +1545,17 @@ int main()
 
     ppd = new double[3+n_ion_populations];
 
-    nx_sr = ( xlength/dx + nx_ich*(n_sr-1) )/n_sr; // nx = nx_sr*n_sr - nx_ich*(n_sr-1);
+    const int nx = (int)( xlength/dx ) + nx_ich*(n_sr-1); // nx = nx_sr*n_sr - nx_ich*(n_sr-1);
+    nx_sr = vector<int>(n_sr, nx / n_sr);
+    for (int i=0; i < (nx % n_sr); i++) {
+        nx_sr[i]++;
+    }
+
+    x0_sr = vector<int>(n_sr);
+    for (int i=1; i<n_sr; i++) {
+        x0_sr[i] = x0_sr[i-1] + nx_sr[i-1] - nx_ich;
+    }
+
     if(nx_ich*(n_sr-1)>=xlength/dx) {cout<<"\033[31m"<<"main: too many slices, aborting..."<<"\033[0m"<<endl; return 1;}
 
     pthread_t* sr_thread = new pthread_t[n_sr];
@@ -1549,7 +1579,7 @@ int main()
         node = i*n_numa_nodes/n_sr;
         //
         psr[i].init(i,dx,dy,dz,dt,lambda/2.4263086e-10,xnpic,ynpic,znpic,node,n_ion_populations,icmr,data_folder);
-        psr[i].create_arrays(nx_sr,int(ylength/dy),int(zlength/dz),i+times(&tms_struct),node);
+        psr[i].create_arrays(nx_sr[i],int(ylength/dy),int(zlength/dz),i+times(&tms_struct),node);
         //
     }
     
@@ -2784,13 +2814,12 @@ int init()
     }
     delete current; // удаление последней переменной
     //
-    int nx_sr1 = ( xlength/dx + nx_ich*(n_sr-1) )/n_sr; // nx = nx_sr*n_sr - nx_ich*(n_sr-1);
     ofstream fout_log(data_folder+"/log");
     fout_log<<"dx\n"<<dx/2/PI<<"\n";
     fout_log<<"dy\n"<<dy/2/PI<<"\n";
     fout_log<<"dz\n"<<dz/2/PI<<"\n";
     fout_log<<"dt\n"<<dt/2/PI<<"\n";
-    fout_log<<"nx\n"<<(nx_sr1*n_sr - nx_ich*(n_sr-1))<<"\n";
+    fout_log<<"nx\n"<<int(xlength/dx)<<"\n";
     fout_log<<"ny\n"<<int(ylength/dy)<<"\n";
     fout_log<<"nz\n"<<int(zlength/dz)<<"\n";
     fout_log<<"lambda\n"<<lambda<<"\n";
