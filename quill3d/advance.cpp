@@ -11,17 +11,70 @@ void spatial_region::fadvance()
 {
     solver->fadvance(ce, cb, cj, dt, dx, dy, dz, nx, ny, nz);
 
+    interpolate_be();
+}
+
+void spatial_region::interpolate_be()
+{
     // b in locations of e for magnetic field interpolation
-    for(int i=2;i<nx-1;i++)
-    {
-        for(int j=2;j<ny-1;j++)
-        {
-            for(int k=2;k<nz-1;k++)
-            {
+    for (int i=1;i<nx-1;i++) {
+        for (int j=1;j<ny-1;j++) {
+            for (int k=1;k<nz-1;k++) {
                 cbe[i][j][k].bex = 0.125*(cb[i][j][k].bx + cb[i+1][j][k].bx + cb[i][j][k-1].bx + cb[i+1][j][k-1].bx + cb[i][j-1][k].bx + cb[i+1][j-1][k].bx + cb[i][j-1][k-1].bx + cb[i+1][j-1][k-1].bx);
                 cbe[i][j][k].bey = 0.125*(cb[i][j][k].by + cb[i-1][j][k].by + cb[i][j][k-1].by + cb[i-1][j][k-1].by + cb[i][j+1][k].by + cb[i-1][j+1][k].by + cb[i][j+1][k-1].by + cb[i-1][j+1][k-1].by);
                 cbe[i][j][k].bez = 0.125*(cb[i][j][k].bz + cb[i-1][j][k].bz + cb[i][j][k+1].bz + cb[i-1][j][k+1].bz + cb[i][j-1][k].bz + cb[i-1][j-1][k].bz + cb[i][j-1][k+1].bz + cb[i-1][j-1][k+1].bz);
             }
+        }
+    }
+
+    int i=0;
+    for(int j=1;j<ny-1;j++) {
+        for(int k=1;k<nz-1;k++) {
+            cbe[i][j][k].bex = 0.125*(cb[i][j][k].bx + cb[i+1][j][k].bx + cb[i][j][k-1].bx + cb[i+1][j][k-1].bx + cb[i][j-1][k].bx + cb[i+1][j-1][k].bx + cb[i][j-1][k-1].bx + cb[i+1][j-1][k-1].bx);
+            cbe[i][j][k].bey = 0.25*(cb[i][j][k].by + cb[i][j][k-1].by + cb[i][j+1][k].by + cb[i][j+1][k-1].by);
+            cbe[i][j][k].bez = 0.25*(cb[i][j][k].bz + cb[i][j][k+1].bz + cb[i][j-1][k].bz + cb[i][j-1][k+1].bz);
+        }
+    }
+    i=nx-1;
+    for(int j=1;j<ny-1;j++) {
+        for(int k=1;k<nz-1;k++) {
+            cbe[i][j][k].bex = 0.25*(cb[i][j][k].bx + cb[i][j][k-1].bx + cb[i][j-1][k].bx + cb[i][j-1][k-1].bx);
+            cbe[i][j][k].bey = 0.125*(cb[i][j][k].by + cb[i-1][j][k].by + cb[i][j][k-1].by + cb[i-1][j][k-1].by + cb[i][j+1][k].by + cb[i-1][j+1][k].by + cb[i][j+1][k-1].by + cb[i-1][j+1][k-1].by);
+            cbe[i][j][k].bez = 0.125*(cb[i][j][k].bz + cb[i-1][j][k].bz + cb[i][j][k+1].bz + cb[i-1][j][k+1].bz + cb[i][j-1][k].bz + cb[i-1][j-1][k].bz + cb[i][j-1][k+1].bz + cb[i-1][j-1][k+1].bz);
+        }
+    }
+
+    int j=0;
+    for(int i=1;i<nx-1;i++) {
+        for(int k=1;k<nz-1;k++) {
+            cbe[i][j][k].bex = 0.25*(cb[i][j][k].bx + cb[i+1][j][k].bx + cb[i][j][k-1].bx + cb[i+1][j][k-1].bx);
+            cbe[i][j][k].bey = 0.125*(cb[i][j][k].by + cb[i-1][j][k].by + cb[i][j][k-1].by + cb[i-1][j][k-1].by + cb[i][j+1][k].by + cb[i-1][j+1][k].by + cb[i][j+1][k-1].by + cb[i-1][j+1][k-1].by);
+            cbe[i][j][k].bez = 0.25*(cb[i][j][k].bz + cb[i-1][j][k].bz + cb[i][j][k+1].bz + cb[i-1][j][k+1].bz);
+        }
+    }
+    j=ny-1;
+    for (int i=1;i<nx-1;i++) {
+        for (int k=1;k<nz-1;k++) {
+            cbe[i][j][k].bex = 0.125*(cb[i][j][k].bx + cb[i+1][j][k].bx + cb[i][j][k-1].bx + cb[i+1][j][k-1].bx + cb[i][j-1][k].bx + cb[i+1][j-1][k].bx + cb[i][j-1][k-1].bx + cb[i+1][j-1][k-1].bx);
+            cbe[i][j][k].bey = 0.25*(cb[i][j][k].by + cb[i-1][j][k].by + cb[i][j][k-1].by + cb[i-1][j][k-1].by);
+            cbe[i][j][k].bez = 0.125*(cb[i][j][k].bz + cb[i-1][j][k].bz + cb[i][j][k+1].bz + cb[i-1][j][k+1].bz + cb[i][j-1][k].bz + cb[i-1][j-1][k].bz + cb[i][j-1][k+1].bz + cb[i-1][j-1][k+1].bz);
+        }
+    }
+
+    int k=0;
+    for (int i=1;i<nx-1;i++) {
+        for (int j=1;j<ny-1;j++) {
+            cbe[i][j][k].bex = 0.25*(cb[i][j][k].bx + cb[i+1][j][k].bx + cb[i][j-1][k].bx + cb[i+1][j-1][k].bx);
+            cbe[i][j][k].bey = 0.25*(cb[i][j][k].by + cb[i-1][j][k].by + cb[i][j+1][k].by + cb[i-1][j+1][k].by);
+            cbe[i][j][k].bez = 0.125*(cb[i][j][k].bz + cb[i-1][j][k].bz + cb[i][j][k+1].bz + cb[i-1][j][k+1].bz + cb[i][j-1][k].bz + cb[i-1][j-1][k].bz + cb[i][j-1][k+1].bz + cb[i-1][j-1][k+1].bz);
+        }
+    }
+    k=nz-1;
+    for (int i=1;i<nx-1;i++) {
+        for (int j=1;j<ny-1;j++) {
+            cbe[i][j][k].bex = 0.125*(cb[i][j][k].bx + cb[i+1][j][k].bx + cb[i][j][k-1].bx + cb[i+1][j][k-1].bx + cb[i][j-1][k].bx + cb[i+1][j-1][k].bx + cb[i][j-1][k-1].bx + cb[i+1][j-1][k-1].bx);
+            cbe[i][j][k].bey = 0.125*(cb[i][j][k].by + cb[i-1][j][k].by + cb[i][j][k-1].by + cb[i-1][j][k-1].by + cb[i][j+1][k].by + cb[i-1][j+1][k].by + cb[i][j+1][k-1].by + cb[i-1][j+1][k-1].by);
+            cbe[i][j][k].bez = 0.25*(cb[i][j][k].bz + cb[i-1][j][k].bz + cb[i][j-1][k].bz + cb[i-1][j-1][k].bz);
         }
     }
 }

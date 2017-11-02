@@ -169,6 +169,7 @@ class spatial_region
     void film(double,double,double,double,bool,double,double,double,double,double,double,double,double,bool,int,int,int,bool);
     void fill_cell_by_particles(double,int_vector3d&,int_vector3d&,double,double=0,double=0,double=0,double=0);
     void fadvance();
+    void interpolate_be();
     void f_zeroing_on_boundaries();
     void padvance(bool=0);
     void birth_from_vacuum(double);
