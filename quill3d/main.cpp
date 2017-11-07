@@ -284,7 +284,7 @@ void write_deleted_particles(ofstream& fout_energy_deleted)
     {
         char s_cmr[20];
         sprintf(s_cmr,"%g",icmr[m]);
-        file_name = data_folder+"/phasespace_";
+        file_name = data_folder+"/deleted_";
         file_name += s_cmr;
         file_name += "_";
         file_name += file_num_pchar;

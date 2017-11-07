@@ -37,6 +37,7 @@ vlflow = 0
 Trflow = 0
 vrflow = 0
 catching = False
+dump_photons = False
 particles_for_output = 'e'
 output_mode = 0
 
@@ -376,5 +377,6 @@ def reset_globals():
     Trflow = 0
     vrflow = 0
     catching = False
+    dump_photons = False
     particles_for_output = 'e'
     output_mode = 0
