@@ -189,7 +189,7 @@ class spatial_region
     double get_rand();
     plist::particle* bear_particle(double,vector3d&,vector3d&,double,double,double);
     plist::particle* new_particle();
-    void delete_particle(plist::particle*);
+    void delete_particle(plist::particle*,bool=false);
     void erase(plist&);
     void copy(plist&,plist&);
     void compute_N(int,int,double);

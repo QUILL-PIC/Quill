@@ -122,6 +122,10 @@ def read_parameters(log=None):
             ss = next(f).strip()
             if ss == 'on':
                 catching = True
+        elif line.strip() == 'dump_photons':
+            ss = next(f).strip()
+            if ss == 'on':
+                dump_photons = True
         elif line.strip() == 'particles_for_output':
             particles_for_output = next(f).strip().replace('ph','g')
         elif line.strip() == 'output_mode':

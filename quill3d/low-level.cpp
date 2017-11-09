@@ -418,16 +418,15 @@ spatial_region::plist::particle* spatial_region::new_particle()
     }
 }
 
-void spatial_region::delete_particle(plist::particle* a)
+void spatial_region::delete_particle(plist::particle* a, bool force_delete)
 {
-    if (catching_enabled)
+    if ((catching_enabled && !spatial_region::is_inside_global(a->x, a->y, a->z) &&
+        !spatial_region::is_in_exchange_area(a->x, a->y, a->z)) || force_delete)
     {
-        if (!spatial_region::is_inside_global(a->x, a->y, a->z) && !spatial_region::is_in_exchange_area(a->x, a->y, a->z))
-        {
-            spatial_region::deleted_particle dparticle(a->cmr, a->q, a->x, a->y, a->z, a->ux, a->uy, a->uz, a->g, a->chi);
-            spatial_region::deleted_particles.push_back(dparticle);
-            update_energy_deleted(a);
-        }
+        spatial_region::deleted_particle dparticle(a->cmr, a->q, a->x, a->y, a->z,
+                                                   a->ux, a->uy, a->uz, a->g, a->chi);
+        spatial_region::deleted_particles.push_back(dparticle);
+        update_energy_deleted(a);
     }
     
     if (n_f == 0)

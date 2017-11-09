@@ -6,6 +6,7 @@
 extern bool qed_enabled;
 extern void (*pusher)(spatial_region::plist::particle* p, vector3d& e_field, vector3d& b_field, double& dt);
 extern std::shared_ptr<maxwell_solver> solver;
+extern bool dump_photons;
 
 void spatial_region::fadvance()
 {
@@ -295,7 +296,11 @@ void spatial_region::padvance(bool freezing)
                                 born->x += a*born->ux/dx;
                                 born->y += a*born->uy/dy;
                                 born->z += a*born->uz/dz;
-                                place(*born);
+                                if (dump_photons) {
+                                    delete_particle(born, true);
+                                } else {
+                                    place(*born);
+                                }
                                 //
                                 current->chi = (1-r)*current->chi;
                                 current->g = (1-r)*g_prev;

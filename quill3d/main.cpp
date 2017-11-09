@@ -70,6 +70,7 @@ std::string lp_reflection,f_reflection;
 std::string ions;
 std::string data_folder;
 bool catching_enabled;
+bool dump_photons;
 bool verbose_logging = true;
 bool qed_enabled = true;
 ios_base::openmode output_mode;
@@ -256,7 +257,7 @@ void write_energy(ofstream& fout_energy)
     delete[] ienergy;
 }
 
-void write_deleted_particles(ofstream& fout_energy_deleted)
+void write_deleted_particles(ofstream& fout_energy_deleted, bool write_p, bool write_ph)
 {
     std::string file_name;
     char file_num_pchar[20];
@@ -290,7 +291,13 @@ void write_deleted_particles(ofstream& fout_energy_deleted)
         file_name += file_num_pchar;
         fout_deleted_i[m].open(file_name.c_str());
     }
-    
+    file_name = data_folder + "/spectrum_deleted_ph" + file_num_pchar;
+    ofstream fout_spectrum_ph(file_name.c_str());
+
+    double* spectrum_ph = new double[neps_ph];
+    for(int i=0; i<neps_ph; i++) spectrum_ph[i] = 0;
+    int i_eps = 0;
+
     for(int n=0; n<n_sr; n++)
     {
         vector<spatial_region::deleted_particle>& del_particles = psr[n].deleted_particles;
@@ -311,7 +318,7 @@ void write_deleted_particles(ofstream& fout_energy_deleted)
                     fout_deleted_e << (*it).g << endl << (*it).chi << endl;
                 }
             }
-            else if ((*it).cmr == 1)
+            else if (write_p && (*it).cmr == 1)
             {
                 i_particle_p++;
                 if(i_particle_p > enthp_p)
@@ -324,8 +331,12 @@ void write_deleted_particles(ofstream& fout_energy_deleted)
                     fout_deleted_p << (*it).g << endl << (*it).chi << endl;
                 }
             }
-            else if ((*it).cmr == 0)
+            else if (write_ph && (*it).cmr == 0)
             {
+                i_eps = (*it).g*0.511/deps_ph;
+                if((i_eps > -1) && (i_eps < neps_ph)) {
+                    spectrum_ph[i_eps] = spectrum_ph[i_eps] + (*it).q; // q>0 for photons
+                }
                 i_particle_ph++;
                 if(i_particle_ph > enthp_ph)
                 {
@@ -361,6 +372,15 @@ void write_deleted_particles(ofstream& fout_energy_deleted)
         del_particles.clear();
     }
 
+    if (write_ph)
+    {
+        double spectrum_norm_ph = 1.11485e13 * lambda*dx*dy*dz/(8*PI*PI*PI)/deps_ph;
+        for(int i=0; i<neps_ph; i++)
+        {
+            spectrum_ph[i] = spectrum_ph[i] * spectrum_norm_ph;
+            fout_spectrum_ph << spectrum_ph[i] << '\n';
+        }
+    }
     fout_deleted_e.close();
     fout_deleted_p.close();
     fout_deleted_ph.close();
@@ -368,7 +388,9 @@ void write_deleted_particles(ofstream& fout_energy_deleted)
     {
         fout_deleted_i[m].close();
     }
-    delete [] fout_deleted_i;
+    fout_spectrum_ph.close();
+    delete[] spectrum_ph;
+    delete[] fout_deleted_i;
 }
 
 void write_energy_deleted(ofstream& fout_energy_deleted)
@@ -1583,7 +1605,7 @@ int main()
     ofstream fout_N(data_folder+"/N");
     ofstream fout_energy(data_folder+"/energy");
     ofstream fout_energy_deleted;
-    if (catching_enabled)
+    if (catching_enabled || dump_photons)
     {
         fout_energy_deleted.open(data_folder+"/energy_deleted");
     }
@@ -1606,9 +1628,9 @@ int main()
             write_density(true, write_p, write_ph, "rho", "rho_p", "rho_ph", true);
             write_spectrum_phasespace(write_p, write_ph);            
             
-            if (catching_enabled)
+            if (catching_enabled || dump_photons)
             {
-                write_deleted_particles(fout_energy_deleted);
+                write_deleted_particles(fout_energy_deleted, write_p, write_ph);
             }
             
             for(int i=0;i<n_sr;i++) pthread_mutex_unlock(&sr_mutex_rho2[i]);
@@ -1623,7 +1645,7 @@ int main()
 
         int N_ep = write_N(fout_N);
         write_energy(fout_energy);
-        if (catching_enabled)
+        if (catching_enabled || dump_photons)
         {
             write_energy_deleted(fout_energy_deleted);
         }
@@ -2706,6 +2728,12 @@ int init()
         qed_enabled = false;
     }
 
+    current = find("dump_photons", first);
+    if (current->units == "on")
+    {
+        dump_photons = true;
+    }
+
     current = find("output_mode", first);
     if (current->units == "binary")
         output_mode = ios_base::out | ios_base::binary;
@@ -2890,13 +2918,9 @@ int init()
     fout_log<<"freezing\n";
     if (freezing==1) fout_log<<"on"; else fout_log<<"off";
     fout_log<<'\n';
-    
-    fout_log << "catching" << endl;
-    if (catching_enabled)
-        fout_log << "on" << endl;
-    else
-        fout_log << "off" << endl;
-    
+
+    fout_log << "catching" << endl << (catching_enabled ? "on" : "off") << endl;
+    fout_log << "dump_photons" << endl << (dump_photons ? "on" : "off") << endl;
     fout_log << "qed" << endl;
     fout_log << (qed_enabled ? "on" : "off") << endl;
 
