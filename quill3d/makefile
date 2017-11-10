@@ -1,22 +1,27 @@
+DEPDIR := .d
+$(shell mkdir -p $(DEPDIR) >/dev/null)
+DEPFLAGS = -MMD -MP -MF $(DEPDIR)/$*.Td
+POSTCOMPILE = @mv -f $(DEPDIR)/$*.Td $(DEPDIR)/$*.d && touch $@
+
 CXX := g++
 CXXFLAGS := -O3 -march=native -ffast-math -std=c++0x
 debug: CXXFLAGS := -g -std=c++0x
 CXXLIBS := -pthread -lnuma
 OBJECTS := advance.o deposition.o fout.o init.o listener.o low-level.o main.o mc.o plist.o pusher.o maxwell.o
+DEPS := $(patsubst %,$(DEPDIR)/%.d,$(basename $(OBJECTS)))
 
-quill: $(OBJECTS)
+quill: $(OBJECTS) $(DEPS)
 	$(CXX) -o quill $(CXXFLAGS) $(OBJECTS) $(CXXLIBS)
-advance.o : main.h maxwell.h
-deposition.o : main.h
-fout.o : main.h
-init.o : main.h
-listener.o : main.h
-low-level.o : main.h
-main.o : main.h pusher.h maxwell.h
-mc.o : main.h
-plist.o : main.h
-pusher.o : main.h
-maxwell.o : main.h
+
+%.o: %.cpp
+%.o: %.cpp $(DEPDIR)/%.d
+	$(CXX) $(CXXFLAGS) $(DEPFLAGS) -o $@ -c $<
+	$(POSTCOMPILE)
+
+$(DEPDIR)/%.d: ;
+.PRECIOUS: $(DEPDIR)/%.d
+
+include $(wildcard $(DEPS))
 
 debug: $(OBJECTS)
 	$(CXX) -o quill $(CXXFLAGS) $(OBJECTS) $(CXXLIBS)
@@ -27,6 +32,7 @@ parallel: parallel.cpp
 .PHONY : clean
 clean:
 	-rm -f quill $(OBJECTS) conf parallel
+	-rm -rf .d/
 
 .PHONY : results_clean
 results_clean:
