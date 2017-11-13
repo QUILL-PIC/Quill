@@ -10,7 +10,7 @@ extern bool dump_photons;
 
 void spatial_region::fadvance()
 {
-    solver->fadvance(ce, cb, cj, dt, dx, dy, dz, nx, ny, nz);
+    solver->fadvance(ce, cb, cj, dt, dx, dy, dz);
 
     interpolate_be();
 }
@@ -82,7 +82,7 @@ void spatial_region::interpolate_be()
 
 void spatial_region::f_zeroing_on_boundaries()
 {
-    solver->fzeroing_on_boundaries(ce, cb, cj, dt, dx, dy, dz, nx, ny, nz);
+    solver->fzeroing_on_boundaries(ce, cb, cj, dt, dx, dy, dz);
 }
 
 void spatial_region::padvance(bool freezing)

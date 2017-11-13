@@ -1,9 +1,8 @@
-#include "main.h"
 #include "maxwell.h"
 #include <cmath>
 
-void ndfx_solver::fadvance(spatial_region::celle*** ce, spatial_region::cellb*** cb, spatial_region::cellj*** cj,
-        double dt, double dx, double dy, double dz, int nx, int ny, int nz)
+void ndfx_solver::fadvance(field3d<celle> & ce, field3d<cellb> & cb, field3d<cellj> & cj, double dt, double dx,
+        double dy, double dz)
 {
     /* «Металлические» границы, наиболее быстрые циклы 'for'; для
      * приблизительного сохранения энергии требуется зануление
@@ -19,6 +18,9 @@ void ndfx_solver::fadvance(spatial_region::celle*** ce, spatial_region::cellb***
     const double dtdx=dt/dx;
     const double dtdy=dt/dy;
     const double dtdz=dt/dz;
+    const int nx = ce.get_nx();
+    const int ny = ce.get_ny();
+    const int nz = ce.get_nz();
     // 1/2 b advance
     for(int i=2;i<nx-1;i++) {
         for(int j=2;j<ny-1;j++) {
@@ -120,9 +122,12 @@ void ndfx_solver::fadvance(spatial_region::celle*** ce, spatial_region::cellb***
     }
 }
 
-void ndfx_solver::fzeroing_on_boundaries(spatial_region::celle*** ce, spatial_region::cellb*** cb, spatial_region::cellj*** cj,
-        double dt, double dx, double dy, double dz, int nx, int ny, int nz)
+void ndfx_solver::fzeroing_on_boundaries(field3d<celle> & ce, field3d<cellb> & cb, field3d<cellj> & cj, double dt,
+        double dx, double dy, double dz)
 {
+    const int nx = ce.get_nx();
+    const int ny = ce.get_ny();
+    const int nz = ce.get_nz();
     /* обнуление полей на границах (иначе ndfx с металлическими
      * границами не сохраняет энергию) */
     {int i=0;
@@ -220,12 +225,15 @@ void ndfx_solver::fzeroing_on_boundaries(spatial_region::celle*** ce, spatial_re
     }
 }
 
-void fdtd_solver::fadvance(spatial_region::celle*** ce, spatial_region::cellb*** cb, spatial_region::cellj*** cj,
-        double dt, double dx, double dy, double dz, int nx, int ny, int nz)
+void fdtd_solver::fadvance(field3d<celle> & ce, field3d<cellb> & cb, field3d<cellj> & cj, double dt, double dx,
+        double dy, double dz)
 {
     const double dtdx=dt/dx;
     const double dtdy=dt/dy;
     const double dtdz=dt/dz;
+    const int nx = ce.get_nx();
+    const int ny = ce.get_ny();
+    const int nz = ce.get_nz();
     // 1/2 b advance
     for(int i=1;i<nx-1;i++) {
         for(int j=1;j<ny-1;j++) {
@@ -327,9 +335,12 @@ void fdtd_solver::fadvance(spatial_region::celle*** ce, spatial_region::cellb***
     }
 }
 
-void fdtd_solver::fzeroing_on_boundaries(spatial_region::celle*** ce, spatial_region::cellb*** cb, spatial_region::cellj*** cj,
-        double dt, double dx, double dy, double dz, int nx, int ny, int nz)
+void fdtd_solver::fzeroing_on_boundaries(field3d<celle> & ce, field3d<cellb> & cb, field3d<cellj> & cj, double dt,
+        double dx, double dy, double dz)
 {
+    const int nx = ce.get_nx();
+    const int ny = ce.get_ny();
+    const int nz = ce.get_nz();
     {int i=0;
         for(int j=0;j<ny-1;j++) {
             for(int k=0;k<nz-1;k++) {

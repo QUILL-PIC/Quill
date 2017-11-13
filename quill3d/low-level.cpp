@@ -19,10 +19,10 @@ spatial_region::spatial_region()
     ynpic = 1;
     znpic = 1;
     e_s = 1e10;
-    ce = 0;
-    cj = 0;
-    cb = 0;
-    cbe = 0;
+    ce = field3d<celle>();
+    cj = field3d<cellj>();
+    cb = field3d<cellb>();
+    cbe = field3d<cellbe>();
     cp = 0;
     n_random = 0;
     energy_e_deleted = 0;
@@ -107,91 +107,16 @@ void spatial_region::create_arrays(int nx0, int ny0, int nz0, int seed, int node
 
     void* pv;
 
-    pv = numa_alloc_onnode(sizeof(celle**)*nx,node_number);
-    ce = (celle***) pv;
-    pv = numa_alloc_onnode(sizeof(celle*)*nx*ny,node_number);
-    for(int i=0;i<nx;i++)
-    {
-        ce[i] = ((celle**) pv) + ny*i;
-    }
-    pv = numa_alloc_onnode(sizeof(celle)*nx*ny*nz,node_number);
-    for(int i=0;i<nx;i++)
-    {
-        for(int j=0;j<ny;j++)
-        {
-            ce[i][j] = ((celle*) pv) + nz*ny*i + nz*j;
-        }
-    }
+    ce = field3d<celle>(nx, ny, nz, node_number);
+    cb = field3d<cellb>(nx, ny, nz, node_number);
+    cj = field3d<cellj>(nx, ny, nz, node_number);
+    cbe = field3d<cellbe>(nx, ny, nz, node_number);
 
-    pv = numa_alloc_onnode(sizeof(cellb**)*nx,node_number);
-    cb = (cellb***) pv;
-    pv = numa_alloc_onnode(sizeof(cellb*)*nx*ny,node_number);
-    for(int i=0;i<nx;i++)
-    {
-        cb[i] = ((cellb**) pv) + ny*i;
-    }
-    pv = numa_alloc_onnode(sizeof(cellb)*nx*ny*nz,node_number);
-    for(int i=0;i<nx;i++)
-    {
-        for(int j=0;j<ny;j++)
-        {
-            cb[i][j] = ((cellb*) pv) + nz*ny*i + nz*j;
-        }
-    }
-
-    pv = numa_alloc_onnode(sizeof(cellj**)*nx,node_number);
-    cj = (cellj***) pv;
-    pv = numa_alloc_onnode(sizeof(cellj*)*nx*ny,node_number);
-    for(int i=0;i<nx;i++)
-    {
-        cj[i] = ((cellj**) pv) + ny*i;
-    }
-    pv = numa_alloc_onnode(sizeof(cellj)*nx*ny*nz,node_number);
-    for(int i=0;i<nx;i++)
-    {
-        for(int j=0;j<ny;j++)
-        {
-            cj[i][j] = ((cellj*) pv) + nz*ny*i + nz*j;
-        }
-    }
-
-    pv = numa_alloc_onnode(sizeof(double***)*n_ion_populations,node_number);
-    irho = (double****) pv;
-    pv = numa_alloc_onnode(sizeof(double**)*n_ion_populations*nx,node_number);
+    pv = numa_alloc_onnode(sizeof(field3d<double>)*n_ion_populations, node_number);
+    irho = (field3d<double> *) pv;
     for (int n=0;n<n_ion_populations;n++)
     {
-        irho[n] = ((double***) pv) + n*nx;
-    }
-    pv = numa_alloc_onnode(sizeof(double*)*n_ion_populations*nx*ny,node_number);
-    for (int n=0;n<n_ion_populations;n++)
-    {
-        for (int i=0;i<nx;i++)
-            irho[n][i] = ((double**) pv) + n*nx*ny + i*ny;
-    }
-    pv = numa_alloc_onnode(sizeof(double)*n_ion_populations*nx*ny*nz,node_number);
-    for (int n=0;n<n_ion_populations;n++)
-    {
-        for (int i=0;i<nx;i++)
-        {
-            for (int j=0;j<ny;j++)
-                irho[n][i][j] = ((double*) pv) + n*nx*ny*nz + i*ny*nz + j*nz;
-        }
-    }
-
-    pv = numa_alloc_onnode(sizeof(cellbe**)*nx,node_number);
-    cbe = (cellbe***) pv;
-    pv = numa_alloc_onnode(sizeof(cellbe*)*nx*ny,node_number);
-    for(int i=0;i<nx;i++)
-    {
-        cbe[i] = ((cellbe**) pv) + ny*i;
-    }
-    pv = numa_alloc_onnode(sizeof(cellbe)*nx*ny*nz,node_number);
-    for(int i=0;i<nx;i++)
-    {
-        for(int j=0;j<ny;j++)
-        {
-            cbe[i][j] = ((cellbe*) pv) + nz*ny*i + nz*j;
-        }
+        irho[n] = field3d<double>(nx, ny, nz, node_number);
     }
 
     pv = numa_alloc_onnode(sizeof(cellp**)*nx,node_number);
@@ -253,84 +178,8 @@ spatial_region::~spatial_region()
 
     void* pv;
 
-    for(int i=0;i<nx;i++)
-    {
-        for(int j=0;j<ny;j++)
-        {
-            pv = (void*) ce[i][j];
-            numa_free(pv, sizeof(celle)*nz);
-        }
-        pv = (void*) ce[i];
-        numa_free(pv, sizeof(celle*)*ny);
-    }
-    pv = (void*) ce;
-    numa_free(pv, sizeof(celle**)*nx);
-
-    for(int i=0;i<nx;i++)
-    {
-        for(int j=0;j<ny;j++)
-        {
-            pv = (void*) cb[i][j];
-            numa_free(pv, sizeof(cellb)*nz);
-        }
-        pv = (void*) cb[i];
-        numa_free(pv, sizeof(cellb*)*ny);
-    }
-    pv = (void*) cb;
-    numa_free(pv, sizeof(cellb**)*nx);
-
-    for(int i=0;i<nx;i++)
-    {
-        for(int j=0;j<ny;j++)
-        {
-            pv = (void*) cj[i][j];
-            numa_free(pv, sizeof(cellj)*nz);
-        }
-        pv = (void*) cj[i];
-        numa_free(pv, sizeof(cellj*)*ny);
-    }
-    pv = (void*) cj;
-    numa_free(pv, sizeof(cellj**)*nx);
-
-    for (int n=0;n<n_ion_populations;n++)
-    {
-        for (int i=0;i<nx;i++)
-        {
-            for (int j=0;j<ny;j++)
-            {
-                pv = (void*) irho[n][i][j];
-                numa_free(pv, sizeof(double)*nz);
-            }
-        }
-    }
-    for (int n=0;n<n_ion_populations;n++)
-    {
-        for (int i=0;i<nx;i++)
-        {
-            pv = (void*) irho[n][i];
-            numa_free(pv, sizeof(double*)*ny);
-        }
-    }
-    for (int n=0;n<n_ion_populations;n++)
-    {
-        pv = (void*) irho[n];
-        numa_free(pv, sizeof(double**)*nx);
-    }
     pv = (void*) irho;
-    numa_free(pv, sizeof(double***)*n_ion_populations);
-
-    for(int i=0;i<nx;i++)
-    {
-        for(int j=0;j<ny;j++)
-        {
-            pv = (void*) cbe[i][j];
-            numa_free(pv, sizeof(cellbe)*nz);
-        }
-        pv = (void*) cbe[i];
-        numa_free(pv, sizeof(cellbe*)*ny);
-    }
-    pv = (void*) cbe;
-    numa_free(pv, sizeof(cellbe**)*nx);
+    numa_free(pv, sizeof(field3d<double>)*n_ion_populations);
 
     for(int i=0;i<nx;i++)
     {
@@ -482,20 +331,6 @@ void spatial_region::update_energy_deleted(plist::particle* a)
             }
         }
     }
-}
-
-vector3d::vector3d()
-{
-    x=0;
-    y=0;
-    z=0;
-}
-
-int_vector3d::int_vector3d()
-{
-    i=0;
-    j=0;
-    k=0;
 }
 
 vector3d regulate(double& a, double& b, double& c)

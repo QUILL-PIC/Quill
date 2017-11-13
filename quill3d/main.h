@@ -1,5 +1,6 @@
 #include <fstream>
 #include <vector>
+#include "containers.h"
 
 using namespace std;
 
@@ -7,19 +8,6 @@ const double PI = 3.141592653589793;
 const double proton_mass = 1836.1526721; /* 1836... - отношение массы
                                             протона к массе электрона
                                           */
-class vector3d
-{
-    public:
-        double x,y,z;
-        vector3d();
-};
-
-class int_vector3d
-{
-    public:
-        int i,j,k;
-        int_vector3d();
-};
 
 class spatial_region
 {
@@ -34,7 +22,7 @@ class spatial_region
     //
     int n_ion_populations;
     double* icmr; // ion charge to mass ratios (=1/proton_mass for proton)
-    double**** irho; // ion densities
+    field3d<double> * irho; // ion densities
     //
     int n_ap; // number of allocated particles
     int n_f; // number of free places
@@ -93,40 +81,16 @@ class spatial_region
     pwpa* p_lapwpa; // pointer to last page with particles
     pwpo* p_lapwpo; // pointer to last page with pointers
     //
-    class celle
-    {
-        public:
-            double ex,ey,ez;
-            celle();
-    };
-    class cellj
-    {
-        public:
-            double jx,jy,jz;
-            cellj();
-    };
-    class cellb
-    {
-        public:
-            double bx,by,bz;
-            cellb();
-    };
-    class cellbe
-    {
-        public:
-            double bex,bey,bez;
-            cellbe();
-    };
     class cellp
     {
         public:
             plist pl;
             cellp();
     };
-    celle*** ce;
-    cellb*** cb;
-    cellj*** cj;
-    cellbe*** cbe;
+    field3d<celle> ce;
+    field3d<cellb> cb;
+    field3d<cellj> cj;
+    field3d<cellbe> cbe;
     cellp*** cp;
     class deleted_particle
     {

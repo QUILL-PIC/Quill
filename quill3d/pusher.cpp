@@ -1,5 +1,6 @@
-#include "main.h"
 #include <cmath>
+#include "main.h"
+#include "pusher.h"
 
 void pusher_vay(spatial_region::plist::particle* p, vector3d& e_field, vector3d& b_field, double& dt)
 {

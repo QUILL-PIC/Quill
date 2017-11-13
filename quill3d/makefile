@@ -7,7 +7,7 @@ CXX := g++
 CXXFLAGS := -O3 -march=native -ffast-math -std=c++0x
 debug: CXXFLAGS := -g -std=c++0x
 CXXLIBS := -pthread -lnuma
-OBJECTS := advance.o deposition.o fout.o init.o listener.o low-level.o main.o mc.o plist.o pusher.o maxwell.o
+OBJECTS := advance.o deposition.o fout.o init.o listener.o low-level.o main.o mc.o plist.o pusher.o maxwell.o containers.o
 DEPS := $(patsubst %,$(DEPDIR)/%.d,$(basename $(OBJECTS)))
 
 quill: $(OBJECTS) $(DEPS)
