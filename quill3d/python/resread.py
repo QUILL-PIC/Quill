@@ -55,7 +55,7 @@ def read_parameters(log=None):
     deps,deps_p,deps_ph,deps_i,a0y,a0z,lmbda,ne,xsigma,nfilm,filmwidth,nerflow,\
     Tlflow, mcrlflow, vlflow, Trflow, vrflow, catching, dump_photons, particles_for_output, output_mode
     if log is None:
-        log = data_folder+'log'
+        log = os.path.join(data_folder,'log')
     icmr = []
     reset_globals()
     f = open(log)
@@ -135,14 +135,14 @@ def read_parameters(log=None):
 def density(name='rho',plane='xy', log=None):
     'Returns 2d data for plane *plane* from file\n\
     data_folder+*name*+t.'
-    filename = data_folder + name + t
+    filename = os.path.join(data_folder, name + t)
     if output_mode == 1 and name != 'w':
         sys.path.append(os.path.join('..', 'chameleon'))
         try:
             import chameleon
         except Exception as e:
             raise ImportError('Chameleon cannot be imported. Check if it is compiled. Error: ' + str(e))
-        chameleon.configure(log if log is not None else data_folder + 'log')
+        chameleon.configure(log if log is not None else os.path.join(data_folder, 'log'))
         return chameleon.read2d(filename, plane)
     else:
         with open(filename) as f:
@@ -165,7 +165,7 @@ def density(name='rho',plane='xy', log=None):
 def particles(name='phasespace', s=['x','y','g'], every=1):
     'Returns characteristics *s* for particles from the file\n\
     data_folder+*name*+t.'
-    f = open(data_folder+name+t)
+    f = open(os.path.join(data_folder, name+t))
     data = f.readlines() if every == 1 else [line for i, line in enumerate(f.readlines()) if (i//9) % every == 0]
     f.close()
     n = len(data)//9
@@ -236,7 +236,7 @@ def t_data(name='energy', step=None, silent=False):
         print ('Fetching t_data from file: {0}; data_folder = {1}'.format(name, data_folder))
     if step==None:
         step = dt
-    f = open(data_folder+name)
+    f = open(os.path.join(data_folder, name))
     i = 0
     data = []
     for line in f:
@@ -265,7 +265,8 @@ def tracks(particles='e', filter=None):
 
 def read_track(track_name):
     'Reads track from the specified track file. The returned track is a dictionary with keys: t, x, y, z, ux, uy, uz, q, g, file'
-    raw_data = np.loadtxt(data_folder + track_name)
+    filename = os.path.join(data_folder, track_name)
+    raw_data = np.loadtxt(filename)
     raw_track = raw_data.reshape(9, -1, order='F')
     track_size = raw_track[0].size
     track = {'x' : raw_track[1],
@@ -274,7 +275,7 @@ def read_track(track_name):
              'ux' : raw_track[4],
              'uy' : raw_track[5],
              'uz' : raw_track[6],
-             'file' : data_folder + track_name,
+             'file' : filename,
              'q' : raw_track[0],
              'g' : raw_track[7],
              'chi' : raw_track[8],
