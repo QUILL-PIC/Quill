@@ -238,6 +238,7 @@ void* thread_function(void* arg)
         pthread_mutex_unlock(&sr_mutex1[i]);
         pthread_mutex_lock(&sr_mutex2[i]);
     }
+    return nullptr;
 }
 
 int write_N(ofstream& fout_N)
@@ -1730,6 +1731,11 @@ int main()
 
         l++;
         for(int i=0;i<n_sr;i++) pthread_mutex_unlock(&sr_mutex2[i]);
+    }
+
+    for (int i=0; i<n_sr; i++) {
+        void ** pv;
+        pthread_join(sr_thread[i], pv);
     }
 
     delete[] sr_thread;
