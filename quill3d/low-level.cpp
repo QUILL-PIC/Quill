@@ -1,7 +1,10 @@
 #include <iostream>
 #include <algorithm>
+#include <memory>
 #include <numa.h>
 #include "main.h"
+#include "maxwell.h"
+#include "containers.h"
 
 extern bool catching_enabled;
 extern double lambda;
@@ -75,7 +78,9 @@ spatial_region::plist::plist()
     start=0;
 }
 
-void spatial_region::init(int sr_id0, double dx0, double dy0, double dz0, double dt0, double e_s0, int xnpic0, int ynpic0, int znpic0, int node_number0, int n_ion_populations0, double* icmr0, std::string df)
+void spatial_region::init(int sr_id0, double dx0, double dy0, double dz0, double dt0, double e_s0, int xnpic0,
+        int ynpic0, int znpic0, int node_number0, int n_ion_populations0, double* icmr0, std::string df,
+        maxwell_solver_enum solver0)
 {
     sr_id = sr_id0;
     dx = dx0;
@@ -97,6 +102,17 @@ void spatial_region::init(int sr_id0, double dx0, double dy0, double dz0, double
     b->head = (plist::particle**) numa_alloc_onnode(page_size,node_number);
     npwpo++;
     p_lapwpo = b;
+
+    switch (solver0) {
+    case maxwell_solver_enum::NDFX:
+        solver = unique_ptr<maxwell_solver>(new ndfx_solver(ce, cb, cj, dt, dx, dy, dz));
+        break;
+    case maxwell_solver_enum::FDTD:
+        solver = unique_ptr<maxwell_solver>(new fdtd_solver(ce, cb, cj, dt, dx, dy, dz));
+        break;
+    default:
+        solver = nullptr;
+    }
 }
 
 void spatial_region::create_arrays(int nx0, int ny0, int nz0, int seed, int node_number)

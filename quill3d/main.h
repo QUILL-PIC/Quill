@@ -1,6 +1,8 @@
 #include <fstream>
 #include <vector>
+#include <memory>
 #include "containers.h"
+#include "maxwell.h"
 
 using namespace std;
 
@@ -32,6 +34,8 @@ class spatial_region
     int particle_size;
     int pointer_size;
     //
+    unique_ptr<maxwell_solver> solver;
+
     public:
     double N_e,N_p,N_ph;
     int N_qp_e, N_qp_p, N_qp_g; // N_qp - number of quasiparticles
@@ -102,7 +106,7 @@ class spatial_region
     };
     vector<deleted_particle> deleted_particles;
     spatial_region();
-    void init(int,double,double,double,double,double,int,int,int,int,int,double*,std::string);
+    void init(int,double,double,double,double,double,int,int,int,int,int,double*,string,maxwell_solver_enum);
     void create_arrays(int,int,int,int,int);
     ~spatial_region();
     void fout_ex(ofstream*,int,int, ios_base::openmode);
@@ -134,7 +138,7 @@ class spatial_region
     void fill_cell_by_particles(double,int_vector3d&,int_vector3d&,double,double=0,double=0,double=0,double=0);
     void fadvance();
     void interpolate_be();
-    void f_zeroing_on_boundaries();
+    void f_init_boundaries();
     void padvance(bool=0);
     void birth_from_vacuum(double);
     void jdeposition(plist::particle&,vector3d&);

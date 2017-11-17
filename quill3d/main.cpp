@@ -80,7 +80,7 @@ std::vector<double> ne_profile_x_coords;
 std::vector<double> ne_profile_x_values;
 
 void (*pusher)(spatial_region::plist::particle* p, vector3d& e_field, vector3d& b_field, double& dt);
-std::shared_ptr<maxwell_solver> solver;
+maxwell_solver_enum solver;
 
 //------------------------------
 
@@ -1579,7 +1579,7 @@ int main()
     {
         node = i*n_numa_nodes/n_sr;
         //
-        psr[i].init(i,dx,dy,dz,dt,lambda/2.4263086e-10,xnpic,ynpic,znpic,node,n_ion_populations,icmr,data_folder);
+        psr[i].init(i,dx,dy,dz,dt,lambda/2.4263086e-10,xnpic,ynpic,znpic,node,n_ion_populations,icmr,data_folder,solver);
         psr[i].create_arrays(nx_sr[i],int(ylength/dy),int(zlength/dz),i+times(&tms_struct),node);
         //
     }
@@ -1594,7 +1594,7 @@ int main()
     init_films();
 
     for (int i=0; i<n_sr; i++) {
-        psr[i].f_zeroing_on_boundaries();
+        psr[i].f_init_boundaries();
         psr[i].interpolate_be();
     }
 
@@ -2803,9 +2803,9 @@ int init()
     }
 
     if (solver_str == "ndfx") {
-        solver = make_shared<ndfx_solver>();
+        solver = maxwell_solver_enum::NDFX;
     } else if (solver_str == "fdtd") {
-        solver = make_shared<fdtd_solver>();
+        solver = maxwell_solver_enum::FDTD;
     } else {
         cout << "\033[31m" << "Solver unknown: " << current->units << ". Aborting..." << "\033[0m" << endl;
         return 1;

@@ -1,16 +1,14 @@
 #include <cmath>
-#include <memory>
 #include "main.h"
 #include "maxwell.h"
 
 extern bool qed_enabled;
 extern void (*pusher)(spatial_region::plist::particle* p, vector3d& e_field, vector3d& b_field, double& dt);
-extern std::shared_ptr<maxwell_solver> solver;
 extern bool dump_photons;
 
 void spatial_region::fadvance()
 {
-    solver->fadvance(ce, cb, cj, dt, dx, dy, dz);
+    solver->advance();
 
     interpolate_be();
 }
@@ -80,9 +78,9 @@ void spatial_region::interpolate_be()
     }
 }
 
-void spatial_region::f_zeroing_on_boundaries()
+void spatial_region::f_init_boundaries()
 {
-    solver->fzeroing_on_boundaries(ce, cb, cj, dt, dx, dy, dz);
+    solver->init_boundaries();
 }
 
 void spatial_region::padvance(bool freezing)

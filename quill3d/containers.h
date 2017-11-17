@@ -54,4 +54,8 @@ private:
     void free();
 };
 
+enum class maxwell_solver_enum {
+    FDTD, NDFX
+};
+
 #endif /* CONTAINERS_H_ */
