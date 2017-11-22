@@ -1,8 +1,8 @@
 #include <cmath>
-#include "main.h"
 #include "pusher.h"
+#include "containers.h"
 
-void pusher_vay(spatial_region::plist::particle* p, vector3d& e_field, vector3d& b_field, double& dt)
+void push_vay(particle & p, vector3d& e_field, vector3d& b_field, double dt)
 {
     // See PoP, J.-L. Vay, 2008
     vector3d e;
@@ -10,11 +10,11 @@ void pusher_vay(spatial_region::plist::particle* p, vector3d& e_field, vector3d&
     double tmp;
     double wx,wy,wz;
     double bw;
-    double & cmr = p->cmr;
-    double & ux = p->ux;
-    double & uy = p->uy;
-    double & uz = p->uz;
-    double & g = p->g;
+    double & cmr = p.cmr;
+    double & ux = p.ux;
+    double & uy = p.uy;
+    double & uz = p.uz;
+    double & g = p.g;
     tmp = dt*cmr;
     e.x = e_field.x*tmp;
     e.y = e_field.y*tmp;
@@ -41,7 +41,7 @@ void pusher_vay(spatial_region::plist::particle* p, vector3d& e_field, vector3d&
     uz = (wz+(wx*b.y-wy*b.x)/g+b.z*bw)*tmp;
 }
 
-void pusher_boris(spatial_region::plist::particle* p, vector3d& e_field, vector3d& b_field, double& dt)
+void push_boris(particle & p, vector3d& e_field, vector3d& b_field, double dt)
 {
     // See Birdsall, Langdon, "Plasma Physics via Computer Simulation"
     vector3d e;
@@ -49,11 +49,11 @@ void pusher_boris(spatial_region::plist::particle* p, vector3d& e_field, vector3
     double tmp;
     double u1x, u1y, u1z;
     double wx,wy,wz;
-    double & cmr = p->cmr;
-    double & ux = p->ux;
-    double & uy = p->uy;
-    double & uz = p->uz;
-    double & g = p->g;
+    double & cmr = p.cmr;
+    double & ux = p.ux;
+    double & uy = p.uy;
+    double & uz = p.uz;
+    double & g = p.g;
     tmp = 0.5 * dt * cmr;
 
     //e = dt qE/2m

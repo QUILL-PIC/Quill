@@ -1,5 +1,6 @@
 #include <cmath>
 #include "main.h"
+#include "containers.h"
 
 int max(int a, int b)
 {
@@ -9,7 +10,7 @@ int max(int a, int b)
         return b;
 }
 
-void spatial_region::simple_jdep(spatial_region::plist::particle& p, vector3d& d, int_vector3d& w)
+void spatial_region::simple_jdep(particle& p, vector3d& d, int_vector3d& w)
 {
     // d - displacement, w - walls for deposition, p - initial position of particle
     double xa,xb,ya,yb,za,zb;
@@ -37,7 +38,7 @@ void spatial_region::simple_jdep(spatial_region::plist::particle& p, vector3d& d
     //
 }
 
-void spatial_region::jdeposition(spatial_region::plist::particle& p, vector3d& d)
+void spatial_region::jdeposition(particle& p, vector3d& d)
 {
     // d - displacement
     int i1,i2,j1,j2,k1,k2;
@@ -354,7 +355,7 @@ void spatial_region::jdeposition(spatial_region::plist::particle& p, vector3d& d
     }
 }
 
-void spatial_region::rhodeposition(spatial_region::plist::particle& p)
+void spatial_region::rhodeposition(particle& p)
 {
     int i,j,k;
     double xa,xb,ya,yb,za,zb;

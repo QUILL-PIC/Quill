@@ -1,5 +1,6 @@
 #include <cmath>
 #include "main.h"
+#include "containers.h"
 
 extern bool qed_enabled;
 
@@ -108,9 +109,9 @@ double spatial_region::mathcal_W(vector3d& e, vector3d& b)
         return 0;
 }
 
-spatial_region::plist::particle* spatial_region::bear_particle(double cmr, vector3d& position, vector3d& direction, double g, double chi, double q)
+particle* spatial_region::bear_particle(double cmr, vector3d& position, vector3d& direction, double g, double chi, double q)
 {
-    spatial_region::plist::particle* p;
+    particle* p;
     double a;
     p = new_particle();
     p->cmr = cmr;
@@ -142,8 +143,8 @@ void spatial_region::birth_from_vacuum(double q)
     direction.y = 0;
     direction.z = 0;
     double a = -dt/2;
-    plist::particle* p1;
-    plist::particle* p2;
+    particle* p1;
+    particle* p2;
     // границы взяты из ndfx для поля e
     for(int i=2;i<nx-2;i++)
     {
@@ -163,9 +164,9 @@ void spatial_region::birth_from_vacuum(double q)
                     /* начальное направление движения безразлично при
                      * g = 1 */
                     p1 = bear_particle(-1,position,direction,1,0,-q);
-                    p1->momentum_advance(e,b,a);
+                    advance_momentum(*p1, e, b, a);
                     p2 = bear_particle(1,position,direction,1,0,q);
-                    p2->momentum_advance(e,b,a);
+                    advance_momentum(*p2, e, b, a);
                     p1->next = p2;
                     p2->previous = p1;
                     if (cp[i][j][k].pl.head==0)
@@ -195,8 +196,8 @@ void spatial_region::pmerging(double* ppd, string pmerging)
      * ppd, поэтому для сохранения нейтральности приходится считать
      * это отношение для каждого сорта частиц отдельно и использовать
      * именно его при при увеличении заряда */
-    plist::particle* current;
-    plist::particle* tmp;
+    particle* current;
+    particle* tmp;
     double* qs = new double[3+n_ion_populations];
     double* a = new double[3+n_ion_populations];
     for (int i=0;i<3+n_ion_populations;i++) {

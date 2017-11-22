@@ -1,2 +1,9 @@
-void pusher_boris(spatial_region::plist::particle* p, vector3d& e_field, vector3d& b_field, double& dt);
-void pusher_vay(spatial_region::plist::particle* p, vector3d& e_field, vector3d& b_field, double& dt);
+#ifndef PUSHER_H_
+#define PUSHER_H_
+
+#include "containers.h"
+
+void push_boris(particle & p, vector3d& e_field, vector3d& b_field, double dt);
+void push_vay(particle & p, vector3d& e_field, vector3d& b_field, double dt);
+
+#endif /* PUSHER_H_ */

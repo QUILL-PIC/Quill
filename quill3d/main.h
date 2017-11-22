@@ -38,6 +38,7 @@ class spatial_region
     int pointer_size;
     //
     unique_ptr<maxwell_solver> solver;
+    function<void(particle&, vector3d&, vector3d&, double&)> advance_momentum;
 
     public:
     double N_e,N_p,N_ph;
@@ -50,55 +51,28 @@ class spatial_region
     double N_freezed;
     std::string data_folder;
     //
-    class plist
-    {
-        public:
-            class particle
-            {
-                public:
-                    double x,y,z,ux,uy,uz,g,q,cmr,chi; // cmr - charge to mass ratio,
-                    int trn; // track name
-                    particle* next;
-                    particle* previous;
-                    particle();
-                    vector3d get_displacement(double&);
-                    void coordinate_advance(vector3d&);
-                    void momentum_advance(vector3d&,vector3d&,double&);
-            };
-            particle* head;
-            particle* start;
-            plist();
-            void xplus(double);
-    };
-    //
     class pwpa
     { // page with particles
         public:
-            plist::particle* head;
+            particle* head;
             pwpa* previous;
     };
     class pwpo
     { // page with pointers
         public:
-            plist::particle** head;
+            particle** head;
             pwpo* previous;
     };
-    plist::particle* p_lap; // pointer to last allocated particle
-    plist::particle** pp_lfp; // pointer to pointer to last free place (particle)
+    particle* p_lap; // pointer to last allocated particle
+    particle** pp_lfp; // pointer to pointer to last free place (particle)
     pwpa* p_lapwpa; // pointer to last page with particles
     pwpo* p_lapwpo; // pointer to last page with pointers
     //
-    class cellp
-    {
-        public:
-            plist pl;
-            cellp();
-    };
     field3d<celle> ce;
     field3d<cellb> cb;
     field3d<cellj> cj;
     field3d<cellbe> cbe;
-    cellp*** cp;
+    field3d<cellp> cp;
     class deleted_particle
     {
         public:
@@ -109,7 +83,7 @@ class spatial_region
     };
     vector<deleted_particle> deleted_particles;
     spatial_region();
-    void init(int,double,double,double,double,double,int,int,int,int,int,double*,string,maxwell_solver_enum);
+    void init(int,double,double,double,double,double,int,int,int,int,int,double*,string,maxwell_solver_enum,pusher_enum);
     void create_arrays(int,int,int,int,int);
     ~spatial_region();
     void fout_ex(ofstream*,int,int, ios_base::openmode);
@@ -144,12 +118,12 @@ class spatial_region
     void f_init_boundaries();
     void padvance(bool=0);
     void birth_from_vacuum(double);
-    void jdeposition(plist::particle&,vector3d&);
-    void rhodeposition(plist::particle&);
+    void jdeposition(particle&,vector3d&);
+    void rhodeposition(particle&);
     void compute_rho();
-    void simple_jdep(plist::particle&,vector3d&,int_vector3d&);
-    void place(plist::particle&,int&,int&,int&);
-    void place(plist::particle&);
+    void simple_jdep(particle&,vector3d&,int_vector3d&);
+    void place(particle&,int&,int&,int&);
+    void place(particle&);
     void p_boundary();
     bool is_inside(int,int,int);
     bool is_inside_global(int, int, int);
@@ -158,9 +132,9 @@ class spatial_region
     vector3d b_to_particle(double&,double&,double&);
     void moving_window(int,int,double);
     double get_rand();
-    plist::particle* bear_particle(double,vector3d&,vector3d&,double,double,double);
-    plist::particle* new_particle();
-    void delete_particle(plist::particle*,bool=false);
+    particle* bear_particle(double,vector3d&,vector3d&,double,double,double);
+    particle* new_particle();
+    void delete_particle(particle*,bool=false);
     void erase(plist&);
     void copy(plist&,plist&);
     void compute_N(int,int,double);
@@ -176,7 +150,7 @@ class spatial_region
     void scale_j(double);
     
     private:
-    void update_energy_deleted(plist::particle*);
+    void update_energy_deleted(particle*);
 };
 
 class film

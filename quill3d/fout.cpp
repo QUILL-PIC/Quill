@@ -1,10 +1,11 @@
 #include <iostream>
 #include <fstream>
 #include "main.h"
+#include "containers.h"
 
 void spatial_region::compute_rho()
 {
-    spatial_region::plist::particle* current;
+    particle* current;
     for(int i=0;i<nx;i++)
     {
         for(int j=0;j<ny;j++)
@@ -46,7 +47,7 @@ void spatial_region::compute_N(int n1, int n2, double a)
     N_qp_g = 0;
     for (int i=0;i<n_ion_populations;i++)
         N_qp_i[i] = 0;
-    plist::particle* current;
+    particle* current;
     for (int i=n1; i<nx-n2; i++)
     {
         for (int j=0; j<ny; j++)
@@ -90,7 +91,7 @@ void spatial_region::compute_energy(int n1, int n2, double a, double b)
     energy_ph = 0;
     for (int n=0;n<n_ion_populations;n++)
         ienergy[n] = 0;
-    plist::particle* current;
+    particle* current;
     for (int i=n1; i<nx-n2; i++)
     {
         for (int j=0; j<ny; j++)
@@ -697,7 +698,7 @@ void spatial_region::fout_tracks(double a, int nm) {
     for (int i=0;i<nx;i++) {
         for (int j=0;j<ny;j++) {
             for(int k=0;k<nz;k++) {
-                plist::particle* current;
+                particle* current;
                 current = cp[i][j][k].pl.head;
                 while (current!=0) {
                     if (current->trn!=0 && current->x>=nm && current->x<nx-nm) {

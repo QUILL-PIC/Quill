@@ -1,9 +1,9 @@
 #include <cmath>
 #include "main.h"
 #include "maxwell.h"
+#include "containers.h"
 
 extern bool qed_enabled;
-extern void (*pusher)(spatial_region::plist::particle* p, vector3d& e_field, vector3d& b_field, double& dt);
 extern bool dump_photons;
 
 void spatial_region::fadvance()
@@ -85,8 +85,8 @@ void spatial_region::f_init_boundaries()
 
 void spatial_region::padvance(bool freezing)
 {
-    spatial_region::plist::particle* current;
-    spatial_region::plist::particle* tmp;
+    particle* current;
+    particle* tmp;
     vector3d displ;
     vector3d e;
     vector3d b;
@@ -95,7 +95,7 @@ void spatial_region::padvance(bool freezing)
     double g_prev,chi_prev,g_interim;
     double a, r;
     bool calc_qed;
-    spatial_region::plist::particle* born;
+    particle* born;
     int_vector3d position;
     //
     p_boundary();
@@ -189,7 +189,7 @@ void spatial_region::padvance(bool freezing)
                             u_prev.z = born->uz;
                             g_prev = born->g;
                             chi_prev = born->chi;
-                            born->momentum_advance(e,b,dt); // p_n -> p_{n+1}
+                            advance_momentum(*born, e, b, dt); // p_n -> p_{n+1}
                             u_interim.x = 0.5*(born->ux+u_prev.x);
                             u_interim.y = 0.5*(born->uy+u_prev.y);
                             u_interim.z = 0.5*(born->uz+u_prev.z);
@@ -214,7 +214,7 @@ void spatial_region::padvance(bool freezing)
                             u_prev.z = born->uz;
                             g_prev = born->g;
                             chi_prev = born->chi;
-                            born->momentum_advance(e,b,dt); // p_n -> p_{n+1}
+                            advance_momentum(*born, e, b, dt); // p_n -> p_{n+1}
                             u_interim.x = 0.5*(born->ux+u_prev.x);
                             u_interim.y = 0.5*(born->uy+u_prev.y);
                             u_interim.z = 0.5*(born->uz+u_prev.z);
@@ -258,7 +258,7 @@ void spatial_region::padvance(bool freezing)
                                 u_prev.z = current->uz;
                                 g_prev = current->g;
                                 chi_prev = current->chi;
-                                current->momentum_advance(e, b, dt); // p_n -> p_{n+1}
+                                advance_momentum(*current, e, b, dt); // p_n -> p_{n+1}
                                 u_interim.x = 0.5 * (current->ux + u_prev.x);
                                 u_interim.y = 0.5 * (current->uy + u_prev.y);
                                 u_interim.z = 0.5 * (current->uz + u_prev.z);
@@ -268,7 +268,7 @@ void spatial_region::padvance(bool freezing)
                                 r = get_rand();
                                 calc_qed = !(get_rand()>=w(g_prev,r,a)*g_prev*dt);
                             } else {
-                                current->momentum_advance(e, b, dt); // p_n -> p_{n+1}
+                                advance_momentum(*current, e, b, dt); // p_n -> p_{n+1}
                                 calc_qed = false;
                             }
 
@@ -327,7 +327,7 @@ void spatial_region::padvance(bool freezing)
                                     //
                                     e = e_to_particle(current->x,current->y,current->z);
                                     b = b_to_particle(current->x,current->y,current->z);
-                                    current->momentum_advance(e,b,dt); // p_n -> p_{n+1}
+                                    advance_momentum(*current, e, b, dt); // p_n -> p_{n+1}
                                     displ = current->get_displacement(dt);
                                     displ.x=displ.x/dx;
                                     displ.y=displ.y/dy;
@@ -352,7 +352,7 @@ void spatial_region::padvance(bool freezing)
                     }
                     else
                     { // *current - ион
-                        current->momentum_advance(e,b,dt); // p_n -> p_{n+1}
+                        advance_momentum(*current, e, b, dt); // p_n -> p_{n+1}
                     displ = current->get_displacement(dt);
                     displ.x=displ.x/dx;
                     displ.y=displ.y/dy;
@@ -381,7 +381,7 @@ void spatial_region::padvance(bool freezing)
 
 void spatial_region::moving_window(int l, int nmw, double mwspeed)
 {
-    spatial_region::plist::particle* current;
+    particle* current;
     //
     if((l+1)*dt*mwspeed>nmw*dx)
     {
@@ -448,38 +448,4 @@ void spatial_region::moving_window(int l, int nmw, double mwspeed)
         }
         //
     }
-}
-
-void spatial_region::plist::xplus(double x_adjunct)
-{
-    spatial_region::plist::particle* current;
-    current = head;
-    while(current!=0)
-    {
-        current->x = current->x + x_adjunct;
-        current = current->next;
-    }
-}
-
-vector3d spatial_region::plist::particle::get_displacement(double& dt)
-{
-    vector3d displacement;
-    double a;
-    a = dt/g;
-    displacement.x = ux*a;
-    displacement.y = uy*a;
-    displacement.z = uz*a;
-    return displacement;
-}
-
-void spatial_region::plist::particle::coordinate_advance(vector3d& a)
-{
-    x = x + a.x;
-    y = y + a.y;
-    z = z + a.z;
-}
-
-void spatial_region::plist::particle::momentum_advance(vector3d& e_field, vector3d& b_field, double& dt)
-{
-    pusher(this, e_field, b_field, dt);
 }

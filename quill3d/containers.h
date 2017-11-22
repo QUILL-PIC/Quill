@@ -54,8 +54,39 @@ private:
     void free();
 };
 
+struct particle
+{
+    double x,y,z,ux,uy,uz,g,q,cmr,chi; // cmr - charge to mass ratio,
+    int trn; // track name
+    particle* next;
+    particle* previous;
+    particle();
+    vector3d get_displacement(double);
+    void coordinate_advance(vector3d&);
+};
+
+class plist
+{
+    public:
+        particle* head;
+        particle* start;
+        plist();
+        void xplus(double);
+};
+
+struct cellp
+{
+    plist pl;
+    cellp();
+};
+
 enum class maxwell_solver_enum {
     FDTD, NDFX
 };
+
+enum class pusher_enum {
+    VAY, BORIS
+};
+
 
 #endif /* CONTAINERS_H_ */

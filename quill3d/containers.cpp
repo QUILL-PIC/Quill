@@ -65,8 +65,57 @@ void field3d<T>::free() {
     numa_free(pv, sizeof(T**)*nx);
 }
 
+particle::particle()
+{
+    x=0;
+    y=0;
+    z=0;
+    ux=0;
+    uy=0;
+    uz=0;
+    g=1;
+    q=0;
+    cmr=-1;
+    next=0;
+    previous=0;
+    chi = 0;
+    trn = 0;
+}
+
+vector3d particle::get_displacement(double dt)
+{
+    vector3d displacement;
+    double a;
+    a = dt/g;
+    displacement.x = ux*a;
+    displacement.y = uy*a;
+    displacement.z = uz*a;
+    return displacement;
+}
+
+void particle::coordinate_advance(vector3d& a)
+{
+    x = x + a.x;
+    y = y + a.y;
+    z = z + a.z;
+}
+
+plist::plist() : head(nullptr), start(nullptr) { }
+
+void plist::xplus(double x_adjunct)
+{
+    particle* current;
+    current = head;
+    while(current!=0)
+    {
+        current->x = current->x + x_adjunct;
+        current = current->next;
+    }
+}
+
 template class field3d<double>;
 template class field3d<celle>;
 template class field3d<cellb>;
 template class field3d<cellj>;
 template class field3d<cellbe>;
+template class field3d<cellp>;

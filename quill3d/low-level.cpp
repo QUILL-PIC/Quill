@@ -5,6 +5,7 @@
 #include "main.h"
 #include "maxwell.h"
 #include "containers.h"
+#include "pusher.h"
 
 extern bool catching_enabled;
 extern double lambda;
@@ -26,7 +27,7 @@ spatial_region::spatial_region()
     cj = field3d<cellj>();
     cb = field3d<cellb>();
     cbe = field3d<cellbe>();
-    cp = 0;
+    cp = field3d<cellp>();
     n_random = 0;
     energy_e_deleted = 0;
     energy_p_deleted = 0;
@@ -44,8 +45,8 @@ spatial_region::spatial_region()
     } else {
         page_size = numa_pagesize();
     }
-    particle_size = sizeof(plist::particle);
-    pointer_size = sizeof(plist::particle*);
+    particle_size = sizeof(particle);
+    pointer_size = sizeof(particle*);
     p_lap = 0;
     pp_lfp = 0;
     p_lapwpa = 0;
@@ -55,32 +56,9 @@ spatial_region::spatial_region()
     data_folder = "results";
 }
 
-spatial_region::plist::particle::particle()
-{
-    x=0;
-    y=0;
-    z=0;
-    ux=0;
-    uy=0;
-    uz=0;
-    g=1;
-    q=0;
-    cmr=-1;
-    next=0;
-    previous=0;
-    chi = 0;
-    trn = 0;
-}
-
-spatial_region::plist::plist()
-{
-    head=0;
-    start=0;
-}
-
 void spatial_region::init(int sr_id0, double dx0, double dy0, double dz0, double dt0, double e_s0, int xnpic0,
         int ynpic0, int znpic0, int node_number0, int n_ion_populations0, double* icmr0, std::string df,
-        maxwell_solver_enum solver0)
+        maxwell_solver_enum solver0, pusher_enum pusher)
 {
     sr_id = sr_id0;
     dx = dx0;
@@ -99,7 +77,7 @@ void spatial_region::init(int sr_id0, double dx0, double dy0, double dz0, double
     // we should always have at least one page for free particles (to avoid performance issues)
     pwpo* b = new pwpo;
     b->previous = 0;
-    b->head = (plist::particle**) numa_alloc_onnode(page_size,node_number);
+    b->head = (particle**) numa_alloc_onnode(page_size,node_number);
     npwpo++;
     p_lapwpo = b;
 
@@ -112,6 +90,17 @@ void spatial_region::init(int sr_id0, double dx0, double dy0, double dz0, double
         break;
     default:
         solver = nullptr;
+    }
+
+    switch (pusher) {
+    case pusher_enum::BORIS:
+        advance_momentum = push_boris;
+        break;
+    case pusher_enum::VAY:
+        advance_momentum = push_vay;
+        break;
+    default:
+        advance_momentum = nullptr;
     }
 }
 
@@ -127,28 +116,13 @@ void spatial_region::create_arrays(int nx0, int ny0, int nz0, int seed, int node
     cb = field3d<cellb>(nx, ny, nz, node_number);
     cj = field3d<cellj>(nx, ny, nz, node_number);
     cbe = field3d<cellbe>(nx, ny, nz, node_number);
+    cp = field3d<cellp>(nx, ny, nz, node_number);
 
     pv = numa_alloc_onnode(sizeof(field3d<double>)*n_ion_populations, node_number);
     irho = (field3d<double> *) pv;
     for (int n=0;n<n_ion_populations;n++)
     {
         irho[n] = field3d<double>(nx, ny, nz, node_number);
-    }
-
-    pv = numa_alloc_onnode(sizeof(cellp**)*nx,node_number);
-    cp = (cellp***) pv;
-    pv = numa_alloc_onnode(sizeof(cellp*)*nx*ny,node_number);
-    for(int i=0;i<nx;i++)
-    {
-        cp[i] = ((cellp**) pv) + ny*i;
-    }
-    pv = numa_alloc_onnode(sizeof(cellp)*nx*ny*nz,node_number);
-    for(int i=0;i<nx;i++)
-    {
-        for(int j=0;j<ny;j++)
-        {
-            cp[i][j] = ((cellp*) pv) + nz*ny*i + nz*j;
-        }
     }
 
     pv = numa_alloc_onnode(sizeof(double)*55,node_number);
@@ -197,19 +171,6 @@ spatial_region::~spatial_region()
     pv = (void*) irho;
     numa_free(pv, sizeof(field3d<double>)*n_ion_populations);
 
-    for(int i=0;i<nx;i++)
-    {
-        for(int j=0;j<ny;j++)
-        {
-            pv = (void*) cp[i][j];
-            numa_free(pv, sizeof(cellp)*nz);
-        }
-        pv = (void*) cp[i];
-        numa_free(pv, sizeof(cellp*)*ny);
-    }
-    pv = (void*) cp;
-    numa_free(pv, sizeof(cellp**)*nx);
-
     pv = (void*) random;
     numa_free(pv, sizeof(double)*55);
 
@@ -222,7 +183,7 @@ spatial_region::~spatial_region()
     numa_free(pv, sizeof(int*)*n_ion_populations);
 }
 
-spatial_region::plist::particle* spatial_region::new_particle()
+particle* spatial_region::new_particle()
 {
     if (n_f == 0) { // create particle from scratch
         if (n_ap+1 > npwpa*((int) page_size/particle_size))
@@ -232,7 +193,7 @@ spatial_region::plist::particle* spatial_region::new_particle()
             pwpa* a;
             a = new pwpa;
             a->previous = p_lapwpa;
-            a->head = (plist::particle*) numa_alloc_onnode(page_size,node_number);
+            a->head = (particle*) numa_alloc_onnode(page_size,node_number);
             //a->head = (plist::particle*) malloc(page_size);
             p_lapwpa = a;
             p_lap = a->head;
@@ -248,7 +209,7 @@ spatial_region::plist::particle* spatial_region::new_particle()
         if (n_f-1 == (npwpo-1)*((int) page_size/pointer_size))
         {
             n_f--;
-            plist::particle* b;
+            particle* b;
             b = *pp_lfp;
 
             if (p_lapwpo == 0)
@@ -283,7 +244,7 @@ spatial_region::plist::particle* spatial_region::new_particle()
     }
 }
 
-void spatial_region::delete_particle(plist::particle* a, bool force_delete)
+void spatial_region::delete_particle(particle* a, bool force_delete)
 {
     if ((catching_enabled && !spatial_region::is_inside_global(a->x, a->y, a->z) &&
         !spatial_region::is_in_exchange_area(a->x, a->y, a->z)) || force_delete)
@@ -307,7 +268,7 @@ void spatial_region::delete_particle(plist::particle* a, bool force_delete)
         pwpo* b;
         b = new pwpo;
         b->previous = p_lapwpo;
-        b->head = (plist::particle**) numa_alloc_onnode(page_size,node_number);
+        b->head = (particle**) numa_alloc_onnode(page_size,node_number);
         //b->head = (plist::particle**) malloc(page_size);
         p_lapwpo = b;
         pp_lfp = b->head;
@@ -321,7 +282,7 @@ void spatial_region::delete_particle(plist::particle* a, bool force_delete)
     }
 }
 
-void spatial_region::update_energy_deleted(plist::particle* a)
+void spatial_region::update_energy_deleted(particle* a)
 {
     double norm = 8.2e-14*dx*dy*dz*1.11485e13*lambda/(8*PI*PI*PI); // energy in Joules
     if (a->cmr == -1)

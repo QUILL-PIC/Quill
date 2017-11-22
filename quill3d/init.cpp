@@ -1,5 +1,6 @@
 #include <cmath>
 #include "main.h"
+#include "containers.h"
 
 void spatial_region::f_init_cos(double a0y, double a0z, double xsigma, double ysigma, double zsigma, double x0, int sscos, bool b_sign, double x1, double phase, double y0, double z0, bool append, double phi, double xtarget, double ytarget, double ztarget)
 {
@@ -404,7 +405,7 @@ void spatial_region::fill_cell_by_particles(double cmr, int_vector3d& a, int_vec
     double y0;
     double z0;
     double q0;
-    spatial_region::plist::particle* tmp_p;
+    particle* tmp_p;
     x0 = 0.5/b.i + dsplmt;
     y0 = 0.5/b.j;
     z0 = 0.5/b.k;

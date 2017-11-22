@@ -1,9 +1,10 @@
 #include "main.h"
+#include "containers.h"
 
 extern int n_sr;
 extern int nm;
 
-void spatial_region::place(spatial_region::plist::particle& p, int& ci, int& cj, int& ck)
+void spatial_region::place(particle& p, int& ci, int& cj, int& ck)
 {
     // ci, cj, ck - cell there particle was
     if(((int)p.x)!=ci||((int)p.y)!=cj||((int)p.z)!=ck)
@@ -18,7 +19,7 @@ void spatial_region::place(spatial_region::plist::particle& p, int& ci, int& cj,
     }
 }
 
-void spatial_region::place(spatial_region::plist::particle& p)
+void spatial_region::place(particle& p)
 { /* добавляет частицу с previous = next = 0, не привязанную к
      какой-либо ячейке (ни один из указателей head не равен &p) */
     if (is_inside(p.x,p.y,p.z))
@@ -104,8 +105,8 @@ void spatial_region::copy(plist& b, plist& a)
 {
     erase(a);
     //
-    plist::particle* current;
-    plist::particle* tmp;
+    particle* current;
+    particle* tmp;
     current = b.head;
     //
     a.start = 0;
@@ -129,8 +130,8 @@ void spatial_region::copy(plist& b, plist& a)
 
 void spatial_region::erase(plist& a)
 {
-    plist::particle* current;
-    plist::particle* tmp;
+    particle* current;
+    particle* tmp;
     current = a.head;
     while(current!=0)
     {

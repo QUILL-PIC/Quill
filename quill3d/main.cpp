@@ -7,8 +7,8 @@
 #include <unistd.h>
 #include <memory>
 #include "main.h"
-#include "pusher.h"
 #include "maxwell.h"
+#include "containers.h"
 
 using namespace std;
 
@@ -79,8 +79,8 @@ int init();
 std::vector<double> ne_profile_x_coords;
 std::vector<double> ne_profile_x_values;
 
-void (*pusher)(spatial_region::plist::particle* p, vector3d& e_field, vector3d& b_field, double& dt);
 maxwell_solver_enum solver;
+pusher_enum pusher;
 
 //------------------------------
 
@@ -584,7 +584,7 @@ void write_spectrum_phasespace(bool write_p, bool write_ph)
         for(int i=0;i<neps_i;i++)
             spectrum_i[m][i] = 0;
     }
-    spatial_region::plist::particle* current;
+    particle* current;
     for(int n=0;n<n_sr;n++)
     {
         for(int i=nm*(n!=0);i<nx_sr[n]-nm*(n!=n_sr-1);i++)
@@ -1199,8 +1199,8 @@ void start_tracking()
                     n = n - 1;
                     x = x + nx_sr[n] - nx_ich;
                 }
-                spatial_region::plist::particle* h = psr[n].cp[x][y2][z2].pl.head;
-                spatial_region::plist::particle* p = h;
+                particle* h = psr[n].cp[x][y2][z2].pl.head;
+                particle* p = h;
                 bool b = 1;
                 if (particles_to_track.find('e') != string::npos)
                 {
@@ -1269,8 +1269,8 @@ void start_tracking()
                 n = n - 1;
                 x = x + nx_sr[n] - nx_ich;
             }
-            spatial_region::plist::particle* h = psr[n].cp[x][y1][z1].pl.head;
-            spatial_region::plist::particle* p = h;
+            particle* h = psr[n].cp[x][y1][z1].pl.head;
+            particle* p = h;
             bool b = 1;
             if (particles_to_track.find('e') != string::npos)
             {
@@ -1579,7 +1579,7 @@ int main()
     {
         node = i*n_numa_nodes/n_sr;
         //
-        psr[i].init(i,dx,dy,dz,dt,lambda/2.4263086e-10,xnpic,ynpic,znpic,node,n_ion_populations,icmr,data_folder,solver);
+        psr[i].init(i,dx,dy,dz,dt,lambda/2.4263086e-10,xnpic,ynpic,znpic,node,n_ion_populations,icmr,data_folder,solver,pusher);
         psr[i].create_arrays(nx_sr[i],int(ylength/dy),int(zlength/dz),i+times(&tms_struct),node);
         //
     }
@@ -2784,11 +2784,11 @@ int init()
     }
 
     if (pusher_str == "boris") {
-        pusher = pusher_boris;
+        pusher = pusher_enum::BORIS;
     } else if (pusher_str == "vay") {
-        pusher = pusher_vay;
+        pusher = pusher_enum::VAY;
     } else {
-        cout << TERM_RED << "Pusher unknown: " << current->units << ". Aborting..." << TERM_NO_COLOR << endl;
+        cout << TERM_RED << "Pusher unknown: " << pusher_str << ". Aborting..." << TERM_NO_COLOR << endl;
         return 1;
     }
 
