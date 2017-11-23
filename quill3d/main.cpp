@@ -2432,9 +2432,7 @@ int init()
         }
         p_last_film->ne_y1 = current->value;
         current = find("mcr",tmp);
-        if (current->value==0)
-            current->value = 1;
-        p_last_film->mcr = current->value;
+        p_last_film->mcr = (current->value == 0 ? 1 : current->value) ;
         current = find("Tfilm",tmp);
         p_last_film->T = current->value;
         current = find("vxfilm",tmp);
