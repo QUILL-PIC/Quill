@@ -51,7 +51,7 @@ py_clean:
 FILE := ""
 .PHONY : conf
 conf:
-	./parse.sh $(FILE) > conf
+	./parse.py $(FILE) > conf
 
 .PHONY : chameleon
 chameleon:
