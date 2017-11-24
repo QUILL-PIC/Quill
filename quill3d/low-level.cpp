@@ -482,6 +482,12 @@ var* find(std::string a, var* b)
             return tmp;
         tmp = tmp->next;
     }
+    if (tmp->value != 0.0 || !tmp->units.empty()) {
+        cerr << TERM_RED << "Warning! The \"empty\" default config variable was modified to [" << tmp->value <<
+                " " << tmp->units << "]. Reverting to [0.0]" << TERM_NO_COLOR << endl;
+        tmp->value = 0.0;
+        tmp->units = "";
+    }
     return tmp; /* «пустая» переменная в силу алгоритма чтения файла
                  */
 }

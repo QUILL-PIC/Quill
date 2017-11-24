@@ -1356,7 +1356,7 @@ void evaluate_merging_condition()
             pmerging_now = "on";
             // portion of particles that will be deleted
             ppd[0] = (N_qp - (3+n_ion_populations)*crnp)/N_qp;
-            cout<<"\t\033[36m"<<"ppd = "<<ppd[0]<<"\033[0m";
+            cout<<"\t\033[36m"<<"ppd = "<<ppd[0]<<TERM_NO_COLOR;
         }
     } else if (pmerging=="nl") {
         bool merge = (N_qp_e>crnp)||(N_qp_p>crnp)||(N_qp_g>crnp);
@@ -1381,7 +1381,7 @@ void evaluate_merging_condition()
             for (int i=0;i<3+n_ion_populations;i++) {
                 cout<<' '<<ppd[i];
             }
-            cout<<"\033[0m";
+            cout<<TERM_NO_COLOR;
         }
     }
     delete[] N_qp_i;
@@ -1557,7 +1557,7 @@ int main()
         x0_sr[i] = x0_sr[i-1] + nx_sr[i-1] - nx_ich;
     }
 
-    if(nx_ich*(n_sr-1)>=xlength/dx) {cout<<"\033[31m"<<"main: too many slices, aborting..."<<"\033[0m"<<endl; return 1;}
+    if(nx_ich*(n_sr-1)>=xlength/dx) {cout<<TERM_RED<<"main: too many slices, aborting..."<<TERM_NO_COLOR<<endl; return 1;}
 
     pthread_t* sr_thread = new pthread_t[n_sr];
     pthread_t* listener_thread = new pthread_t;
@@ -1681,7 +1681,7 @@ int main()
             write_energy_deleted(fout_energy_deleted);
         }
 
-        cout<<"\033[33m"<<"ct/lambda = "<<l*dt/2/PI<<"\tstep# "<<l<<"\033[0m";
+        cout<<"\033[33m"<<"ct/lambda = "<<l*dt/2/PI<<"\tstep# "<<l<<TERM_NO_COLOR;
 
         evaluate_merging_condition();
 
@@ -1691,7 +1691,7 @@ int main()
             N_freezed = 0;
             for (int i=0;i<n_sr;i++) N_freezed += psr[i].N_freezed;
             if (N_freezed!=0)
-                cout<<"\t\033[36m"<<"N_f/N_c = "<<N_freezed*dx*dy*dz*1.11485e13*lambda/(8*PI*PI*PI)/(N_ep)<<"\033[0m";
+                cout<<"\t\033[36m"<<"N_f/N_c = "<<N_freezed*dx*dy*dz*1.11485e13*lambda/(8*PI*PI*PI)/(N_ep)<<TERM_NO_COLOR;
         }
         cout<<endl;
 
@@ -1716,7 +1716,7 @@ int main()
                 print_number_of_quasiparticles();
             }
             
-            cout<<"output# "<<"\033[1m"<<int([](ddi* a) {double b=a->f*a->output_period; if(a->prev!=0) b+=(a->prev)->t_end; return b;} (p_current_ddi)/2/PI*file_name_accuracy)/file_name_accuracy<<"\033[0m"<<flush;
+            cout<<"output# "<<"\033[1m"<<int([](ddi* a) {double b=a->f*a->output_period; if(a->prev!=0) b+=(a->prev)->t_end; return b;} (p_current_ddi)/2/PI*file_name_accuracy)/file_name_accuracy<<TERM_NO_COLOR<<flush;
             
             write_fields(); // Ex..Ez, Bx..Bz, w (field energy density), inv (E^2-B^2 - relativistic invariant)
             
@@ -1830,7 +1830,7 @@ int init()
         // dx = dt/( 1 - 1/(k0*k0)*dt*dt/4.04 );
         dx = (1+1e-2)*dt/( 1 - 1/(k0*k0)*dt*dt/4.04 );
         if (dx < 0) {
-            cout << "\033[31m" << "Cannot calculate stable dx, reduce dt. Aborting..." << "\033[0m" << endl;
+            cout << TERM_RED << "Cannot calculate stable dx, reduce dt. Aborting..." << TERM_NO_COLOR << endl;
             return 1;
         }
     }
@@ -2162,7 +2162,7 @@ int init()
           sigma0 = sigma*sigma*sigma*sigma/4 - 4*x00*x00;
           if (sigma0<0)
           {
-          cout<<"\n\033[31m"<<"main: improper focused pulse, aborting..."<<"\033[0m"<<endl;
+          cout<<"\n\033[31m"<<"main: improper focused pulse, aborting..."<<TERM_NO_COLOR<<endl;
           return 1;
           }
           sigma0 = sqrt( sigma*sigma/2 - sqrt(sigma0) );*/
@@ -2735,14 +2735,14 @@ int init()
     }
 
     if (ne_profile_x_coords.size() != ne_profile_x_values.size()) {
-        cout << "\033[31m" << "The size of ne_profile_x_coords " << ne_profile_x_coords.size()
+        cout << TERM_RED << "The size of ne_profile_x_coords " << ne_profile_x_coords.size()
                 << " is not equal to the size of ne_profile_x_values " << ne_profile_x_values.size() << ". Aborting..."
-                << "\033[0m" << endl;
+                << TERM_NO_COLOR << endl;
         return 1;
     }
 
     if (!is_sorted(ne_profile_x_coords.begin(), ne_profile_x_coords.end())) {
-        cout << "\033[31m" << "The array ne_profile_x_coords is not sorted. Aborting..." "\033[0m" << endl;
+        cout << TERM_RED << "The array ne_profile_x_coords is not sorted. Aborting..." << TERM_NO_COLOR << endl;
         return 1;
     }
 
@@ -2788,7 +2788,7 @@ int init()
     } else if (pusher_str == "vay") {
         pusher = pusher_vay;
     } else {
-        cout << "\033[31m" << "Pusher unknown: " << current->units << ". Aborting..." << "\033[0m" << endl;
+        cout << TERM_RED << "Pusher unknown: " << current->units << ". Aborting..." << TERM_NO_COLOR << endl;
         return 1;
     }
 
@@ -2805,7 +2805,7 @@ int init()
     } else if (solver_str == "fdtd") {
         solver = maxwell_solver_enum::FDTD;
     } else {
-        cout << "\033[31m" << "Solver unknown: " << current->units << ". Aborting..." << "\033[0m" << endl;
+        cout << TERM_RED << "Solver unknown: " << current->units << ". Aborting..." << TERM_NO_COLOR << endl;
         return 1;
     }
 

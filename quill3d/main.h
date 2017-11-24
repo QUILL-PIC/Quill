@@ -11,6 +11,9 @@ const double proton_mass = 1836.1526721; /* 1836... - отношение мас�
                                             протона к массе электрона
                                           */
 
+const std::string TERM_RED = "\033[31m";
+const std::string TERM_NO_COLOR = "\033[0m";
+
 class spatial_region
 {
     int nx,ny,nz;
