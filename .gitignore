@@ -1,5 +1,4 @@
 quill
-parallel
 *.o
 conf
 *.eps

@@ -26,12 +26,9 @@ include $(wildcard $(DEPS))
 debug: $(OBJECTS)
 	$(CXX) -o quill $(CXXFLAGS) $(OBJECTS) $(CXXLIBS)
 
-parallel: parallel.cpp
-	$(CXX) -o parallel $(CXXFLAGS) parallel.cpp -pthread
-
 .PHONY : clean
 clean:
-	-rm -f quill $(OBJECTS) conf parallel
+	-rm -f quill $(OBJECTS) conf
 	-rm -rf .d/
 
 .PHONY : results_clean
@@ -57,4 +54,4 @@ conf:
 chameleon:
 	$(MAKE) -C chameleon
 
-all: quill parallel chameleon
+all: quill chameleon
