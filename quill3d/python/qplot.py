@@ -607,8 +607,10 @@ def spectrum(t=None, particles='geip', colors='bgmrcyk', sptype='simple', axis=[
     'spectrum() # plots spectrum for all particles\n\
     at t_end\n\
     Examples:\n\
-    spectrum(10,sptype=\'loglog\') # energy distr.\n\
-    in log-log axes'
+    spectrum(10,sptype=\'loglog\') # energy distribution\n\
+    in log-log axes.\n\
+    spectrum(5,sptype=\'lin\',axis=[0,1,-2,2]) \n\
+    # linear scaling of x and y axes with x from 0 to 1 and y from -2 to 2.\n'
 
     def window(i, width, type='square'):
         'Window function with specified width'
@@ -707,7 +709,8 @@ def spectrum(t=None, particles='geip', colors='bgmrcyk', sptype='simple', axis=[
         if smooth:
             sp[:,1] = smooth_array(sp[:,1], smooth_start, smooth_max, smooth_width, window_type)
 
-        plt.yscale('log')
+        if sptype != 'lin':
+            plt.yscale('log')
         if sptype=='energy' or sptype=='loglog':
             for j in np.arange(len(sp[:,0])):
                 sp[j,1] = sp[j,0]*sp[j,1]
