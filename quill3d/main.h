@@ -1,6 +1,7 @@
 #include <fstream>
 #include <vector>
 #include <memory>
+#include <functional>
 #include "containers.h"
 #include "maxwell.h"
 
