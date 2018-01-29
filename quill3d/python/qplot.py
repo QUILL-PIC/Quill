@@ -38,7 +38,8 @@ def tex_format(space_item):
 
 
 def density(t=0, plane='xy', max_w=0, max_e_density=0, max_p_density=0, max_g_density=0, max_i_density=0, axis=None,
-            extent=None, save2=None, data_folder=None, particles='geipw', cmaps={}, xlim=None, ylim=None, clf=False, **kwargs):
+            extent=None, save2=None, data_folder=None, particles='geipw', cmaps={}, xlim=None, ylim=None, clf=False,
+            color_mixing = False, **kwargs):
     """
     Plots density distributions of particles and the electromagnetic field w.
 
@@ -59,9 +60,15 @@ def density(t=0, plane='xy', max_w=0, max_e_density=0, max_p_density=0, max_g_de
         The order determines the plot order (e.g. 'ew' and 'we' have different plot orders).
     cmaps : dict
         Dictionary of particle-colormap pairs to be used instead of defaults. E.g. {'e': 'Blues', 'w': 'tcmap_green'}.
+    color_mixing : bool
+        Turns on color mixing instead of overlay of palettes for multiple particles. The default palettes are changed to
+        opaque ones.
     kwargs
         parameters to be passed to the underlying 'imshow' methods.
     """
+    if color_mixing:
+        import qcolor
+
     resread.t = '%g' % t
     data_folder = __get_data_folder(data_folder, kwargs)
     if data_folder is not None:
@@ -117,7 +124,10 @@ def density(t=0, plane='xy', max_w=0, max_e_density=0, max_p_density=0, max_g_de
     tmp_kwargs.update(kwargs)
     kwargs = tmp_kwargs
 
-    tmp_cmaps = {'g': 'tcmap_blue', 'w': 'tcmap_orange', 'i': 'tcmap_purple', 'e': 'tcmap_green', 'p': 'tcmap_red'}
+    if color_mixing:
+        tmp_cmaps = {'g': 'qcolor_blue', 'w': 'qcolor_orange', 'i': 'qcolor_purple', 'e': 'qcolor_green', 'p': 'qcolor_red'}
+    else:
+        tmp_cmaps = {'g': 'tcmap_blue', 'w': 'tcmap_orange', 'i': 'tcmap_purple', 'e': 'tcmap_green', 'p': 'tcmap_red'}
     tmp_cmaps.update(cmaps)
     cmaps = tmp_cmaps
 
@@ -148,6 +158,13 @@ def density(t=0, plane='xy', max_w=0, max_e_density=0, max_p_density=0, max_g_de
         else:
             if p not in 'gwiep':
                 print("Warning: Particle '%c' is not a valid option. Possible options are: gwiep." % p)
+
+    if color_mixing:
+        imgs = [x for x in plt.gca().get_children() if isinstance(x, mpl.image.AxesImage)]
+        rgb_values = qcolor.mix_images(imgs)
+        for img in imgs:
+            img.remove()
+        plt.imshow(rgb_values, **kwargs)
 
     if save2 is not None:
         plt.savefig(save2)
