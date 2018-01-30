@@ -53,7 +53,6 @@ std::string particles_to_track;
 bool tr_init;
 double tr_start,xtr1,ytr1,ztr1,xtr2,ytr2,ztr2;
 double mwspeed,nelflow,vlflow,mcrlflow,Tlflow,nerflow,vrflow,mcrrflow,Trflow;
-double mw_channel_radius;
 int i_particle, i_particle_p, i_particle_ph, i_particle_i;  // for "writing down every i-th electron, positron, etc."
 std::string e_components_for_output;
 std::string b_components_for_output;
@@ -78,6 +77,8 @@ int init();
 
 std::vector<double> ne_profile_x_coords;
 std::vector<double> ne_profile_x_values;
+std::vector<double> ne_profile_r_coords;
+std::vector<double> ne_profile_r_values;
 
 maxwell_solver_enum solver;
 pusher_enum pusher;
@@ -1416,9 +1417,10 @@ void add_moving_window_particles()
                     double zrel = zcell - zcenter;
                     double yrel = ycell - ycenter;
                     double r = sqrt(zrel * zrel + yrel * yrel);
-                    if (r >= mw_channel_radius)
+                    double modifier = lin_interpolation(r, ne_profile_r_coords, ne_profile_r_values);
+                    if (modifier != 0.0)
                     {
-                        psr[n_sr-1].fill_cell_by_particles(-1,cell_pos,v_npic,n);
+                        psr[n_sr-1].fill_cell_by_particles(-1,cell_pos,v_npic,n*modifier);
                     }
                     //if (ions=="on")
                     // psr[n_sr-1].fill_cell_by_particles(-1,cell_pos,v_npic,n); // bug??! this adds electrons, not ions; qwe
@@ -1775,6 +1777,44 @@ int main()
 
     cout<<"\n\033[1mbye!\033[0m\n"<<endl;
     return 0;
+}
+
+double convert_units(double value, string initial_units, string desired_units) {
+    if (desired_units == "1/k") {
+        if (initial_units == "um") {
+            value *= 2 * PI * 1e-4 / lambda;
+        } else if (initial_units == "lambda") {
+            value *= 2 * PI;
+        } else if (initial_units == "1/k") {
+        } else {
+            cout << TERM_RED << "Unknown units: " << initial_units << " for conversion to " << desired_units
+                    << TERM_NO_COLOR << endl;
+        }
+    } else if (desired_units == "") {
+        if (initial_units != "") {
+            cout << TERM_RED << "Cannot convert [" << initial_units << "] to unitless" << TERM_NO_COLOR << endl;
+        }
+    } else {
+        cout << TERM_RED << "Unknown desired units: " << desired_units << TERM_NO_COLOR << endl;
+    }
+    return value;
+}
+
+vector<double> find_array(var * element, string name, string desired_units, string default_units = "",
+        vector<double> default_array = { }) {
+    var * current = find(name, element);
+    string units = current->units == "#" ? default_units : current->units;
+
+    if (!current->input_array.empty()) {
+        vector<double> array = current->input_array;
+        for (double & v : array) {
+            v = convert_units(v, units, desired_units);
+        }
+        return array;
+    } else {
+        return default_array;
+    }
+
 }
 
 int init()
@@ -2180,8 +2220,6 @@ int init()
     current = find("mwindow",first);
     mwindow = 1;
     if (current->units=="off") mwindow = 0;
-    current = find("mw_channel_radius", first);
-    mw_channel_radius = current->value * 2 * PI;
     current = find("mwspeed",first);
     mwspeed = current->value;
     if (mwindow==1 && mwspeed==0)
@@ -2713,26 +2751,8 @@ int init()
     }
     ztr2 = current->value*2*PI;
 
-    current = find("ne_profile_x_coords",first);
-    if (current->units == "um") {
-        for (double & v : current->input_array) {
-            v *= 1e-4/lambda;
-        }
-        current->units = "lambda";
-    }
-    ne_profile_x_coords = current->input_array;
-    if (ne_profile_x_coords.empty()) {
-        ne_profile_x_coords = {0.0};
-    }
-    for (double & v : ne_profile_x_coords) {
-        v *= 2*PI;
-    }
-
-    current = find("ne_profile_x_values",first);
-    ne_profile_x_values = current->input_array;
-    if (ne_profile_x_values.empty()) {
-        ne_profile_x_values = {1.0};
-    }
+    ne_profile_x_coords = find_array(first, "ne_profile_x_coords", "1/k", "lambda");
+    ne_profile_x_values = find_array(first, "ne_profile_x_values", "");
 
     if (ne_profile_x_coords.size() != ne_profile_x_values.size()) {
         cout << TERM_RED << "The size of ne_profile_x_coords " << ne_profile_x_coords.size()
@@ -2743,6 +2763,21 @@ int init()
 
     if (!is_sorted(ne_profile_x_coords.begin(), ne_profile_x_coords.end())) {
         cout << TERM_RED << "The array ne_profile_x_coords is not sorted. Aborting..." << TERM_NO_COLOR << endl;
+        return 1;
+    }
+
+    ne_profile_r_coords = find_array(first, "ne_profile_r_coords", "1/k", "lambda");
+    ne_profile_r_values = find_array(first, "ne_profile_r_values", "");
+
+    if (ne_profile_r_coords.size() != ne_profile_r_values.size()) {
+        cout << TERM_RED << "The size of ne_profile_r_coords " << ne_profile_r_coords.size()
+                << " is not equal to the size of ne_profile_r_values " << ne_profile_r_values.size() << ". Aborting..."
+                << TERM_NO_COLOR << endl;
+        return 1;
+    }
+
+    if (!is_sorted(ne_profile_r_coords.begin(), ne_profile_r_coords.end())) {
+        cout << TERM_RED << "The array ne_profile_r_coords is not sorted. Aborting..." << TERM_NO_COLOR << endl;
         return 1;
     }
 

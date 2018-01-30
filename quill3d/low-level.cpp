@@ -474,6 +474,10 @@ film::film()
 
 double lin_interpolation(double coordinate, std::vector<double>& density_coords, std::vector<double>& density_values)
 {
+	if (density_coords.empty()) {
+		return 1.0;
+	}
+
     if (coordinate < density_coords[0]) {
         return density_values[0];
     } else if (coordinate > density_coords[density_coords.size()-1]) {

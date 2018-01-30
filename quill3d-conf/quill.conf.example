@@ -25,9 +25,15 @@ lambda = 0.91 um # default: cm; possible: um; lambda_p
 # не задан явно
 ne = 100 ncr # default: cm^{-3}; possible: ncr
 
-# массивы координат и относительных значений плотностей плазмы при добавлении частиц.
+# массивы координат и относительных значений концентрации плазмы,
+# задающие продольный профиль плазмы при добавлении частиц
 ne_profile_x_coords = [5;10;20] lambda # default: lambda; possible: um
-ne_profile_x_values = [0.3;0.5;1.0] % # default: %
+ne_profile_x_values = [0.3;0.5;1.0] # default: unitless
+
+# массивы координат и относительных значений концентрации плазмы,
+# задающие поперечный осесимметричный профиль при добавлении частиц
+ne_profile_r_coords = [0;1] lambda # default: lambda; possible: um
+ne_profile_r_values = [0.0;1.0] # default: unitless
 
 # размеры области моделирования
 xlength = 18 # default: lambda; possible: um, fs
@@ -126,9 +132,6 @@ mwindow = off # default: on; possible: on, off
 # включает или отключает добавление частиц на передней границе области
 # при работе движущегося окна
 #mwseed = on # default: on; possible: on, off
-# радиус канала, не заполняемого плазмой, при добавлении частиц на передней
-# границе области
-#mw_channel_radius = 3 # default: 0; default units: lambda; possible: um
 
 # компоненты полей для вывода в файл
 e_components_for_output = xyz # default: none; possible: x, y, z, xy, xz, yz, xyz
