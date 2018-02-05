@@ -117,7 +117,7 @@ class spatial_region
     void fadvance();
     void interpolate_be();
     void f_init_boundaries();
-    void padvance(bool=0);
+    void padvance(bool=0,double=0);
     void birth_from_vacuum(double);
     void jdeposition(particle&,vector3d&);
     void rhodeposition(particle&);

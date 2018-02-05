@@ -83,7 +83,7 @@ void spatial_region::f_init_boundaries()
     solver->init_boundaries();
 }
 
-void spatial_region::padvance(bool freezing)
+void spatial_region::padvance(bool freezing, double external_bz)
 {
     particle* current;
     particle* tmp;
@@ -126,6 +126,7 @@ void spatial_region::padvance(bool freezing)
                 {
                     e = e_to_particle(current->x,current->y,current->z);
                     b = b_to_particle(current->x,current->y,current->z);
+                    b.z += external_bz;
                     /* Теперь определяется импульс частицы в момент
                      * времени t_{n+1} (для электронов и позитронов),
                      * а координата в момент времени t_{n+3/2} ещё не
@@ -327,6 +328,7 @@ void spatial_region::padvance(bool freezing)
                                     //
                                     e = e_to_particle(current->x,current->y,current->z);
                                     b = b_to_particle(current->x,current->y,current->z);
+                                    b.z += external_bz;
                                     advance_momentum(*current, e, b, dt); // p_n -> p_{n+1}
                                     displ = current->get_displacement(dt);
                                     displ.x=displ.x/dx;

@@ -44,6 +44,7 @@ double t_add_mw;
 film* p_last_film;
 double x00,y00,z00;
 double sigma0,sigma; // sigma0 - радиус пучка в фокальной плоскости
+double external_bz;
 bool freezing;
 bool b_sign; // b_sign = 1 соответствует знаку '+', 0 - знаку '-'
 int n_ion_populations;
@@ -153,7 +154,7 @@ void* thread_function(void* arg)
         if (pmerging_now=="on")
             psr[i].pmerging(ppd,pmerging);
         psr[i].birth_from_vacuum(8*PI*PI/(dx*dy*dz)*2.818e-13/lambda); // 2.818e-13 = e^2/mc^2
-        psr[i].padvance(freezing);
+        psr[i].padvance(freezing, external_bz);
         psr[i].compute_N(nm*(i!=0),nm*(i!=n_sr-1),dx*dy*dz*1.11485e13*lambda/(8*PI*PI*PI));
         psr[i].compute_energy(nm*(i!=0),nm*(i!=n_sr-1),0.5*dx*dy*dz*3.691e4*lambda/1e7,8.2e-14*dx*dy*dz*1.11485e13*lambda/(8*PI*PI*PI)); // энергия в Джоулях
         psr[i].fout_tracks((x0_sr[i]+nmw)*dx/2/PI,nm);
@@ -2099,6 +2100,8 @@ int init()
             a0y = 0;
         }
     }
+    current = find("external_bz",first);
+    external_bz = current->value;
     current = find("f_envelope",first);
     f_envelope = current->units;
     if (f_envelope=="") {
@@ -2878,6 +2881,7 @@ int init()
     fout_log<<"x0fout\n"<<x0fout/2/PI<<"\n";
     fout_log<<"a0y\n"<<a0y<<"\n";
     fout_log<<"a0z\n"<<a0z<<"\n";
+    fout_log << "external_bz\n" << external_bz << "\n";
     if (mwindow==0)
         fout_log<<"mwindow\n"<<"off"<<"\n";
     else
