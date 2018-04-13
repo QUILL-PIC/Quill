@@ -3,11 +3,11 @@ $(shell mkdir -p $(DEPDIR) >/dev/null)
 DEPFLAGS = -MMD -MP -MF $(DEPDIR)/$*.Td
 POSTCOMPILE = @mv -f $(DEPDIR)/$*.Td $(DEPDIR)/$*.d && touch $@
 
-CXX := g++
+CXX := mpicxx
 CXXFLAGS := -O3 -march=native -ffast-math -std=c++0x
 debug: CXXFLAGS := -g -std=c++0x
-CXXLIBS := -pthread -lnuma
-OBJECTS := advance.o deposition.o fout.o init.o listener.o low-level.o main.o mc.o plist.o pusher.o maxwell.o containers.o
+CXXLIBS := 
+OBJECTS := advance.o deposition.o fout.o init.o low-level.o main.o mc.o plist.o pusher.o maxwell.o containers.o
 DEPS := $(patsubst %,$(DEPDIR)/%.d,$(basename $(OBJECTS)))
 
 quill: $(OBJECTS) $(DEPS)

@@ -203,12 +203,20 @@ template<typename T> void write_binary_yzplane(ofstream* f, field3d<T> & data, d
     delete[] a;
 }
 
+bool is_mode_non_binary(ios_base::openmode mode) {
+    return (mode == ios_base::out) || (mode == (ios_base::out | ios_base::app));
+}
+
+bool is_mode_binary(ios_base::openmode mode) {
+    return (mode == (ios_base::out | ios_base::binary)) || (mode == (ios_base::out | ios_base::app | ios_base::binary));
+}
+
 void spatial_region::fout_ex(ofstream* pfout, int n0, int n, ios_base::openmode
         mode)
 {
     /* n-n0 - длина массива по x (для данного spatial_region'а) для
      * вывода сечения плоскостью xy и плоскостью xz */
-    if (mode == ios_base::out) {
+    if (is_mode_non_binary(mode)) {
         for(int i=n0;i<n;i++)
         {
             int k=nz/2;
@@ -218,7 +226,7 @@ void spatial_region::fout_ex(ofstream* pfout, int n0, int n, ios_base::openmode
             for(int k=0;k<nz;k++)
                 (*pfout)<<ce[i][j][k].ex<<"\n";
         }
-    } else if (mode == ios_base::out | ios_base::binary) {
+    } else if (is_mode_binary(mode)) {
         write_binary<celle>(pfout, ce, getex, n0, n, ny, nz);
     } else {
         cerr << "fout_ex: ERROR: wrong mode" << endl;
@@ -228,12 +236,12 @@ void spatial_region::fout_ex(ofstream* pfout, int n0, int n, ios_base::openmode
 void spatial_region::fout_ex_yzplane(ofstream* pfout, int i, ios_base::openmode
         mode)
 {
-    if (mode == ios_base::out) {
+    if (is_mode_non_binary(mode)) {
         for(int j=0;j<ny;j++) {
             for(int k=0;k<nz;k++)
                 (*pfout)<<ce[i][j][k].ex<<"\n";
         }
-    } else if (mode == ios_base::out | ios_base::binary) {
+    } else if (is_mode_binary(mode)) {
         write_binary_yzplane<celle>(pfout, ce, getex, i, ny, nz);
     } else {
         cerr << "fout_ex_yzplane: ERROR: wrong mode" << endl;
@@ -245,7 +253,7 @@ void spatial_region::fout_ey(ofstream* pfout, int n0, int n, ios_base::openmode
 {
     /* n-n0 - длина массива по x (для данного spatial_region'а) для
      * вывода сечения плоскостью xy и плоскостью xz */
-    if (mode == ios_base::out) {
+    if (is_mode_non_binary(mode)) {
         for(int i=n0;i<n;i++)
         {
             int k=nz/2;
@@ -255,7 +263,7 @@ void spatial_region::fout_ey(ofstream* pfout, int n0, int n, ios_base::openmode
             for(int k=0;k<nz;k++)
                 (*pfout)<<ce[i][j][k].ey<<"\n";
         }
-    } else if (mode == ios_base::out | ios_base::binary) {
+    } else if (is_mode_binary(mode)) {
         write_binary<celle>(pfout, ce, getey, n0, n, ny, nz);
     } else {
         cerr << "fout_ey: ERROR: wrong mode" << endl;
@@ -265,12 +273,12 @@ void spatial_region::fout_ey(ofstream* pfout, int n0, int n, ios_base::openmode
 void spatial_region::fout_ey_yzplane(ofstream* pfout, int i, ios_base::openmode
         mode)
 {
-    if (mode == ios_base::out) {
+    if (is_mode_non_binary(mode)) {
         for(int j=0;j<ny;j++) {
             for(int k=0;k<nz;k++)
                 (*pfout)<<ce[i][j][k].ey<<"\n";
         }
-    } else if (mode == ios_base::out | ios_base::binary) {
+    } else if (is_mode_binary(mode)) {
         write_binary_yzplane<celle>(pfout, ce, getey, i, ny, nz);
     } else {
         cerr << "fout_ey_yzplane: ERROR: wrong mode" << endl;
@@ -282,7 +290,7 @@ void spatial_region::fout_ez(ofstream* pfout, int n0, int n, ios_base::openmode
 {
     /* n-n0 - длина массива по x (для данного spatial_region'а) для
      * вывода сечения плоскостью xy и плоскостью xz */
-    if (mode == ios_base::out) {
+    if (is_mode_non_binary(mode)) {
         for(int i=n0;i<n;i++)
         {
             int k=nz/2;
@@ -292,7 +300,7 @@ void spatial_region::fout_ez(ofstream* pfout, int n0, int n, ios_base::openmode
             for(int k=0;k<nz;k++)
                 (*pfout)<<ce[i][j][k].ez<<"\n";
         }
-    } else if (mode == ios_base::out | ios_base::binary) {
+    } else if (is_mode_binary(mode)) {
         write_binary<celle>(pfout, ce, getez, n0, n, ny, nz);
     } else {
         cerr << "fout_ez: ERROR: wrong mode" << endl;
@@ -302,12 +310,12 @@ void spatial_region::fout_ez(ofstream* pfout, int n0, int n, ios_base::openmode
 void spatial_region::fout_ez_yzplane(ofstream* pfout, int i, ios_base::openmode
         mode)
 {
-    if (mode == ios_base::out) {
+    if (is_mode_non_binary(mode)) {
         for(int j=0;j<ny;j++) {
             for(int k=0;k<nz;k++)
                 (*pfout)<<ce[i][j][k].ez<<"\n";
         }
-    } else if (mode == ios_base::out | ios_base::binary) {
+    } else if (is_mode_binary(mode)) {
         write_binary_yzplane<celle>(pfout, ce, getez, i, ny, nz);
     } else {
         cerr << "fout_ez_yzplane: ERROR: wrong mode" << endl;
@@ -319,7 +327,7 @@ void spatial_region::fout_bx(ofstream* pfout, int n0, int n, ios_base::openmode
 {
     /* n-n0 - длина массива по x (для данного spatial_region'а) для
      * вывода сечения плоскостью xy и плоскостью xz */
-    if (mode == ios_base::out) {
+    if (is_mode_non_binary(mode)) {
         for(int i=n0;i<n;i++)
         {
             int k=nz/2;
@@ -329,7 +337,7 @@ void spatial_region::fout_bx(ofstream* pfout, int n0, int n, ios_base::openmode
             for(int k=0;k<nz;k++)
                 (*pfout)<<cb[i][j][k].bx<<"\n";
         }
-    } else if (mode == ios_base::out | ios_base::binary) {
+    } else if (is_mode_binary(mode)) {
         write_binary<cellb>(pfout, cb, getbx, n0, n, ny, nz);
     } else {
         cerr << "fout_bx: ERROR: wrong mode" << endl;
@@ -339,12 +347,12 @@ void spatial_region::fout_bx(ofstream* pfout, int n0, int n, ios_base::openmode
 void spatial_region::fout_bx_yzplane(ofstream* pfout, int i, ios_base::openmode
         mode)
 {
-    if (mode == ios_base::out) {
+    if (is_mode_non_binary(mode)) {
         for(int j=0;j<ny;j++) {
             for(int k=0;k<nz;k++)
                 (*pfout)<<cb[i][j][k].bx<<"\n";
         }
-    } else if (mode == ios_base::out | ios_base::binary) {
+    } else if (is_mode_binary(mode)) {
         write_binary_yzplane<cellb>(pfout, cb, getbx, i, ny, nz);
     } else {
         cerr << "fout_bx_yzplane: ERROR: wrong mode" << endl;
@@ -356,7 +364,7 @@ void spatial_region::fout_by(ofstream* pfout, int n0, int n, ios_base::openmode
 {
     /* n-n0 - длина массива по x (для данного spatial_region'а) для
      * вывода сечения плоскостью xy и плоскостью xz */
-    if (mode == ios_base::out) {
+    if (is_mode_non_binary(mode)) {
         for(int i=n0;i<n;i++)
         {
             int k=nz/2;
@@ -366,7 +374,7 @@ void spatial_region::fout_by(ofstream* pfout, int n0, int n, ios_base::openmode
             for(int k=0;k<nz;k++)
                 (*pfout)<<cb[i][j][k].by<<"\n";
         }
-    } else if (mode == ios_base::out | ios_base::binary) {
+    } else if (is_mode_binary(mode)) {
         write_binary<cellb>(pfout, cb, getby, n0, n, ny, nz);
     } else {
         cerr << "fout_by: ERROR: wrong mode" << endl;
@@ -376,12 +384,12 @@ void spatial_region::fout_by(ofstream* pfout, int n0, int n, ios_base::openmode
 void spatial_region::fout_by_yzplane(ofstream* pfout, int i, ios_base::openmode
         mode)
 {
-    if (mode == ios_base::out) {
+    if (is_mode_non_binary(mode)) {
         for(int j=0;j<ny;j++) {
             for(int k=0;k<nz;k++)
                 (*pfout)<<cb[i][j][k].by<<"\n";
         }
-    } else if (mode == ios_base::out | ios_base::binary) {
+    } else if (is_mode_binary(mode)) {
         write_binary_yzplane<cellb>(pfout, cb, getby, i, ny, nz);
     } else {
         cerr << "fout_by_yzplane: ERROR: wrong mode" << endl;
@@ -393,7 +401,7 @@ void spatial_region::fout_bz(ofstream* pfout, int n0, int n, ios_base::openmode
 {
     /* n-n0 - длина массива по x (для данного spatial_region'а) для
      * вывода сечения плоскостью xy и плоскостью xz */
-    if (mode == ios_base::out) {
+    if (is_mode_non_binary(mode)) {
         for(int i=n0;i<n;i++)
         {
             int k=nz/2;
@@ -403,7 +411,7 @@ void spatial_region::fout_bz(ofstream* pfout, int n0, int n, ios_base::openmode
             for(int k=0;k<nz;k++)
                 (*pfout)<<cb[i][j][k].bz<<"\n";
         }
-    } else if (mode == ios_base::out | ios_base::binary) {
+    } else if (is_mode_binary(mode)) {
         write_binary<cellb>(pfout, cb, getbz, n0, n, ny, nz);
     } else {
         cerr << "fout_bz: ERROR: wrong mode" << endl;
@@ -413,12 +421,12 @@ void spatial_region::fout_bz(ofstream* pfout, int n0, int n, ios_base::openmode
 void spatial_region::fout_bz_yzplane(ofstream* pfout, int i, ios_base::openmode
         mode)
 {
-    if (mode == ios_base::out) {
+    if (is_mode_non_binary(mode)) {
         for(int j=0;j<ny;j++) {
             for(int k=0;k<nz;k++)
                 (*pfout)<<cb[i][j][k].bz<<"\n";
         }
-    } else if (mode == ios_base::out | ios_base::binary) {
+    } else if (is_mode_binary(mode)) {
         write_binary_yzplane<cellb>(pfout, cb, getbz, i, ny, nz);
     } else {
         cerr << "fout_bz_yzplane: ERROR: wrong mode" << endl;
@@ -556,7 +564,7 @@ void spatial_region::fout_rho(ofstream* pfout_x, ofstream* pfout_y,
 {
     /* n-n0 - длина массива по x (для данного spatial_region'а) для
      * вывода сечения плоскостью xy и плоскостью xz */
-    if (mode == ios_base::out) {
+    if (is_mode_non_binary(mode)) {
         if (pfout_x != 0) {
             for (int i = n0; i < n; i++) {
                 int k = nz / 2;
@@ -601,7 +609,7 @@ void spatial_region::fout_rho(ofstream* pfout_x, ofstream* pfout_y,
                 }
             }
         }
-    } else if (mode == ios_base::out | ios_base::binary) {
+    } else if (is_mode_binary(mode)) {
         if (pfout_x != 0)
             write_binary<cellj>(pfout_x, cj, getjx, n0, n, ny, nz);
         if (pfout_y != 0)
@@ -616,7 +624,7 @@ void spatial_region::fout_rho(ofstream* pfout_x, ofstream* pfout_y,
 void spatial_region::fout_rho_yzplane(ofstream* pfout_x, ofstream* pfout_y,
         ofstream* pfout_z, int i, ios_base::openmode mode)
 {
-    if (mode == ios_base::out) {
+    if (is_mode_non_binary(mode)) {
         if (pfout_x != 0) {
             for (int j = 0; j < ny; j++) {
                 for (int k = 0; k < nz; k++) {
@@ -638,7 +646,7 @@ void spatial_region::fout_rho_yzplane(ofstream* pfout_x, ofstream* pfout_y,
                 }
             }
         }
-    } else if (mode == ios_base::out | ios_base::binary) {
+    } else if (is_mode_binary(mode)) {
         if (pfout_x != 0)
             write_binary_yzplane<cellj>(pfout_x, cj, getjx, i, ny, nz);
         if (pfout_y != 0)
@@ -656,7 +664,7 @@ void spatial_region::fout_irho(int ion_type, ofstream* pfout, int n0, int n,
     /* n-n0 - длина массива по x (для данного spatial_region'а) для
      * вывода сечения плоскостью xy и плоскостью xz */
     // ion_type - index for icmr array
-    if (mode == ios_base::out) {
+    if (is_mode_non_binary(mode)) {
         for(int i=n0;i<n;i++)
         {
             int k=nz/2;
@@ -670,7 +678,7 @@ void spatial_region::fout_irho(int ion_type, ofstream* pfout, int n0, int n,
                 (*pfout)<<irho[ion_type][i][j][k]<<"\n";
             }
         }
-    } else if (mode == ios_base::out | ios_base::binary) {
+    } else if (is_mode_binary(mode)) {
         write_binary<double>(pfout, irho[ion_type], getdouble, n0, n, ny, nz);
     } else {
         cerr << "fout_irho: ERROR: wrong mode" << endl;
@@ -680,13 +688,13 @@ void spatial_region::fout_irho(int ion_type, ofstream* pfout, int n0, int n,
 void spatial_region::fout_irho_yzplane(int ion_type, ofstream* pfout, int i,
         ios_base::openmode mode)
 {
-    if (mode == ios_base::out) {
+    if (is_mode_non_binary(mode)) {
         for(int j=0;j<ny;j++) {
             for(int k=0;k<nz;k++) {
                 (*pfout)<<irho[ion_type][i][j][k]<<"\n";
             }
         }
-    } else if (mode == ios_base::out | ios_base::binary) {
+    } else if (is_mode_binary(mode)) {
         write_binary_yzplane<double>(pfout, irho[ion_type], getdouble, i, ny,
                 nz);
     } else {

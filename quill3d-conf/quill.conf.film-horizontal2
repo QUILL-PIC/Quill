@@ -4,8 +4,6 @@
 
 # число вычислительных потоков
 n_sr = 16 # default: 8
-# число NUMA-нодов
-n_numa_nodes = 2 # default: 2
 
 # шаги численной сетки; если задан dt, но не задан dx, то dx
 # вычисляется автоматически так, чтобы алгоритм NDFX давал наименьшую
@@ -226,9 +224,6 @@ ztr2 = 17 # default: lambda; possible: um
 pmerging = nl # default: off; possible: nl, ti
 # критическое отношение числа квазичастиц одного сорта к числу ячеек
 crpc = 0.02
-
-# алгоритм «заморозки» частиц в магнитном поле
-freezing = off # default: off; possible: on
 
 # имя папки для результатов; не забудьте создать её вручную!
 data_folder = results2 # default: results

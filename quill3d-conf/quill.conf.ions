@@ -142,6 +142,3 @@ deps_i = 0.01
 #pmerging = on # default: off; possible: on
 # критическое отношение числа квазичастиц к числу ячеек
 #crpc = 2.0
-
-# алгоритм «заморозки» частиц в магнитном поле
-#freezing = on # default: off; possible: on

@@ -23,7 +23,6 @@ class spatial_region
     double e_s; // Sauter field normalized to mc\omega/e
     double* random;
     int n_random;
-    int node_number;
     int sr_id; // Current spatial region id
     //
     int n_ion_populations;
@@ -49,7 +48,6 @@ class spatial_region
     double* ienergy; // energies of ion populations
     double energy_e_deleted, energy_p_deleted, energy_ph_deleted; // for particles caught at boundaries
     double* ienergy_deleted;
-    double N_freezed;
     std::string data_folder;
     //
     class pwpa
@@ -84,8 +82,8 @@ class spatial_region
     };
     vector<deleted_particle> deleted_particles;
     spatial_region();
-    void init(int,double,double,double,double,double,int,int,int,int,int,double*,string,maxwell_solver_enum,pusher_enum);
-    void create_arrays(int,int,int,int,int);
+    void init(int,double,double,double,double,double,int,int,int,int,double*,string,maxwell_solver_enum,pusher_enum);
+    void create_arrays(int,int,int,int);
     ~spatial_region();
     void fout_ex(ofstream*,int,int, ios_base::openmode);
     void fout_ex_yzplane(ofstream*,int, ios_base::openmode);
@@ -117,7 +115,7 @@ class spatial_region
     void fadvance();
     void interpolate_be();
     void f_init_boundaries();
-    void padvance(bool=0,double=0);
+    void padvance(double=0);
     void birth_from_vacuum(double);
     void jdeposition(particle&,vector3d&);
     void rhodeposition(particle&);
@@ -137,7 +135,6 @@ class spatial_region
     particle* new_particle();
     void delete_particle(particle*,bool=false);
     void erase(plist&);
-    void copy(plist&,plist&);
     void compute_N(int,int,double);
     void compute_energy(int,int,double,double);
     double chi(vector3d&,vector3d&,vector3d&,double&);
@@ -149,6 +146,10 @@ class spatial_region
     void pmerging(double*,string);
     double _ppd(double,double); // вспомогательная функция
     void scale_j(double);
+
+    int get_nx() {return nx;}
+    int get_ny() {return ny;}
+    int get_nz() {return nz;}
     
     private:
     void update_energy_deleted(particle*);
@@ -187,5 +188,4 @@ class var
 vector3d regulate(double&, double&, double&);
 var* find(std::string, var*);
 void copy(spatial_region&,int,int,int,spatial_region&,int,int,int);
-void* listen_for_param_updates(void*);
 double lin_interpolation(double, std::vector<double>&, std::vector<double>&);

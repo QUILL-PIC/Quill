@@ -83,7 +83,7 @@ void spatial_region::f_init_boundaries()
     solver->init_boundaries();
 }
 
-void spatial_region::padvance(bool freezing, double external_bz)
+void spatial_region::padvance(double external_bz)
 {
     particle* current;
     particle* tmp;
@@ -99,8 +99,6 @@ void spatial_region::padvance(bool freezing, double external_bz)
     int_vector3d position;
     //
     p_boundary();
-    //
-    N_freezed = 0;
     //
     for(int i=0;i<nx;i++)
     {
@@ -241,116 +239,104 @@ void spatial_region::padvance(bool freezing, double external_bz)
                     }
                     else if (fabs(current->cmr)==1)
                     { // *current - электрон или позитрон
-                        if (freezing==1&&(b.x*b.x+b.y*b.y+b.z*b.z-e.x*e.x-e.y*e.y-e.z*e.z)/(current->g*current->g)>0.1/(dt*dt))
+                        if (qed_enabled) {
+                            u_prev.x = current->ux;
+                            u_prev.y = current->uy;
+                            u_prev.z = current->uz;
+                            g_prev = current->g;
+                            chi_prev = current->chi;
+                            advance_momentum(*current, e, b, dt); // p_n -> p_{n+1}
+                            u_interim.x = 0.5 * (current->ux + u_prev.x);
+                            u_interim.y = 0.5 * (current->uy + u_prev.y);
+                            u_interim.z = 0.5 * (current->uz + u_prev.z);
+                            g_interim = 0.5 * (current->g + g_prev);
+                            current->chi = chi(e, b, u_interim, g_interim); // chi_{n+1/2}
+                            a = 0.5 * (current->chi + chi_prev); // chi_n
+                            r = get_rand();
+                            calc_qed = !(get_rand()>=w(g_prev,r,a)*g_prev*dt);
+                        } else {
+                            advance_momentum(*current, e, b, dt); // p_n -> p_{n+1}
+                            calc_qed = false;
+                        }
+
+                        if (!calc_qed)
                         {
-                            current->ux = 0;
-                            current->uy = 0;
-                            current->uz = 0;
-                            current->g = 1;
-                            N_freezed += fabs(current->q);
+                            displ = current->get_displacement(dt);
+                            displ.x=displ.x/dx;
+                            displ.y=displ.y/dy;
+                            displ.z=displ.z/dz;
+                            jdeposition(*current,displ);
                             tmp = current;
                             current = current->next;
+                            place(*tmp,i,j,k);
                         }
                         else
-                        {
-                            if (qed_enabled) {
-                                u_prev.x = current->ux;
-                                u_prev.y = current->uy;
-                                u_prev.z = current->uz;
-                                g_prev = current->g;
-                                chi_prev = current->chi;
-                                advance_momentum(*current, e, b, dt); // p_n -> p_{n+1}
-                                u_interim.x = 0.5 * (current->ux + u_prev.x);
-                                u_interim.y = 0.5 * (current->uy + u_prev.y);
-                                u_interim.z = 0.5 * (current->uz + u_prev.z);
-                                g_interim = 0.5 * (current->g + g_prev);
-                                current->chi = chi(e, b, u_interim, g_interim); // chi_{n+1/2}
-                                a = 0.5 * (current->chi + chi_prev); // chi_n
-                                r = get_rand();
-                                calc_qed = !(get_rand()>=w(g_prev,r,a)*g_prev*dt);
+                        { // photon emission
+                            a = 0.5*dt/g_prev;
+                            displ.x = current->x - a*u_prev.x/dx;
+                            displ.y = current->y - a*u_prev.y/dy;
+                            displ.z = current->z - a*u_prev.z/dz;
+                            born = bear_particle(0,displ,u_prev,r*g_prev,r*current->chi,fabs(current->q));
+                            a = 3*a*g_prev/born->g;
+                            born->x += a*born->ux/dx;
+                            born->y += a*born->uy/dy;
+                            born->z += a*born->uz/dz;
+                            if (dump_photons) {
+                                delete_particle(born, true);
                             } else {
-                                advance_momentum(*current, e, b, dt); // p_n -> p_{n+1}
-                                calc_qed = false;
+                                place(*born);
                             }
-
-                            if (!calc_qed)
+                            //
+                            current->chi = (1-r)*current->chi;
+                            current->g = (1-r)*g_prev;
+                            a = sqrt((current->g*current->g-1)/(u_prev.x*u_prev.x + u_prev.y*u_prev.y + u_prev.z*u_prev.z));
+                            current->ux = u_prev.x*a;
+                            current->uy = u_prev.y*a;
+                            current->uz = u_prev.z*a;
+                            a = 0.5*dt/g_prev;
+                            current->x -= a*u_prev.x/dx;
+                            current->y -= a*u_prev.y/dy;
+                            current->z -= a*u_prev.z/dz;
+                            a = a*g_prev/current->g;
+                            current->x += a*current->ux/dx;
+                            current->y += a*current->uy/dy;
+                            current->z += a*current->uz/dz;
+                            //
+                            tmp = current->next;
+                            //
+                            if (is_inside(current->x,current->y,current->z))
                             {
+                                place(*current,i,j,k);
+                                //
+                                position.i = current->x; // where particle was; for place(...)
+                                position.j = current->y;
+                                position.k = current->z;
+                                //
+                                e = e_to_particle(current->x,current->y,current->z);
+                                b = b_to_particle(current->x,current->y,current->z);
+                                b.z += external_bz;
+                                advance_momentum(*current, e, b, dt); // p_n -> p_{n+1}
                                 displ = current->get_displacement(dt);
                                 displ.x=displ.x/dx;
                                 displ.y=displ.y/dy;
                                 displ.z=displ.z/dz;
                                 jdeposition(*current,displ);
-                                tmp = current;
-                                current = current->next;
-                                place(*tmp,i,j,k);
+                                //
+                                place(*current,position.i,position.j,position.k);
                             }
                             else
-                            { // photon emission
-                                a = 0.5*dt/g_prev;
-                                displ.x = current->x - a*u_prev.x/dx;
-                                displ.y = current->y - a*u_prev.y/dy;
-                                displ.z = current->z - a*u_prev.z/dz;
-                                born = bear_particle(0,displ,u_prev,r*g_prev,r*current->chi,fabs(current->q));
-                                a = 3*a*g_prev/born->g;
-                                born->x += a*born->ux/dx;
-                                born->y += a*born->uy/dy;
-                                born->z += a*born->uz/dz;
-                                if (dump_photons) {
-                                    delete_particle(born, true);
-                                } else {
-                                    place(*born);
-                                }
-                                //
-                                current->chi = (1-r)*current->chi;
-                                current->g = (1-r)*g_prev;
-                                a = sqrt((current->g*current->g-1)/(u_prev.x*u_prev.x + u_prev.y*u_prev.y + u_prev.z*u_prev.z));
-                                current->ux = u_prev.x*a;
-                                current->uy = u_prev.y*a;
-                                current->uz = u_prev.z*a;
-                                a = 0.5*dt/g_prev;
-                                current->x -= a*u_prev.x/dx;
-                                current->y -= a*u_prev.y/dy;
-                                current->z -= a*u_prev.z/dz;
-                                a = a*g_prev/current->g;
-                                current->x += a*current->ux/dx;
-                                current->y += a*current->uy/dy;
-                                current->z += a*current->uz/dz;
-                                //
-                                tmp = current->next;
-                                //
-                                if (is_inside(current->x,current->y,current->z))
-                                {
-                                    place(*current,i,j,k);
-                                    //
-                                    position.i = current->x; // where particle was; for place(...)
-                                    position.j = current->y;
-                                    position.k = current->z;
-                                    //
-                                    e = e_to_particle(current->x,current->y,current->z);
-                                    b = b_to_particle(current->x,current->y,current->z);
-                                    b.z += external_bz;
-                                    advance_momentum(*current, e, b, dt); // p_n -> p_{n+1}
-                                    displ = current->get_displacement(dt);
-                                    displ.x=displ.x/dx;
-                                    displ.y=displ.y/dy;
-                                    displ.z=displ.z/dz;
-                                    jdeposition(*current,displ);
-                                    //
-                                    place(*current,position.i,position.j,position.k);
-                                }
+                            {
+                                if (current->previous!=0)
+                                    (current->previous)->next = current->next;
                                 else
-                                {
-                                    if (current->previous!=0)
-                                        (current->previous)->next = current->next;
-                                    else
-                                        cp[i][j][k].pl.head = current->next;
-                                    if (current->next!=0)
-                                        (current->next)->previous = current->previous;
-                                    delete_particle(current);
-                                }
-                                current = tmp;
+                                    cp[i][j][k].pl.head = current->next;
+                                if (current->next!=0)
+                                    (current->next)->previous = current->previous;
+                                delete_particle(current);
                             }
+                            current = tmp;
                         }
+
                     }
                     else
                     { // *current - ион

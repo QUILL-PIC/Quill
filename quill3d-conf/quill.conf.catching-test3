@@ -7,8 +7,6 @@
 
 # число вычислительных потоков
 n_sr = 20 # default: 8
-# число NUMA-нодов
-n_numa_nodes = 2 # default: 2
 
 catching = on
 
@@ -214,6 +212,4 @@ pmerging = nl # default: off; possible: nl, ti
 # критическое отношение числа квазичастиц одного сорта к числу ячеек
 crpc = 1.0
 
-# алгоритм «заморозки» частиц в магнитном поле
-freezing = off # default: off; possible: on
 data_folder = results_catching3

@@ -1,21 +1,21 @@
-#include <numa.h>
+#include <cstdlib>
 #include "containers.h"
 
 template <typename T>
-field3d<T>::field3d(int nx0, int ny0, int nz0, int node_number) : nx(nx0), ny(ny0), nz(nz0) {
+field3d<T>::field3d(int nx0, int ny0, int nz0) : nx(nx0), ny(ny0), nz(nz0) {
 
     void* pv;
 
-    pv = numa_alloc_onnode(sizeof(T**)*nx, node_number);
+    pv = malloc(sizeof(T**)*nx);
     p = (T***) pv;
 
-    pv = numa_alloc_onnode(sizeof(T*)*nx*ny, node_number);
+    pv = malloc(sizeof(T*)*nx*ny);
     for(int i=0; i<nx; i++)
     {
         p[i] = ((T**) pv) + ny*i;
     }
 
-    pv = numa_alloc_onnode(sizeof(T)*nx*ny*nz, node_number);
+    pv = malloc(sizeof(T)*nx*ny*nz);
     for(int i=0; i<nx; i++)
     {
         for(int j=0; j<ny; j++)
@@ -27,12 +27,12 @@ field3d<T>::field3d(int nx0, int ny0, int nz0, int node_number) : nx(nx0), ny(ny
 
 template <typename T>
 field3d<T>::~field3d() {
-    free();
+    free_memory();
 }
 
 template <typename T>
 field3d<T> & field3d<T>::operator =(field3d<T> && other) {
-    free();
+    free_memory();
     nx = other.nx;
     ny = other.ny;
     nz = other.nz;
@@ -44,25 +44,21 @@ field3d<T> & field3d<T>::operator =(field3d<T> && other) {
 }
 
 template <typename T>
-void field3d<T>::free() {
+void field3d<T>::free_memory() {
     if (!p) {
         return;
     }
 
     void* pv;
 
-    for(int i=0;i<nx;i++)
-    {
-        for(int j=0;j<ny;j++)
-        {
-            pv = (void*) p[i][j];
-            numa_free(pv, sizeof(T)*nz);
-        }
-        pv = (void*) p[i];
-        numa_free(pv, sizeof(T*)*ny);
-    }
+    pv = (void*) p[0][0];
+    free(pv);
+
+    pv = (void*) p[0];
+    free(pv);
+
     pv = (void*) p;
-    numa_free(pv, sizeof(T**)*nx);
+    free(pv);
 }
 
 particle::particle()

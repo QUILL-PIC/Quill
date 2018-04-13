@@ -3,9 +3,9 @@
 #include <cmath>
 #include <algorithm>
 #include <sys/times.h>
-#include <numa.h>
 #include <unistd.h>
 #include <memory>
+#include "mpi.h"
 #include "main.h"
 #include "maxwell.h"
 #include "containers.h"
@@ -15,6 +15,7 @@ using namespace std;
 // global variables ------------
 double dx,dy,dz,dt;
 double xlength,ylength,zlength;
+int nx_global, ny_global, nz_global;
 double a0y,a0z;
 double xsigma,ysigma,zsigma;
 double x0;
@@ -45,7 +46,6 @@ film* p_last_film;
 double x00,y00,z00;
 double sigma0,sigma; // sigma0 - радиус пучка в фокальной плоскости
 double external_bz;
-bool freezing;
 bool b_sign; // b_sign = 1 соответствует знаку '+', 0 - знаку '-'
 int n_ion_populations;
 double* icmr;
@@ -89,20 +89,10 @@ pusher_enum pusher;
 
 int l; // номер шага по времени
 
-pthread_mutex_t* sr_mutex_c; // c - create; mutex используется только при создании потоков
-pthread_mutex_t* sr_mutex1;
-pthread_mutex_t* sr_mutex2;
-pthread_mutex_t* sr_mutex_m; // ich - interchange; mutex используется для смешивания на границе слоев
-pthread_mutex_t* sr_mutex_m2;
-pthread_mutex_t* sr_mutex_rho1;
-pthread_mutex_t* sr_mutex_rho2;
-pthread_mutex_t* sr_mutex_j1;
-pthread_mutex_t* sr_mutex_j2; // mutex для вывода токов
+unique_ptr<spatial_region> psr; // пространственный регион данного процесса
 
-spatial_region* psr; // указатель на массив областей, на которые разбита область вычислений
-
-int n_sr; // число слоёв и потоков
-int n_numa_nodes; // number of NUMA nodes
+int n_sr; // число слоёв и mpi-процессов
+int mpi_rank; // mpi-ранг текущего процесса
 vector<int> nx_sr; // число ячеек (по x) в слое
 vector<int> x0_sr; // индексы левых границ слоев
 int nx_ich; /* число ячеек для приграничной области слоёв, данные в
@@ -142,155 +132,88 @@ inline int get_xindex_in_sr(double x) {
     return get_xindex_in_sr(x, get_sr_for_x(x));
 }
 
-void* thread_function(void* arg)
+void write_N(ofstream& fout_N)
 {
-    int i;
-    i = *( (int*) arg );
-    pthread_mutex_unlock(&sr_mutex_c[i]);
+    if (mpi_rank == 0) {
+        double N_e,N_p,N_ph;
+        N_e = psr->N_e;
+        N_p = psr->N_p;
+        N_ph = psr->N_ph;
 
-    numa_run_on_node(int(i*n_numa_nodes/n_sr));
-    while(l<p_last_ddi->t_end/dt)
-    {
-        if (pmerging_now=="on")
-            psr[i].pmerging(ppd,pmerging);
-        psr[i].birth_from_vacuum(8*PI*PI/(dx*dy*dz)*2.818e-13/lambda); // 2.818e-13 = e^2/mc^2
-        psr[i].padvance(freezing, external_bz);
-        psr[i].compute_N(nm*(i!=0),nm*(i!=n_sr-1),dx*dy*dz*1.11485e13*lambda/(8*PI*PI*PI));
-        psr[i].compute_energy(nm*(i!=0),nm*(i!=n_sr-1),0.5*dx*dy*dz*3.691e4*lambda/1e7,8.2e-14*dx*dy*dz*1.11485e13*lambda/(8*PI*PI*PI)); // энергия в Джоулях
-        psr[i].fout_tracks((x0_sr[i]+nmw)*dx/2/PI,nm);
-        psr[i].fadvance();
-        if (mwindow==1) psr[i].moving_window(l,nmw,mwspeed);
+        for (int i=1;i<n_sr;i++) {
+            int tag = 0;
+            double value;
+            MPI_Recv(&value, 1, MPI_DOUBLE, i, tag++, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+            N_e += value;
+            MPI_Recv(&value, 1, MPI_DOUBLE, i, tag++, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+            N_p += value;
+            MPI_Recv(&value, 1, MPI_DOUBLE, i, tag++, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+            N_ph += value;
+        }
 
-        // обмен данными на приграничной области слоёв
-        if(n_sr>1)
-        {
-            if(i!=0) pthread_mutex_unlock(&sr_mutex_m[i-1]);
-            if(i!=n_sr-1) pthread_mutex_unlock(&sr_mutex_m2[i+1]);
-            if(i!=n_sr-1) pthread_mutex_lock(&sr_mutex_m[i]);
-            if(i!=0) pthread_mutex_lock(&sr_mutex_m2[i]);
-            //
-            if (mwindow==1&&(l+1)*dt*mwspeed>nmw*dx)
-            {
-                /* в этом случае функция moving_window
-                 * произвела сдвиг содержимого *psr[i]
-                 * на одну ячейку */
-                if (i!=n_sr-1) {
-                    for (int ii=0;ii<nm+1;ii++) {
-                        for (int j=0;j<int(ylength/dy);j++) {
-                            for (int k=0;k<int(zlength/dz);k++) {
-                                copy(psr[i+1],nm-1+ii,j,k,psr[i],nx_sr[i]-nm-1+ii,j,k);
-                                psr[i].copy(psr[i+1].cp[nm-1+ii][j][k].pl,psr[i].cp[nx_sr[i]-nm-1+ii][j][k].pl);
-                                psr[i].cp[nx_sr[i]-nm-1+ii][j][k].pl.xplus(nx_sr[i]-nx_ich);
-                            }
-                        }
-                    }
-                }
-                if (i!=0) {
-                    for(int ii=0;ii<nm-1;ii++) {
-                        for(int j=0;j<int(ylength/dy);j++) {
-                            for(int k=0;k<int(zlength/dz);k++) {
-                                copy(psr[i-1],nx_sr[i-1]-nx_ich+ii,j,k,psr[i],ii,j,k);
-                                psr[i].copy(psr[i-1].cp[nx_sr[i-1]-nx_ich+ii][j][k].pl,psr[i].cp[ii][j][k].pl);
-                                psr[i].cp[ii][j][k].pl.xplus(-nx_sr[i-1]+nx_ich);
-                            }
-                        }
-                    }
-                }
-            }
-            else
-            {
-                /* в этом случае функция moving_window
-                 * не производила сдвига содержимого
-                 * *psr[i] на одну ячейку */
-                if (i!=n_sr-1) {
-                    for (int ii=0;ii<nm;ii++) {
-                        for (int j=0;j<int(ylength/dy);j++) {
-                            for (int k=0;k<int(zlength/dz);k++) {
-                                copy(psr[i+1],nm+ii,j,k,psr[i],nx_sr[i]-nm+ii,j,k);
-                                psr[i].copy(psr[i+1].cp[nm+ii][j][k].pl,psr[i].cp[nx_sr[i]-nm+ii][j][k].pl);
-                                psr[i].cp[nx_sr[i]-nm+ii][j][k].pl.xplus(nx_sr[i]-nx_ich);
-                            }
-                        }
-                    }
-                }
-                if (i!=0) {
-                    for(int ii=0;ii<nm;ii++) {
-                        for(int j=0;j<int(ylength/dy);j++) {
-                            for(int k=0;k<int(zlength/dz);k++) {
-                                copy(psr[i-1],nx_sr[i-1]-nx_ich+ii,j,k,psr[i],ii,j,k);
-                                psr[i].copy(psr[i-1].cp[nx_sr[i-1]-nx_ich+ii][j][k].pl,psr[i].cp[ii][j][k].pl);
-                                psr[i].cp[ii][j][k].pl.xplus(-nx_sr[i-1]+nx_ich);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        //
-        if(l*dt >= [](ddi* a) {double b=a->f*a->output_period; if(a->prev!=0) b+=(a->prev)->t_end; return b;} (p_current_ddi))
-        {
-            pthread_mutex_unlock(&sr_mutex_j1[i]);
-            pthread_mutex_lock(&sr_mutex_j2[i]);
-            // подсчёт плотности частиц
-            psr[i].compute_rho();
-            pthread_mutex_unlock(&sr_mutex_rho1[i]);
-            pthread_mutex_lock(&sr_mutex_rho2[i]);
-        }
-        //
-        pthread_mutex_unlock(&sr_mutex1[i]);
-        pthread_mutex_lock(&sr_mutex2[i]);
+        fout_N<<N_e<<'\t'<<N_p<<'\t'<<N_ph<<endl;
+    } else {
+        int tag = 0;
+        MPI_Send(&(psr->N_e), 1, MPI_DOUBLE, 0, tag++, MPI_COMM_WORLD);
+        MPI_Send(&(psr->N_p), 1, MPI_DOUBLE, 0, tag++, MPI_COMM_WORLD);
+        MPI_Send(&(psr->N_ph), 1, MPI_DOUBLE, 0, tag++, MPI_COMM_WORLD);
     }
-    return nullptr;
-}
-
-int write_N(ofstream& fout_N)
-{
-    double N_e,N_p,N_ph;
-    N_e = N_p = N_ph = 0;
-    
-    for (int i=0;i<n_sr;i++) 
-        N_e += psr[i].N_e;
-    for (int i=0;i<n_sr;i++) 
-        N_p += psr[i].N_p;
-    for (int i=0;i<n_sr;i++) 
-        N_ph += psr[i].N_ph;
-        
-    fout_N<<N_e<<'\t'<<N_p<<'\t'<<N_ph<<endl;
-    
-    return N_e + N_p; // for logging in "freezing"; delete when freezing is removed
 }
 
 void write_energy(ofstream& fout_energy)
 {
-    double energy_f,energy_e,energy_p,energy_ph;
-    double* ienergy = new double[n_ion_populations];
-    energy_f = energy_e = energy_p = energy_ph = 0;
-    for (int n=0;n<n_ion_populations;n++)
-        ienergy[n] = 0;
-
-    for (int i=0;i<n_sr;i++) 
-        energy_f += psr[i].energy_f;
-    for (int i=0;i<n_sr;i++) 
-        energy_e += psr[i].energy_e;
-    for (int i=0;i<n_sr;i++) 
-        energy_p += psr[i].energy_p;
-    for (int i=0;i<n_sr;i++) 
-        energy_ph += psr[i].energy_ph;
-    for (int i=0;i<n_sr;i++)
-    {
+    if (mpi_rank == 0) {
+        double energy_f,energy_e,energy_p,energy_ph;
+        double* ienergy = new double[n_ion_populations];
+        energy_f = psr->energy_f;
+        energy_e = psr->energy_e;
+        energy_p = psr->energy_p;
+        energy_ph = psr->energy_ph;
         for (int n=0;n<n_ion_populations;n++)
-            ienergy[n] += psr[i].ienergy[n];
+            ienergy[n] = psr->ienergy[n];
+
+        for (int i=1;i<n_sr;i++) {
+            int tag = 0;
+            double value;
+            MPI_Recv(&value, 1, MPI_DOUBLE, i, tag++, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+            energy_f += value;
+            MPI_Recv(&value, 1, MPI_DOUBLE, i, tag++, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+            energy_e += value;
+            MPI_Recv(&value, 1, MPI_DOUBLE, i, tag++, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+            energy_p += value;
+            MPI_Recv(&value, 1, MPI_DOUBLE, i, tag++, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+            energy_ph += value;
+            for (int n=0;n<n_ion_populations;n++) {
+                MPI_Recv(&value, 1, MPI_DOUBLE, i, tag++, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                ienergy[n] += value;
+            }
+        }
+        fout_energy<<energy_f<<'\t'<<energy_e<<'\t'<<energy_p<<'\t'<<energy_ph;
+            for (int n=0;n<n_ion_populations;n++)
+                fout_energy<<'\t'<<ienergy[n];
+            fout_energy<<endl;
+        delete [] ienergy;
+    } else {
+        int tag = 0;
+        MPI_Send(&(psr->energy_f), 1, MPI_DOUBLE, 0, tag++, MPI_COMM_WORLD);
+        MPI_Send(&(psr->energy_e), 1, MPI_DOUBLE, 0, tag++, MPI_COMM_WORLD);
+        MPI_Send(&(psr->energy_p), 1, MPI_DOUBLE, 0, tag++, MPI_COMM_WORLD);
+        MPI_Send(&(psr->energy_ph), 1, MPI_DOUBLE, 0, tag++, MPI_COMM_WORLD);
+        for (int n=0; n<n_ion_populations; n++) {
+            MPI_Send(&(psr->ienergy[n]), 1, MPI_DOUBLE, 0, tag++, MPI_COMM_WORLD);
+        }
     }
-    
-    fout_energy<<energy_f<<'\t'<<energy_e<<'\t'<<energy_p<<'\t'<<energy_ph;
-    for (int n=0;n<n_ion_populations;n++)
-        fout_energy<<'\t'<<ienergy[n];
-    fout_energy<<endl;
-    delete[] ienergy;
 }
 
-void write_deleted_particles(ofstream& fout_energy_deleted, bool write_p, bool write_ph)
+void write_deleted_particles(bool write_p, bool write_ph)
 {
+    ios_base::openmode non_binary_mode;
+    if (mpi_rank == 0) {
+        non_binary_mode = ios_base::out;
+    } else {
+        non_binary_mode = ios_base::out | ios_base::app;
+    }
+
     std::string file_name;
     char file_num_pchar[20];
     sprintf(file_num_pchar,"%g",
@@ -303,160 +226,195 @@ void write_deleted_particles(ofstream& fout_energy_deleted, bool write_p, bool w
         } (p_current_ddi)/2/PI*file_name_accuracy
         )/file_name_accuracy);
     
-    file_name = data_folder + "/deleted" + file_num_pchar;
-    ofstream fout_deleted_e(file_name.c_str());
-    
-    file_name = data_folder + "/deleted_p" + file_num_pchar;
-    ofstream fout_deleted_p(file_name.c_str());
-    
-    file_name = data_folder + "/deleted_ph" + file_num_pchar;
-    ofstream fout_deleted_ph(file_name.c_str());
-    
-    ofstream* fout_deleted_i = new ofstream[n_ion_populations];
-    for (int m=0; m<n_ion_populations; ++m)
-    {
-        char s_cmr[20];
-        sprintf(s_cmr,"%g",icmr[m]);
-        file_name = data_folder+"/deleted_";
-        file_name += s_cmr;
-        file_name += "_";
-        file_name += file_num_pchar;
-        fout_deleted_i[m].open(file_name.c_str());
-    }
-    file_name = data_folder + "/spectrum_deleted_ph" + file_num_pchar;
-    ofstream fout_spectrum_ph(file_name.c_str());
-
     double* spectrum_ph = new double[neps_ph];
     for(int i=0; i<neps_ph; i++) spectrum_ph[i] = 0;
     int i_eps = 0;
 
     for(int n=0; n<n_sr; n++)
     {
-        vector<spatial_region::deleted_particle>& del_particles = psr[n].deleted_particles;
-        
-        double norm = 8.2e-14*dx*dy*dz*1.11485e13*lambda/(8*PI*PI*PI); // energy in Joules
-        for (auto it = del_particles.begin(); it != del_particles.end(); ++it)
-        {
-            if ((*it).cmr == -1)
+        if (mpi_rank == n) {
+            file_name = data_folder + "/deleted" + file_num_pchar;
+            ofstream fout_deleted_e(file_name.c_str(), non_binary_mode);
+
+            file_name = data_folder + "/deleted_p" + file_num_pchar;
+            ofstream fout_deleted_p(file_name.c_str(), non_binary_mode);
+
+            file_name = data_folder + "/deleted_ph" + file_num_pchar;
+            ofstream fout_deleted_ph(file_name.c_str(), non_binary_mode);
+
+            ofstream* fout_deleted_i = new ofstream[n_ion_populations];
+            for (int m=0; m<n_ion_populations; ++m)
             {
-                i_particle++;
-                if(i_particle > enthp)
-                {
-                    i_particle = 0;
-                    fout_deleted_e << (*it).q << endl;
-                    fout_deleted_e << dx*((*it).x + x0_sr[n])/(2*PI) << endl;
-                    fout_deleted_e << dy*((*it).y)/(2*PI) << endl << dz*((*it).z)/(2*PI) << endl;
-                    fout_deleted_e << (*it).ux << endl << (*it).uy << endl <<(*it).uz << endl;
-                    fout_deleted_e << (*it).g << endl << (*it).chi << endl;
-                }
+                char s_cmr[20];
+                sprintf(s_cmr,"%g",icmr[m]);
+                file_name = data_folder+"/deleted_";
+                file_name += s_cmr;
+                file_name += "_";
+                file_name += file_num_pchar;
+                fout_deleted_i[m].open(file_name.c_str(), non_binary_mode);
             }
-            else if (write_p && (*it).cmr == 1)
+
+            vector<spatial_region::deleted_particle>& del_particles = psr->deleted_particles;
+
+            double norm = 8.2e-14*dx*dy*dz*1.11485e13*lambda/(8*PI*PI*PI); // energy in Joules
+            for (auto it = del_particles.begin(); it != del_particles.end(); ++it)
             {
-                i_particle_p++;
-                if(i_particle_p > enthp_p)
+                if ((*it).cmr == -1)
                 {
-                    i_particle_ph = 0;
-                    fout_deleted_p << (*it).q << endl;
-                    fout_deleted_p << dx*((*it).x + x0_sr[n])/(2*PI) << endl;
-                    fout_deleted_p << dy*((*it).y)/(2*PI) << endl << dz*((*it).z)/(2*PI) << endl;
-                    fout_deleted_p << (*it).ux << endl << (*it).uy << endl <<(*it).uz << endl;
-                    fout_deleted_p << (*it).g << endl << (*it).chi << endl;
-                }
-            }
-            else if (write_ph && (*it).cmr == 0)
-            {
-                i_eps = (*it).g*0.511/deps_ph;
-                if((i_eps > -1) && (i_eps < neps_ph)) {
-                    spectrum_ph[i_eps] = spectrum_ph[i_eps] + (*it).q; // q>0 for photons
-                }
-                i_particle_ph++;
-                if(i_particle_ph > enthp_ph)
-                {
-                    i_particle_ph = 0;
-                    fout_deleted_ph << (*it).q << endl;
-                    fout_deleted_ph << dx*((*it).x + x0_sr[n])/(2*PI) << endl;
-                    fout_deleted_ph << dy*((*it).y)/(2*PI) << endl << dz*((*it).z)/(2*PI) << endl;
-                    fout_deleted_ph << (*it).ux << endl << (*it).uy << endl <<(*it).uz << endl;
-                    fout_deleted_ph << (*it).g << endl << (*it).chi << endl;
-                }
-            }
-            else
-            {
-                for (int j=0; j<n_ion_populations; ++j)
-                {
-                    if ((*it).cmr == icmr[j])
+                    i_particle++;
+                    if(i_particle > enthp)
                     {
-                        i_particle_i++;
-                        if(i_particle_i > enthp_i)
+                        i_particle = 0;
+                        fout_deleted_e << (*it).q << endl;
+                        fout_deleted_e << dx*((*it).x + x0_sr[n])/(2*PI) << endl;
+                        fout_deleted_e << dy*((*it).y)/(2*PI) << endl << dz*((*it).z)/(2*PI) << endl;
+                        fout_deleted_e << (*it).ux << endl << (*it).uy << endl <<(*it).uz << endl;
+                        fout_deleted_e << (*it).g << endl << (*it).chi << endl;
+                    }
+                }
+                else if (write_p && (*it).cmr == 1)
+                {
+                    i_particle_p++;
+                    if(i_particle_p > enthp_p)
+                    {
+                        i_particle_ph = 0;
+                        fout_deleted_p << (*it).q << endl;
+                        fout_deleted_p << dx*((*it).x + x0_sr[n])/(2*PI) << endl;
+                        fout_deleted_p << dy*((*it).y)/(2*PI) << endl << dz*((*it).z)/(2*PI) << endl;
+                        fout_deleted_p << (*it).ux << endl << (*it).uy << endl <<(*it).uz << endl;
+                        fout_deleted_p << (*it).g << endl << (*it).chi << endl;
+                    }
+                }
+                else if (write_ph && (*it).cmr == 0)
+                {
+                    i_eps = (*it).g*0.511/deps_ph;
+                    if((i_eps > -1) && (i_eps < neps_ph)) {
+                        spectrum_ph[i_eps] = spectrum_ph[i_eps] + (*it).q; // q>0 for photons
+                    }
+                    i_particle_ph++;
+                    if(i_particle_ph > enthp_ph)
+                    {
+                        i_particle_ph = 0;
+                        fout_deleted_ph << (*it).q << endl;
+                        fout_deleted_ph << dx*((*it).x + x0_sr[n])/(2*PI) << endl;
+                        fout_deleted_ph << dy*((*it).y)/(2*PI) << endl << dz*((*it).z)/(2*PI) << endl;
+                        fout_deleted_ph << (*it).ux << endl << (*it).uy << endl <<(*it).uz << endl;
+                        fout_deleted_ph << (*it).g << endl << (*it).chi << endl;
+                    }
+                }
+                else
+                {
+                    for (int j=0; j<n_ion_populations; ++j)
+                    {
+                        if ((*it).cmr == icmr[j])
                         {
-                            i_particle_i = 0;
-                            fout_deleted_i[j] << (*it).q << endl;
-                            fout_deleted_i[j] << dx*((*it).x + x0_sr[n])/(2*PI) << endl;
-                            fout_deleted_i[j] << dy*((*it).y)/(2*PI) << endl << dz*((*it).z)/(2*PI) << endl;
-                            fout_deleted_i[j] << (*it).ux << endl << (*it).uy << endl <<(*it).uz << endl;
-                            fout_deleted_i[j] << (*it).g << endl << (*it).chi << endl;
+                            i_particle_i++;
+                            if(i_particle_i > enthp_i)
+                            {
+                                i_particle_i = 0;
+                                fout_deleted_i[j] << (*it).q << endl;
+                                fout_deleted_i[j] << dx*((*it).x + x0_sr[n])/(2*PI) << endl;
+                                fout_deleted_i[j] << dy*((*it).y)/(2*PI) << endl << dz*((*it).z)/(2*PI) << endl;
+                                fout_deleted_i[j] << (*it).ux << endl << (*it).uy << endl <<(*it).uz << endl;
+                                fout_deleted_i[j] << (*it).g << endl << (*it).chi << endl;
+                            }
+                            break;
                         }
-                        break;
                     }
                 }
             }
+            del_particles.clear();
+            fout_deleted_e.close();
+            fout_deleted_p.close();
+            fout_deleted_ph.close();
+            for (int m=0; m<n_ion_populations; ++m)
+            {
+                fout_deleted_i[m].close();
+            }
+            delete[] fout_deleted_i;
         }
-        del_particles.clear();
+        MPI_Barrier(MPI_COMM_WORLD);
     }
 
-    if (write_ph)
-    {
-        double spectrum_norm_ph = 1.11485e13 * lambda*dx*dy*dz/(8*PI*PI*PI)/deps_ph;
-        for(int i=0; i<neps_ph; i++)
-        {
-            spectrum_ph[i] = spectrum_ph[i] * spectrum_norm_ph;
-            fout_spectrum_ph << spectrum_ph[i] << '\n';
+    if (write_ph) {
+        //gathering photon spectra on process rank 0
+        if (mpi_rank == 0) {
+            double * buffer = new double[neps_ph];
+            for (int n=1;n<n_sr;n++) {
+                MPI_Recv(buffer, neps_ph, MPI_DOUBLE, n, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                for (int i=0;i<neps_ph;i++) {
+                    spectrum_ph[i] += buffer[i];
+                }
+            }
+            delete [] buffer;
+        } else {
+            MPI_Send(spectrum_ph, neps_ph, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD);
+        }
+
+        //spectrum output
+        if (mpi_rank == 0) {
+            file_name = data_folder + "/spectrum_deleted_ph" + file_num_pchar;
+            ofstream fout_spectrum_ph(file_name.c_str());
+
+            double spectrum_norm_ph = 1.11485e13 * lambda*dx*dy*dz/(8*PI*PI*PI)/deps_ph;
+            for(int i=0; i<neps_ph; i++)
+            {
+                spectrum_ph[i] = spectrum_ph[i] * spectrum_norm_ph;
+                fout_spectrum_ph << spectrum_ph[i] << '\n';
+            }
+
+            fout_spectrum_ph.close();
         }
     }
-    fout_deleted_e.close();
-    fout_deleted_p.close();
-    fout_deleted_ph.close();
-    for (int m=0; m<n_ion_populations; ++m)
-    {
-        fout_deleted_i[m].close();
-    }
-    fout_spectrum_ph.close();
+
     delete[] spectrum_ph;
-    delete[] fout_deleted_i;
 }
 
 void write_energy_deleted(ofstream& fout_energy_deleted)
 {
-    double energy_e_deleted, energy_p_deleted, energy_ph_deleted;
-    double* ienergy_deleted = new double[n_ion_populations];
-    energy_e_deleted = energy_p_deleted = energy_ph_deleted = 0;
-    for (int n=0; n<n_ion_populations; n++)
-        ienergy_deleted[n] = 0;
-
-    for (int i=0; i<n_sr; i++) 
-        energy_e_deleted += psr[i].energy_e_deleted;
-    for (int i=0; i<n_sr; i++) 
-        energy_p_deleted += psr[i].energy_p_deleted;
-    for (int i=0; i<n_sr; i++) 
-        energy_ph_deleted += psr[i].energy_ph_deleted;
-    for (int i=0; i<n_sr; i++)
-    {
+    if (mpi_rank == 0) {
+        double energy_e_deleted,energy_p_deleted,energy_ph_deleted;
+        double* ienergy_deleted = new double[n_ion_populations];
+        energy_e_deleted = psr->energy_e_deleted;
+        energy_p_deleted = psr->energy_p_deleted;
+        energy_ph_deleted = psr->energy_ph_deleted;
         for (int n=0;n<n_ion_populations;n++)
-            ienergy_deleted[n] += psr[i].ienergy_deleted[n];
+            ienergy_deleted[n] = psr->ienergy_deleted[n];
+
+        for (int i=1;i<n_sr;i++) {
+            int tag = 0;
+            double value;
+            MPI_Recv(&value, 1, MPI_DOUBLE, i, tag++, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+            energy_e_deleted += value;
+            MPI_Recv(&value, 1, MPI_DOUBLE, i, tag++, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+            energy_p_deleted += value;
+            MPI_Recv(&value, 1, MPI_DOUBLE, i, tag++, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+            energy_ph_deleted += value;
+            for (int n=0;n<n_ion_populations;n++) {
+                MPI_Recv(&value, 1, MPI_DOUBLE, i, tag++, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                ienergy_deleted[n] += value;
+            }
+        }
+        fout_energy_deleted << energy_e_deleted << '\t' << energy_p_deleted << '\t' << energy_ph_deleted;
+        for (int n=0; n<n_ion_populations; n++)
+            fout_energy_deleted << '\t' << ienergy_deleted[n];
+        fout_energy_deleted << endl;
+        delete[] ienergy_deleted;
+    } else {
+        int tag = 0;
+        MPI_Send(&(psr->energy_e_deleted), 1, MPI_DOUBLE, 0, tag++, MPI_COMM_WORLD);
+        MPI_Send(&(psr->energy_p_deleted), 1, MPI_DOUBLE, 0, tag++, MPI_COMM_WORLD);
+        MPI_Send(&(psr->energy_ph_deleted), 1, MPI_DOUBLE, 0, tag++, MPI_COMM_WORLD);
+        for (int n=0; n<n_ion_populations; n++) {
+            MPI_Send(&(psr->ienergy_deleted[n]), 1, MPI_DOUBLE, 0, tag++, MPI_COMM_WORLD);
+        }
     }
-    
-    fout_energy_deleted << energy_e_deleted << '\t' << energy_p_deleted << '\t' << energy_ph_deleted;
-    for (int n=0; n<n_ion_populations; n++)
-        fout_energy_deleted << '\t' << ienergy_deleted[n];
-    fout_energy_deleted << endl;
-    delete[] ienergy_deleted;
 }
 
 void write_density(bool write_x, bool write_y, bool write_z,
         std::string x_folder, std::string y_folder, std::string z_folder,
         bool write_ions = false, bool scale_j = false)
 {
-    std::string file_name;
     char file_num_pchar[20];
     ofstream* pof_x = 0;
     ofstream* pof_y = 0;
@@ -464,40 +422,67 @@ void write_density(bool write_x, bool write_y, bool write_z,
 
     sprintf(file_num_pchar,"%g",int([](ddi* a) {double b=a->f*a->output_period; if(a->prev!=0) b+=(a->prev)->t_end; return b;} (p_current_ddi)/2/PI*file_name_accuracy)/file_name_accuracy);
 
-    if (write_x) {
-        file_name = data_folder + "/" + x_folder + file_num_pchar;
-        pof_x = new ofstream(file_name.c_str(), output_mode);
-    }
+    string file_name_x = data_folder + "/" + x_folder + file_num_pchar;
+    string file_name_y = data_folder + "/" + y_folder + file_num_pchar;
+    string file_name_z = data_folder + "/" + z_folder + file_num_pchar;
 
-    if (write_y) {
-        file_name = data_folder + "/" + y_folder + file_num_pchar;
-        pof_y = new ofstream(file_name.c_str(), output_mode);
-    }
-    if (write_z) {
-        file_name = data_folder + "/" + z_folder + file_num_pchar;
-        pof_z = new ofstream(file_name.c_str(), output_mode);
-    }
-    
     int onx;
     int onx0;
     for(int i=0;i<n_sr;i++)
     {
-        if(i==n_sr-1)
-            onx = nx_sr[i];
-        else
-            onx = nx_sr[i]-nx_ich/2;
-        if(i==0)
-            onx0 = 0;
-        else
-            onx0 = nx_ich/2;
-        if (scale_j) {
-            psr[i].scale_j(dx / dt);
+        if (mpi_rank == i) {
+            if (write_x) {
+                pof_x = new ofstream(file_name_x.c_str(), output_mode);
+            }
+
+            if (write_y) {
+                pof_y = new ofstream(file_name_y.c_str(), output_mode);
+            }
+            if (write_z) {
+                pof_z = new ofstream(file_name_z.c_str(), output_mode);
+            }
+
+            if(i==n_sr-1)
+                onx = nx_sr[i];
+            else
+                onx = nx_sr[i]-nx_ich/2;
+            if(i==0)
+                onx0 = 0;
+            else
+                onx0 = nx_ich/2;
+            if (scale_j) {
+                psr->scale_j(dx / dt);
+            }
+            psr->fout_rho(pof_x,pof_y,pof_z,onx0,onx, output_mode);
+
+            if (pof_x) delete pof_x;
+            if (pof_y) delete pof_y;
+            if (pof_z) delete pof_z;
         }
-        psr[i].fout_rho(pof_x,pof_y,pof_z,onx0,onx, output_mode);
+        MPI_Barrier(MPI_COMM_WORLD);
     }
+
+    pof_x = 0;
+    pof_y = 0;
+    pof_z = 0;
     
     int ii = get_sr_for_x(xlength-x0fout);
-    psr[ii].fout_rho_yzplane(pof_x,pof_y,pof_z,get_xindex_in_sr(xlength-x0fout, ii), output_mode);
+    if (mpi_rank == ii) {
+        ios_base::openmode mode = output_mode | ios_base::app;
+        if (write_x) {
+            pof_x = new ofstream(file_name_x.c_str(), mode);
+        }
+        if (write_y) {
+            pof_y = new ofstream(file_name_y.c_str(), mode);
+        }
+        if (write_z) {
+            pof_z = new ofstream(file_name_z.c_str(), mode);
+        }
+        psr->fout_rho_yzplane(pof_x,pof_y,pof_z,get_xindex_in_sr(xlength-x0fout, ii), mode);
+        if (pof_x) delete pof_x;
+        if (pof_y) delete pof_y;
+        if (pof_z) delete pof_z;
+    }
 
     if (write_ions && (ions=="on"))
     {
@@ -505,59 +490,50 @@ void write_density(bool write_x, bool write_y, bool write_z,
         for (int n=0;n<n_ion_populations;n++)
         {
             sprintf(s_cmr,"%g",icmr[n]);
-            file_name = data_folder+"/irho_";
+            string file_name = data_folder+"/irho_";
             file_name += s_cmr;
             file_name += "_";
             file_name += file_num_pchar;
-            ofstream fout_irho(file_name.c_str());
             for(int i=0;i<n_sr;i++)
             {
-                if(i==n_sr-1)
-                    onx = nx_sr[i];
-                else
-                    onx = nx_sr[i]-nx_ich/2;
-                if(i==0)
-                    onx0 = 0;
-                else
-                    onx0 = nx_ich/2;
-                psr[i].fout_irho(n,&fout_irho,onx0,onx, output_mode);
+                if (mpi_rank == i) {
+                    ofstream fout_irho(file_name.c_str(), output_mode);
+                    if(i==n_sr-1)
+                        onx = nx_sr[i];
+                    else
+                        onx = nx_sr[i]-nx_ich/2;
+                    if(i==0)
+                        onx0 = 0;
+                    else
+                        onx0 = nx_ich/2;
+                    psr->fout_irho(n,&fout_irho,onx0,onx, output_mode);
+                    fout_irho.close();
+                }
+                MPI_Barrier(MPI_COMM_WORLD);
             }
             ii = get_sr_for_x(xlength-x0fout);
-            psr[ii].fout_irho_yzplane(n,&fout_irho,get_xindex_in_sr(xlength-x0fout, ii), output_mode);
-            fout_irho.close();
+            if (mpi_rank == ii) {
+                ios_base::openmode mode = output_mode | ios_base::app;
+                ofstream fout_irho(file_name.c_str(), mode);
+                psr->fout_irho_yzplane(n,&fout_irho,get_xindex_in_sr(xlength-x0fout, ii), mode);
+                fout_irho.close();
+            }
         }
     }
-    
-    if (pof_x) delete pof_x;
-    if (pof_y) delete pof_y;
-    if (pof_z) delete pof_z;
 }
 
 void write_spectrum_phasespace(bool write_p, bool write_ph)
 {
+    ios_base::openmode non_binary_mode;
+    if (mpi_rank == 0) {
+        non_binary_mode = ios_base::out;
+    } else {
+        non_binary_mode = ios_base::out | ios_base::app;
+    }
+
     std::string file_name;
     char file_num_pchar[20];
     
-    file_name = data_folder+"/spectrum";
-    sprintf(file_num_pchar,"%g",int([](ddi* a) {double b=a->f*a->output_period; if(a->prev!=0) b+=(a->prev)->t_end; return b;} (p_current_ddi)/2/PI*file_name_accuracy)/file_name_accuracy);
-    file_name = file_name + file_num_pchar;
-    ofstream fout_spectrum(file_name.c_str());
-    file_name = data_folder+"/spectrum_p";
-    file_name = file_name + file_num_pchar;
-    ofstream fout_spectrum_p(file_name.c_str());
-    file_name = data_folder+"/spectrum_ph";
-    file_name = file_name + file_num_pchar;
-    ofstream fout_spectrum_ph(file_name.c_str());
-    file_name = data_folder+"/phasespace";
-    sprintf(file_num_pchar,"%g",int([](ddi* a) {double b=a->f*a->output_period; if(a->prev!=0) b+=(a->prev)->t_end; return b;} (p_current_ddi)/2/PI*file_name_accuracy)/file_name_accuracy);
-    file_name = file_name + file_num_pchar;
-    ofstream fout_phasespace(file_name.c_str());
-    file_name = data_folder+"/phasespace_p";
-    file_name = file_name + file_num_pchar;
-    ofstream fout_phasespace_p(file_name.c_str());
-    file_name = data_folder+"/phasespace_ph";
-    file_name = file_name + file_num_pchar;
-    ofstream fout_phasespace_ph(file_name.c_str());
     double* spectrum = new double[neps];
     for(int i=0;i<neps;i++) spectrum[i] = 0;
     double* spectrum_p = new double[neps_p];
@@ -565,182 +541,263 @@ void write_spectrum_phasespace(bool write_p, bool write_ph)
     double* spectrum_ph = new double[neps_ph];
     for(int i=0;i<neps_ph;i++) spectrum_ph[i] = 0;
     int i_eps;
-    ofstream* fout_spectrum_i = new ofstream[n_ion_populations];
-    ofstream* fout_phasespace_i = new ofstream[n_ion_populations];
     double** spectrum_i = new double*[n_ion_populations];
-    for (int m=0;m<n_ion_populations;m++)
-    {
-        char s_cmr[20];
-        sprintf(s_cmr,"%g",icmr[m]);
-        file_name = data_folder+"/spectrum_";
-        file_name += s_cmr;
-        file_name += "_";
-        file_name += file_num_pchar;
-        fout_spectrum_i[m].open(file_name.c_str());
-        file_name = data_folder+"/phasespace_";
-        file_name += s_cmr;
-        file_name += "_";
-        file_name += file_num_pchar;
-        fout_phasespace_i[m].open(file_name.c_str());
+    for (int m=0;m<n_ion_populations;m++) {
         spectrum_i[m] = new double[neps_i];
         for(int i=0;i<neps_i;i++)
             spectrum_i[m][i] = 0;
     }
+
+    // sequential output of phasespace
     particle* current;
     for(int n=0;n<n_sr;n++)
     {
-        for(int i=nm*(n!=0);i<nx_sr[n]-nm*(n!=n_sr-1);i++)
-        {
-            for(int j=0;j<int(ylength/dy);j++)
+        if (mpi_rank == n) {
+            file_name = data_folder+"/phasespace";
+            sprintf(file_num_pchar,"%g",int([](ddi* a) {double b=a->f*a->output_period; if(a->prev!=0) b+=(a->prev)->t_end; return b;} (p_current_ddi)/2/PI*file_name_accuracy)/file_name_accuracy);
+            file_name = file_name + file_num_pchar;
+            ofstream fout_phasespace(file_name.c_str(), non_binary_mode);
+            file_name = data_folder+"/phasespace_p";
+            file_name = file_name + file_num_pchar;
+            ofstream fout_phasespace_p(file_name.c_str(), non_binary_mode);
+            file_name = data_folder+"/phasespace_ph";
+            file_name = file_name + file_num_pchar;
+            ofstream fout_phasespace_ph(file_name.c_str(), non_binary_mode);
+
+            ofstream* fout_phasespace_i = new ofstream[n_ion_populations];
+            for (int m=0;m<n_ion_populations;m++)
             {
-                for(int k=0;k<int(zlength/dz);k++)
+                char s_cmr[20];
+                sprintf(s_cmr,"%g",icmr[m]);
+                file_name = data_folder+"/phasespace_";
+                file_name += s_cmr;
+                file_name += "_";
+                file_name += file_num_pchar;
+                fout_phasespace_i[m].open(file_name.c_str(), non_binary_mode);
+            }
+            for(int i=nm*(n!=0);i<nx_sr[n]-nm*(n!=n_sr-1);i++)
+            {
+                for(int j=0;j<ny_global;j++)
                 {
-                    current = psr[n].cp[i][j][k].pl.head;
-                    while(current!=0)
+                    for(int k=0;k<nz_global;k++)
                     {
-                        if (current->cmr==-1)
-                        { // electrons
-                            i_eps = (current->g-1)*0.511/deps;
-                            if((i_eps>-1)&&(i_eps<neps))
-                                spectrum[i_eps] = spectrum[i_eps] - current->q; // q<0 for electrons
-                            // phase space
-                            i_particle++;
-                            if(i_particle>enthp)
-                            {
-                                i_particle = 0;
-                                /* координаты выводятся
-                                 * нормированными на лазерную
-                                 * длину волны */
-                                fout_phasespace<<current->q<<"\n";
-                                fout_phasespace<<dx*(current->x+x0_sr[n])/(2*PI)<<"\n";
-                                fout_phasespace<<dy*(current->y)/(2*PI)<<"\n"<<dz*(current->z)/(2*PI)<<"\n";
-                                fout_phasespace<<current->ux<<"\n"<<current->uy<<"\n"<<current->uz<<"\n";
-                                fout_phasespace<<current->g<<"\n";
-                                fout_phasespace<<current->chi<<"\n";
-                            }
-                        }
-                        else if (current->cmr==1 && write_p)
-                        { // positrons
-                            i_eps = (current->g-1)*0.511/deps_p;
-                            if((i_eps>-1)&&(i_eps<neps_p))
-                                spectrum_p[i_eps] = spectrum_p[i_eps] + current->q; // q>0 for positrons
-                            i_particle_p++;
-                            if(i_particle_p>enthp_p)
-                            {
-                                i_particle_p = 0;
-                                fout_phasespace_p<<current->q<<"\n";
-                                fout_phasespace_p<<dx*(current->x+x0_sr[n])/(2*PI)<<"\n";
-                                fout_phasespace_p<<dy*(current->y)/(2*PI)<<"\n"<<dz*(current->z)/(2*PI)<<"\n";
-                                fout_phasespace_p<<current->ux<<"\n"<<current->uy<<"\n"<<current->uz<<"\n";
-                                fout_phasespace_p<<current->g<<"\n";
-                                fout_phasespace_p<<current->chi<<"\n";
-                            }
-                        }
-                        else if (current->cmr==0 && write_ph)
-                        { // photons
-                            i_eps = current->g*0.511/deps_ph;
-                            if((i_eps>-1)&&(i_eps<neps_ph))
-                                spectrum_ph[i_eps] = spectrum_ph[i_eps] + current->q; // q>0 for photons
-                            i_particle_ph++;
-                            if(i_particle_ph>enthp_ph)
-                            {
-                                i_particle_ph = 0;
-                                fout_phasespace_ph<<current->q<<"\n";
-                                fout_phasespace_ph<<dx*(current->x+x0_sr[n])/(2*PI)<<"\n";
-                                fout_phasespace_ph<<dy*(current->y)/(2*PI)<<"\n"<<dz*(current->z)/(2*PI)<<"\n";
-                                fout_phasespace_ph<<current->ux<<"\n"<<current->uy<<"\n"<<current->uz<<"\n";
-                                fout_phasespace_ph<<current->g<<"\n";
-                                fout_phasespace_ph<<current->chi<<"\n";
-                            }
-                        }
-                        else
-                        { // ions
-                            int m;
-                            m = 0;
-                            while (m!=n_ion_populations)
-                            {
-                                if (current->cmr==icmr[m])
+                        current = psr->cp[i][j][k].pl.head;
+                        while(current!=0)
+                        {
+                            if (current->cmr==-1)
+                            { // electrons
+                                i_eps = (current->g-1)*0.511/deps;
+                                if((i_eps>-1)&&(i_eps<neps))
+                                    spectrum[i_eps] = spectrum[i_eps] - current->q; // q<0 for electrons
+                                // phase space
+                                i_particle++;
+                                if(i_particle>enthp)
                                 {
-                                    i_eps = (current->g-1)*0.511*proton_mass/deps_i;
-                                    if((i_eps>-1)&&(i_eps<neps_i))
-                                        spectrum_i[m][i_eps] += current->q;
-                                    i_particle_i++;
-                                    if(i_particle_i>enthp_i)
-                                    {
-                                        i_particle_i = 0;
-                                        fout_phasespace_i[m]<<current->q<<"\n";
-                                        fout_phasespace_i[m]<<dx*(current->x+x0_sr[n])/(2*PI)<<"\n";
-                                        fout_phasespace_i[m]<<dy*(current->y)/(2*PI)<<"\n"<<dz*(current->z)/(2*PI)<<"\n";
-                                        fout_phasespace_i[m]<<current->ux<<"\n"<<current->uy<<"\n"<<current->uz<<"\n";
-                                        fout_phasespace_i[m]<<current->g<<"\n";
-                                        fout_phasespace_i[m]<<current->chi<<"\n";
-                                    }
-                                    m = n_ion_populations;
+                                    i_particle = 0;
+                                    /* координаты выводятся
+                                     * нормированными на лазерную
+                                     * длину волны */
+                                    fout_phasespace<<current->q<<"\n";
+                                    fout_phasespace<<dx*(current->x+x0_sr[n])/(2*PI)<<"\n";
+                                    fout_phasespace<<dy*(current->y)/(2*PI)<<"\n"<<dz*(current->z)/(2*PI)<<"\n";
+                                    fout_phasespace<<current->ux<<"\n"<<current->uy<<"\n"<<current->uz<<"\n";
+                                    fout_phasespace<<current->g<<"\n";
+                                    fout_phasespace<<current->chi<<"\n";
                                 }
-                                else
-                                    m++;
                             }
+                            else if (current->cmr==1 && write_p)
+                            { // positrons
+                                i_eps = (current->g-1)*0.511/deps_p;
+                                if((i_eps>-1)&&(i_eps<neps_p))
+                                    spectrum_p[i_eps] = spectrum_p[i_eps] + current->q; // q>0 for positrons
+                                i_particle_p++;
+                                if(i_particle_p>enthp_p)
+                                {
+                                    i_particle_p = 0;
+                                    fout_phasespace_p<<current->q<<"\n";
+                                    fout_phasespace_p<<dx*(current->x+x0_sr[n])/(2*PI)<<"\n";
+                                    fout_phasespace_p<<dy*(current->y)/(2*PI)<<"\n"<<dz*(current->z)/(2*PI)<<"\n";
+                                    fout_phasespace_p<<current->ux<<"\n"<<current->uy<<"\n"<<current->uz<<"\n";
+                                    fout_phasespace_p<<current->g<<"\n";
+                                    fout_phasespace_p<<current->chi<<"\n";
+                                }
+                            }
+                            else if (current->cmr==0 && write_ph)
+                            { // photons
+                                i_eps = current->g*0.511/deps_ph;
+                                if((i_eps>-1)&&(i_eps<neps_ph))
+                                    spectrum_ph[i_eps] = spectrum_ph[i_eps] + current->q; // q>0 for photons
+                                i_particle_ph++;
+                                if(i_particle_ph>enthp_ph)
+                                {
+                                    i_particle_ph = 0;
+                                    fout_phasespace_ph<<current->q<<"\n";
+                                    fout_phasespace_ph<<dx*(current->x+x0_sr[n])/(2*PI)<<"\n";
+                                    fout_phasespace_ph<<dy*(current->y)/(2*PI)<<"\n"<<dz*(current->z)/(2*PI)<<"\n";
+                                    fout_phasespace_ph<<current->ux<<"\n"<<current->uy<<"\n"<<current->uz<<"\n";
+                                    fout_phasespace_ph<<current->g<<"\n";
+                                    fout_phasespace_ph<<current->chi<<"\n";
+                                }
+                            }
+                            else
+                            { // ions
+                                int m;
+                                m = 0;
+                                while (m!=n_ion_populations)
+                                {
+                                    if (current->cmr==icmr[m])
+                                    {
+                                        i_eps = (current->g-1)*0.511*proton_mass/deps_i;
+                                        if((i_eps>-1)&&(i_eps<neps_i))
+                                            spectrum_i[m][i_eps] += current->q;
+                                        i_particle_i++;
+                                        if(i_particle_i>enthp_i)
+                                        {
+                                            i_particle_i = 0;
+                                            fout_phasespace_i[m]<<current->q<<"\n";
+                                            fout_phasespace_i[m]<<dx*(current->x+x0_sr[n])/(2*PI)<<"\n";
+                                            fout_phasespace_i[m]<<dy*(current->y)/(2*PI)<<"\n"<<dz*(current->z)/(2*PI)<<"\n";
+                                            fout_phasespace_i[m]<<current->ux<<"\n"<<current->uy<<"\n"<<current->uz<<"\n";
+                                            fout_phasespace_i[m]<<current->g<<"\n";
+                                            fout_phasespace_i[m]<<current->chi<<"\n";
+                                        }
+                                        m = n_ion_populations;
+                                    }
+                                    else
+                                        m++;
+                                }
+                            }
+                            current = current->next;
                         }
-                        current = current->next;
                     }
                 }
             }
+            fout_phasespace.close();
+            fout_phasespace_p.close();
+            fout_phasespace_ph.close();
+            for (int m=0;m<n_ion_populations;m++)
+            {
+                fout_phasespace_i[m].close();
+            }
+            delete [] fout_phasespace_i;
+        }
+        MPI_Barrier(MPI_COMM_WORLD);
+    }
+
+    // gathering spectra on rank 0 process
+    if (mpi_rank == 0) {
+        int size = neps;
+        if (neps_p > size) size = neps_p;
+        if (neps_ph > size) size = neps_ph;
+        if (neps_i > size) size = neps_i;
+        double * buffer = new double[size];
+        for (int n=1;n<n_sr;n++) {
+            int tag = 0;
+            MPI_Recv(buffer, neps, MPI_DOUBLE, n, tag++, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+            for (int i=0;i<neps;i++) {
+                spectrum[i] += buffer[i];
+            }
+            MPI_Recv(buffer, neps_p, MPI_DOUBLE, n, tag++, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+            for (int i=0;i<neps_p;i++) {
+                spectrum_p[i] += buffer[i];
+            }
+            MPI_Recv(buffer, neps_ph, MPI_DOUBLE, n, tag++, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+            for (int i=0;i<neps_ph;i++) {
+                spectrum_ph[i] += buffer[i];
+            }
+            for (int m=0;m<n_ion_populations;m++) {
+                MPI_Recv(buffer, neps_i, MPI_DOUBLE, n, tag++, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                for (int i=0;i<neps_i;i++) {
+                    spectrum_i[m][i] += buffer[i];
+                }
+            }
+        }
+        delete [] buffer;
+    } else {
+        int tag = 0;
+        MPI_Send(spectrum, neps, MPI_DOUBLE, 0, tag++, MPI_COMM_WORLD);
+        MPI_Send(spectrum_p, neps_p, MPI_DOUBLE, 0, tag++, MPI_COMM_WORLD);
+        MPI_Send(spectrum_ph, neps_ph, MPI_DOUBLE, 0, tag++, MPI_COMM_WORLD);
+        for (int m=0;m<n_ion_populations;m++) {
+            MPI_Send(spectrum_i[m], neps_i, MPI_DOUBLE, 0, tag++, MPI_COMM_WORLD);
         }
     }
 
-    // spectrum = dN/deps [1/MeV]
-    double spectrum_norm = 1.11485e13*lambda*dx*dy*dz/(8*PI*PI*PI)/deps;
-    double spectrum_norm_p = 1.11485e13*lambda*dx*dy*dz/(8*PI*PI*PI)/deps_p;
-    double spectrum_norm_ph = 1.11485e13*lambda*dx*dy*dz/(8*PI*PI*PI)/deps_ph;
-    for(int i=0;i<neps;i++)
-    {
-        spectrum[i] = spectrum[i]*spectrum_norm;
-        fout_spectrum<<spectrum[i]<<"\n";
-    }
-    if (write_p)
-    {
-        for(int i=0;i<neps_p;i++)
-        {
-            spectrum_p[i] = spectrum_p[i]*spectrum_norm_p;
-            fout_spectrum_p<<spectrum_p[i]<<"\n";
+    // output of spectra
+    if (mpi_rank == 0) {
+        file_name = data_folder+"/spectrum";
+        sprintf(file_num_pchar,"%g",int([](ddi* a) {double b=a->f*a->output_period; if(a->prev!=0) b+=(a->prev)->t_end; return b;} (p_current_ddi)/2/PI*file_name_accuracy)/file_name_accuracy);
+        file_name = file_name + file_num_pchar;
+        ofstream fout_spectrum(file_name.c_str());
+        file_name = data_folder+"/spectrum_p";
+        file_name = file_name + file_num_pchar;
+        ofstream fout_spectrum_p(file_name.c_str());
+        file_name = data_folder+"/spectrum_ph";
+        file_name = file_name + file_num_pchar;
+        ofstream fout_spectrum_ph(file_name.c_str());
+
+        ofstream* fout_spectrum_i = new ofstream[n_ion_populations];
+        for (int m=0;m<n_ion_populations;m++) {
+            char s_cmr[20];
+            sprintf(s_cmr,"%g",icmr[m]);
+            file_name = data_folder+"/spectrum_";
+            file_name += s_cmr;
+            file_name += "_";
+            file_name += file_num_pchar;
+            fout_spectrum_i[m].open(file_name.c_str());
         }
-    }
-    if (write_ph)
-    {
-        for(int i=0;i<neps_ph;i++)
+
+        // spectrum = dN/deps [1/MeV]
+        double spectrum_norm = 1.11485e13*lambda*dx*dy*dz/(8*PI*PI*PI)/deps;
+        double spectrum_norm_p = 1.11485e13*lambda*dx*dy*dz/(8*PI*PI*PI)/deps_p;
+        double spectrum_norm_ph = 1.11485e13*lambda*dx*dy*dz/(8*PI*PI*PI)/deps_ph;
+        for(int i=0;i<neps;i++)
         {
-            spectrum_ph[i] = spectrum_ph[i]*spectrum_norm_ph;
-            fout_spectrum_ph<<spectrum_ph[i]<<"\n";
+            spectrum[i] = spectrum[i]*spectrum_norm;
+            fout_spectrum<<spectrum[i]<<"\n";
         }
-    }
-    // spectrum_i = dN/deps [1/MeV], but N is the number of nucleons, not ions
-    double spectrum_norm_i;
-    for (int m=0;m<n_ion_populations;m++)
-    {
-        spectrum_norm_i =  1.11485e13*lambda*dx*dy*dz/(8*PI*PI*PI)/(icmr[m]*deps_i);
-        for(int i=0;i<neps_i;i++)
+        if (write_p)
         {
-            spectrum_i[m][i] = spectrum_i[m][i]*spectrum_norm_ph;
-            fout_spectrum_i[m]<<spectrum_i[m][i]<<"\n";
+            for(int i=0;i<neps_p;i++)
+            {
+                spectrum_p[i] = spectrum_p[i]*spectrum_norm_p;
+                fout_spectrum_p<<spectrum_p[i]<<"\n";
+            }
         }
+        if (write_ph)
+        {
+            for(int i=0;i<neps_ph;i++)
+            {
+                spectrum_ph[i] = spectrum_ph[i]*spectrum_norm_ph;
+                fout_spectrum_ph<<spectrum_ph[i]<<"\n";
+            }
+        }
+        // spectrum_i = dN/deps [1/MeV], but N is the number of nucleons, not ions
+        double spectrum_norm_i;
+        for (int m=0;m<n_ion_populations;m++)
+        {
+            spectrum_norm_i =  1.11485e13*lambda*dx*dy*dz/(8*PI*PI*PI)/(icmr[m]*deps_i);
+            for(int i=0;i<neps_i;i++)
+            {
+                spectrum_i[m][i] = spectrum_i[m][i]*spectrum_norm_ph;
+                fout_spectrum_i[m]<<spectrum_i[m][i]<<"\n";
+            }
+        }
+
+        fout_spectrum.close();
+        fout_spectrum_p.close();
+        fout_spectrum_ph.close();
+        //
+        for (int m=0;m<n_ion_populations;m++)
+        {
+            fout_spectrum_i[m].close();
+        }
+        delete[] fout_spectrum_i;
     }
+
     delete[] spectrum;
     delete[] spectrum_p;
     delete[] spectrum_ph;
-    fout_spectrum.close();
-    fout_spectrum_p.close();
-    fout_spectrum_ph.close();
-    fout_phasespace.close();
-    fout_phasespace_p.close();
-    fout_phasespace_ph.close();
-    //
-    for (int m=0;m<n_ion_populations;m++)
-    {
-        fout_spectrum_i[m].close();
-        fout_phasespace_i[m].close();
-    }
-    delete[] fout_spectrum_i;
-    delete[] fout_phasespace_i;
     for (int m=0;m<n_ion_populations;m++)
         delete[] spectrum_i[m];
     delete[] spectrum_i;
@@ -750,7 +807,6 @@ void write_fields()
 {
     std::string file_name;
     char file_num_pchar[20];
-    ofstream* pof;
     int onx;
     int onx0;
     int ii;
@@ -761,23 +817,31 @@ void write_fields()
         file_name = data_folder+"/ex";
         sprintf(file_num_pchar,"%g",int([](ddi* a) {double b=a->f*a->output_period; if(a->prev!=0) b+=(a->prev)->t_end; return b;} (p_current_ddi)/2/PI*file_name_accuracy)/file_name_accuracy);
         file_name = file_name + file_num_pchar;
-        ofstream fout_ex(file_name.c_str());
-        pof = &fout_ex;
         for(int i=0;i<n_sr;i++)
         {
-            if(i==n_sr-1)
-                onx = nx_sr[i];
-            else
-                onx = nx_sr[i]-nx_ich/2;
-            if(i==0)
-                onx0 = 0;
-            else
-                onx0 = nx_ich/2;
-            psr[i].fout_ex(pof,onx0,onx, output_mode);
+            if (mpi_rank == i) {
+                ofstream fout_ex(file_name.c_str(), output_mode);
+                if(i==n_sr-1)
+                    onx = nx_sr[i];
+                else
+                    onx = nx_sr[i]-nx_ich/2;
+                if(i==0)
+                    onx0 = 0;
+                else
+                    onx0 = nx_ich/2;
+                psr->fout_ex(&fout_ex,onx0,onx, output_mode);
+                fout_ex.close();
+            }
+            MPI_Barrier(MPI_COMM_WORLD);
         }
         ii = get_sr_for_x(xlength-x0fout);
-        psr[ii].fout_ex_yzplane(pof,get_xindex_in_sr(xlength-x0fout, ii), output_mode);
-        fout_ex.close();
+        if (mpi_rank == ii) {
+            ios_base::openmode mode = output_mode | ios_base::app;
+            ofstream fout_ex(file_name.c_str(), mode);
+            psr->fout_ex_yzplane(&fout_ex,get_xindex_in_sr(xlength-x0fout, ii), mode);
+            fout_ex.close();
+        }
+
     }
     //
     if (e_components_for_output=="y"||e_components_for_output=="xy"||e_components_for_output=="yz"||e_components_for_output=="xyz")
@@ -785,23 +849,31 @@ void write_fields()
         file_name = data_folder+"/ey";
         sprintf(file_num_pchar,"%g",int([](ddi* a) {double b=a->f*a->output_period; if(a->prev!=0) b+=(a->prev)->t_end; return b;} (p_current_ddi)/2/PI*file_name_accuracy)/file_name_accuracy);
         file_name = file_name + file_num_pchar;
-        ofstream fout_ey(file_name.c_str());
-        pof = &fout_ey;
         for(int i=0;i<n_sr;i++)
         {
-            if(i==n_sr-1)
-                onx = nx_sr[i];
-            else
-                onx = nx_sr[i]-nx_ich/2;
-            if(i==0)
-                onx0 = 0;
-            else
-                onx0 = nx_ich/2;
-            psr[i].fout_ey(pof,onx0,onx, output_mode);
+            if (mpi_rank == i) {
+                ofstream fout_ey(file_name.c_str(), output_mode);
+                if(i==n_sr-1)
+                    onx = nx_sr[i];
+                else
+                    onx = nx_sr[i]-nx_ich/2;
+                if(i==0)
+                    onx0 = 0;
+                else
+                    onx0 = nx_ich/2;
+                psr->fout_ey(&fout_ey,onx0,onx, output_mode);
+                fout_ey.close();
+            }
+            MPI_Barrier(MPI_COMM_WORLD);
         }
         ii = get_sr_for_x(xlength-x0fout);
-        psr[ii].fout_ey_yzplane(pof,get_xindex_in_sr(xlength-x0fout, ii), output_mode);
-        fout_ey.close();
+        if (mpi_rank == ii) {
+            ios_base::openmode mode = output_mode | ios_base::app;
+            ofstream fout_ey(file_name.c_str(), mode);
+            psr->fout_ey_yzplane(&fout_ey,get_xindex_in_sr(xlength-x0fout, ii), mode);
+            fout_ey.close();
+        }
+
     }
     //
     if (e_components_for_output=="z"||e_components_for_output=="xz"||e_components_for_output=="yz"||e_components_for_output=="xyz")
@@ -809,23 +881,30 @@ void write_fields()
         file_name = data_folder+"/ez";
         sprintf(file_num_pchar,"%g",int([](ddi* a) {double b=a->f*a->output_period; if(a->prev!=0) b+=(a->prev)->t_end; return b;} (p_current_ddi)/2/PI*file_name_accuracy)/file_name_accuracy);
         file_name = file_name + file_num_pchar;
-        ofstream fout_ez(file_name.c_str());
-        pof = &fout_ez;
         for(int i=0;i<n_sr;i++)
         {
-            if(i==n_sr-1)
-                onx = nx_sr[i];
-            else
-                onx = nx_sr[i]-nx_ich/2;
-            if(i==0)
-                onx0 = 0;
-            else
-                onx0 = nx_ich/2;
-            psr[i].fout_ez(pof,onx0,onx, output_mode);
+            if (mpi_rank == i) {
+                ofstream fout_ez(file_name.c_str(), output_mode);
+                if(i==n_sr-1)
+                    onx = nx_sr[i];
+                else
+                    onx = nx_sr[i]-nx_ich/2;
+                if(i==0)
+                    onx0 = 0;
+                else
+                    onx0 = nx_ich/2;
+                psr->fout_ez(&fout_ez,onx0,onx, output_mode);
+                fout_ez.close();
+            }
+            MPI_Barrier(MPI_COMM_WORLD);
         }
         ii = get_sr_for_x(xlength-x0fout);
-        psr[ii].fout_ez_yzplane(pof,get_xindex_in_sr(xlength-x0fout, ii), output_mode);
-        fout_ez.close();
+        if (mpi_rank == ii) {
+            ios_base::openmode mode = output_mode | ios_base::app;
+            ofstream fout_ez(file_name.c_str(), mode);
+            psr->fout_ez_yzplane(&fout_ez,get_xindex_in_sr(xlength-x0fout, ii), mode);
+            fout_ez.close();
+        }
     }
     //
     if (b_components_for_output=="x"||b_components_for_output=="xy"||b_components_for_output=="xz"||b_components_for_output=="xyz")
@@ -833,23 +912,30 @@ void write_fields()
         file_name = data_folder+"/bx";
         sprintf(file_num_pchar,"%g",int([](ddi* a) {double b=a->f*a->output_period; if(a->prev!=0) b+=(a->prev)->t_end; return b;} (p_current_ddi)/2/PI*file_name_accuracy)/file_name_accuracy);
         file_name = file_name + file_num_pchar;
-        ofstream fout_bx(file_name.c_str(), output_mode);
-        pof = &fout_bx;
         for(int i=0;i<n_sr;i++)
         {
-            if(i==n_sr-1)
-                onx = nx_sr[i];
-            else
-                onx = nx_sr[i]-nx_ich/2;
-            if(i==0)
-                onx0 = 0;
-            else
-                onx0 = nx_ich/2;
-            psr[i].fout_bx(pof,onx0,onx, output_mode);
+            if (mpi_rank == i) {
+                ofstream fout_bx(file_name.c_str(), output_mode);
+                if(i==n_sr-1)
+                    onx = nx_sr[i];
+                else
+                    onx = nx_sr[i]-nx_ich/2;
+                if(i==0)
+                    onx0 = 0;
+                else
+                    onx0 = nx_ich/2;
+                psr->fout_bx(&fout_bx,onx0,onx, output_mode);
+                fout_bx.close();
+            }
+            MPI_Barrier(MPI_COMM_WORLD);
         }
         ii = get_sr_for_x(xlength-x0fout);
-        psr[ii].fout_bx_yzplane(pof,get_xindex_in_sr(xlength-x0fout, ii), output_mode);
-        fout_bx.close();
+        if (mpi_rank == ii) {
+            ios_base::openmode mode = output_mode | ios_base::app;
+            ofstream fout_bx(file_name.c_str(), mode);
+            psr->fout_bx_yzplane(&fout_bx,get_xindex_in_sr(xlength-x0fout, ii), mode);
+            fout_bx.close();
+        }
     }
     //
     if (b_components_for_output=="y"||b_components_for_output=="xy"||b_components_for_output=="yz"||b_components_for_output=="xyz")
@@ -857,23 +943,30 @@ void write_fields()
         file_name = data_folder+"/by";
         sprintf(file_num_pchar,"%g",int([](ddi* a) {double b=a->f*a->output_period; if(a->prev!=0) b+=(a->prev)->t_end; return b;} (p_current_ddi)/2/PI*file_name_accuracy)/file_name_accuracy);
         file_name = file_name + file_num_pchar;
-        ofstream fout_by(file_name.c_str());
-        pof = &fout_by;
         for(int i=0;i<n_sr;i++)
         {
-            if(i==n_sr-1)
-                onx = nx_sr[i];
-            else
-                onx = nx_sr[i]-nx_ich/2;
-            if(i==0)
-                onx0 = 0;
-            else
-                onx0 = nx_ich/2;
-            psr[i].fout_by(pof,onx0,onx, output_mode);
+            if (mpi_rank == i) {
+                ofstream fout_by(file_name.c_str(), output_mode);
+                if(i==n_sr-1)
+                    onx = nx_sr[i];
+                else
+                    onx = nx_sr[i]-nx_ich/2;
+                if(i==0)
+                    onx0 = 0;
+                else
+                    onx0 = nx_ich/2;
+                psr->fout_by(&fout_by,onx0,onx, output_mode);
+                fout_by.close();
+            }
+            MPI_Barrier(MPI_COMM_WORLD);
         }
         ii = get_sr_for_x(xlength-x0fout);
-        psr[ii].fout_by_yzplane(pof,get_xindex_in_sr(xlength-x0fout, ii), output_mode);
-        fout_by.close();
+        if (mpi_rank == ii) {
+            ios_base::openmode mode = output_mode | ios_base::app;
+            ofstream fout_by(file_name.c_str(), mode);
+            psr->fout_by_yzplane(&fout_by,get_xindex_in_sr(xlength-x0fout, ii), mode);
+            fout_by.close();
+        }
     }
     //
     if (b_components_for_output=="z"||b_components_for_output=="xz"||b_components_for_output=="yz"||b_components_for_output=="xyz")
@@ -881,10 +974,46 @@ void write_fields()
         file_name = data_folder+"/bz";
         sprintf(file_num_pchar,"%g",int([](ddi* a) {double b=a->f*a->output_period; if(a->prev!=0) b+=(a->prev)->t_end; return b;} (p_current_ddi)/2/PI*file_name_accuracy)/file_name_accuracy);
         file_name = file_name + file_num_pchar;
-        ofstream fout_bz(file_name.c_str());
-        pof = &fout_bz;
         for(int i=0;i<n_sr;i++)
         {
+            if (mpi_rank == i) {
+                ofstream fout_bz(file_name.c_str(), output_mode);
+                if(i==n_sr-1)
+                    onx = nx_sr[i];
+                else
+                    onx = nx_sr[i]-nx_ich/2;
+                if(i==0)
+                    onx0 = 0;
+                else
+                    onx0 = nx_ich/2;
+                psr->fout_bz(&fout_bz,onx0,onx, output_mode);
+                fout_bz.close();
+            }
+            MPI_Barrier(MPI_COMM_WORLD);
+        }
+        ii = get_sr_for_x(xlength-x0fout);
+        if (mpi_rank == ii) {
+            ios_base::openmode mode = output_mode | ios_base::app;
+            ofstream fout_bz(file_name.c_str(), mode);
+            psr->fout_bz_yzplane(&fout_bz,get_xindex_in_sr(xlength-x0fout, ii), mode);
+            fout_bz.close();
+        }
+    }
+
+    ios_base::openmode non_binary_mode;
+    if (mpi_rank == 0) {
+        non_binary_mode = ios_base::out;
+    } else {
+        non_binary_mode = ios_base::out | ios_base::app;
+    }
+    //
+    file_name = data_folder+"/w";
+    sprintf(file_num_pchar,"%g",int([](ddi* a) {double b=a->f*a->output_period; if(a->prev!=0) b+=(a->prev)->t_end; return b;} (p_current_ddi)/2/PI*file_name_accuracy)/file_name_accuracy);
+    file_name = file_name + file_num_pchar;
+    for(int i=0;i<n_sr;i++)
+    {
+        if (mpi_rank == i) {
+            ofstream fout_w(file_name.c_str(), non_binary_mode);
             if(i==n_sr-1)
                 onx = nx_sr[i];
             else
@@ -893,66 +1022,58 @@ void write_fields()
                 onx0 = 0;
             else
                 onx0 = nx_ich/2;
-            psr[i].fout_bz(pof,onx0,onx, output_mode);
+            if (i==n_sr-1)
+                is_last_sr = 1;
+            else
+                is_last_sr = 0;
+            psr->fout_w(&fout_w,onx0,onx,is_last_sr);
+            fout_w.close();
         }
-        ii = get_sr_for_x(xlength-x0fout);
-        psr[ii].fout_bz_yzplane(pof,get_xindex_in_sr(xlength-x0fout, ii), output_mode);
-        fout_bz.close();
-    }
-    //
-    file_name = data_folder+"/w";
-    sprintf(file_num_pchar,"%g",int([](ddi* a) {double b=a->f*a->output_period; if(a->prev!=0) b+=(a->prev)->t_end; return b;} (p_current_ddi)/2/PI*file_name_accuracy)/file_name_accuracy);
-    file_name = file_name + file_num_pchar;
-    ofstream fout_w(file_name.c_str());
-    pof = &fout_w;
-    for(int i=0;i<n_sr;i++)
-    {
-        if(i==n_sr-1)
-            onx = nx_sr[i];
-        else
-            onx = nx_sr[i]-nx_ich/2;
-        if(i==0)
-            onx0 = 0;
-        else
-            onx0 = nx_ich/2;
-        if (i==n_sr-1)
-            is_last_sr = 1;
-        else
-            is_last_sr = 0;
-        psr[i].fout_w(pof,onx0,onx,is_last_sr);
+        MPI_Barrier(MPI_COMM_WORLD);
     }
     ii = get_sr_for_x(xlength-x0fout);
-    psr[ii].fout_w_yzplane(pof,get_xindex_in_sr(xlength-x0fout, ii));
+    if (mpi_rank == ii) {
+        ofstream fout_w(file_name.c_str(), non_binary_mode | ios_base::app);
+        psr->fout_w_yzplane(&fout_w,get_xindex_in_sr(xlength-x0fout, ii));
+        fout_w.close();
+    }
+
     //
     file_name = data_folder+"/inv";
     sprintf(file_num_pchar,"%g",int([](ddi* a) {double b=a->f*a->output_period; if(a->prev!=0) b+=(a->prev)->t_end; return b;} (p_current_ddi)/2/PI*file_name_accuracy)/file_name_accuracy);
     file_name = file_name + file_num_pchar;
-    ofstream fout_inv(file_name.c_str());
-    pof = &fout_inv;
     for(int i=0;i<n_sr;i++)
     {
-        if(i==n_sr-1)
-            onx = nx_sr[i];
-        else
-            onx = nx_sr[i]-nx_ich/2;
-        if(i==0)
-            onx0 = 0;
-        else
-            onx0 = nx_ich/2;
-        if (i==n_sr-1)
-            is_last_sr = 1;
-        else
-            is_last_sr = 0;
-        psr[i].fout_inv(pof,onx0,onx,is_last_sr);
+        if (mpi_rank == i) {
+            ofstream fout_inv(file_name.c_str(), non_binary_mode);
+            if(i==n_sr-1)
+                onx = nx_sr[i];
+            else
+                onx = nx_sr[i]-nx_ich/2;
+            if(i==0)
+                onx0 = 0;
+            else
+                onx0 = nx_ich/2;
+            if (i==n_sr-1)
+                is_last_sr = 1;
+            else
+                is_last_sr = 0;
+            psr->fout_inv(&fout_inv,onx0,onx,is_last_sr);
+            fout_inv.close();
+        }
+        MPI_Barrier(MPI_COMM_WORLD);
     }
     ii = get_sr_for_x(xlength-x0fout);
-    psr[ii].fout_inv_yzplane(pof,get_xindex_in_sr(xlength-x0fout, ii));
-    fout_w.close();
-    fout_inv.close();
+    if (mpi_rank == ii) {
+        ofstream fout_inv(file_name.c_str(), non_binary_mode | ios_base::app);
+        psr->fout_inv_yzplane(&fout_inv,get_xindex_in_sr(xlength-x0fout, ii));
+        fout_inv.close();
+    }
 }
 
 void init_fields()
 {
+    int i = mpi_rank;
     if (f_envelope=="focused")
     {
         const char* tmpl = lp_reflection.c_str();
@@ -997,56 +1118,53 @@ void init_fields()
             }
         }
         if (shenergy == 0) 
-            for (int i=0;i<n_sr;i++) psr[i].f_init_focused(a0y,a0z,xsigma,sigma0,xlength/2+x0-dx*x0_sr[i],x0,b_sign,phase,y00,z00,0,0,sscos,1,xtarget,ytarget,ztarget);
+            psr->f_init_focused(a0y,a0z,xsigma,sigma0,xlength/2+x0-dx*x0_sr[i],x0,b_sign,phase,y00,z00,0,0,sscos,1,xtarget,ytarget,ztarget);
         else  // adding second harmonic
         {
             double alpha, beta;
             alpha = sqrt(1 - shenergy);
             beta = sqrt(shenergy);
-            for (int i=0;i<n_sr;i++)
-                psr[i].f_init_focused(a0y * alpha, a0z * alpha, xsigma,sigma0,xlength/2+x0-dx*x0_sr[i],x0,b_sign,phase,y00,z00,0,0,sscos,1,xtarget,ytarget,ztarget);
-            for (int i=0;i<n_sr;i++)
-                psr[i].f_init_focused(a0y * beta, a0z * beta, xsigma,sigma0,xlength/2+x0-dx*x0_sr[i],x0,b_sign, shphase,y00,z00, 1, 0,sscos, 2,xtarget,ytarget,ztarget);
+            psr->f_init_focused(a0y * alpha, a0z * alpha, xsigma,sigma0,xlength/2+x0-dx*x0_sr[i],x0,b_sign,phase,y00,z00,0,0,sscos,1,xtarget,ytarget,ztarget);
+            psr->f_init_focused(a0y * beta, a0z * beta, xsigma,sigma0,xlength/2+x0-dx*x0_sr[i],x0,b_sign, shphase,y00,z00, 1, 0,sscos, 2,xtarget,ytarget,ztarget);
         }
         if (phi!=0) {
-            for (int i=0;i<n_sr;i++) psr[i].f_init_focused(a0y,a0z,xsigma,sigma0,xlength/2-x0-dx*x0_sr[i],-x0,b_sign,phase,-y00,-z00,1,phi,sscos,1,xtarget,ytarget,ztarget);
+            psr->f_init_focused(a0y,a0z,xsigma,sigma0,xlength/2-x0-dx*x0_sr[i],-x0,b_sign,phase,-y00,-z00,1,phi,sscos,1,xtarget,ytarget,ztarget);
         }
         else if (lp_reflection1=="xy") {
-            for (int i=0;i<n_sr;i++) psr[i].f_init_focused((1-2*(f_reflection1=="y"))*a0y,(1-2*(f_reflection1=="z"))*a0z,xsigma,sigma0,xlength/2+x0-dx*x0_sr[i],x0,b_sign,phase,y00,-z00,1,0,sscos,1,xtarget,ytarget,ztarget);
+            psr->f_init_focused((1-2*(f_reflection1=="y"))*a0y,(1-2*(f_reflection1=="z"))*a0z,xsigma,sigma0,xlength/2+x0-dx*x0_sr[i],x0,b_sign,phase,y00,-z00,1,0,sscos,1,xtarget,ytarget,ztarget);
             if (lp_reflection2=="xz") {
-                for (int i=0;i<n_sr;i++) psr[i].f_init_focused((1-2*(f_reflection2=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,sigma0,xlength/2+x0-dx*x0_sr[i],x0,b_sign,phase,-y00,z00,1,0,sscos,1,xtarget,ytarget,ztarget);
-                for (int i=0;i<n_sr;i++) psr[i].f_init_focused((1-2*(f_reflection2=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,sigma0,xlength/2+x0-dx*x0_sr[i],x0,b_sign,phase,-y00,-z00,1,0,sscos,1,xtarget,ytarget,ztarget);
+                psr->f_init_focused((1-2*(f_reflection2=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,sigma0,xlength/2+x0-dx*x0_sr[i],x0,b_sign,phase,-y00,z00,1,0,sscos,1,xtarget,ytarget,ztarget);
+                psr->f_init_focused((1-2*(f_reflection2=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,sigma0,xlength/2+x0-dx*x0_sr[i],x0,b_sign,phase,-y00,-z00,1,0,sscos,1,xtarget,ytarget,ztarget);
                 if (lp_reflection3=="yz") {
-                    for (int i=0;i<n_sr;i++) psr[i].f_init_focused((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,sigma0,xlength/2-x0-dx*x0_sr[i],-x0,b_sign,phase,y00,z00,1,0,sscos,1,xtarget,ytarget,ztarget);
-                    for (int i=0;i<n_sr;i++) psr[i].f_init_focused((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,sigma0,xlength/2-x0-dx*x0_sr[i],-x0,b_sign,phase,y00,-z00,1,0,sscos,1,xtarget,ytarget,ztarget);
-                    for (int i=0;i<n_sr;i++) psr[i].f_init_focused((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,sigma0,xlength/2-x0-dx*x0_sr[i],-x0,b_sign,phase,-y00,z00,1,0,sscos,1,xtarget,ytarget,ztarget);
-                    for (int i=0;i<n_sr;i++) psr[i].f_init_focused((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,sigma0,xlength/2-x0-dx*x0_sr[i],-x0,b_sign,phase,-y00,-z00,1,0,sscos,1,xtarget,ytarget,ztarget);
+                    psr->f_init_focused((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,sigma0,xlength/2-x0-dx*x0_sr[i],-x0,b_sign,phase,y00,z00,1,0,sscos,1,xtarget,ytarget,ztarget);
+                    psr->f_init_focused((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,sigma0,xlength/2-x0-dx*x0_sr[i],-x0,b_sign,phase,y00,-z00,1,0,sscos,1,xtarget,ytarget,ztarget);
+                    psr->f_init_focused((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,sigma0,xlength/2-x0-dx*x0_sr[i],-x0,b_sign,phase,-y00,z00,1,0,sscos,1,xtarget,ytarget,ztarget);
+                    psr->f_init_focused((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,sigma0,xlength/2-x0-dx*x0_sr[i],-x0,b_sign,phase,-y00,-z00,1,0,sscos,1,xtarget,ytarget,ztarget);
                 }
             }
             else if (lp_reflection2=="yz") {
-                for (int i=0;i<n_sr;i++) psr[i].f_init_focused((1-2*(f_reflection2=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,sigma0,xlength/2-x0-dx*x0_sr[i],-x0,b_sign,phase,y00,z00,1,0,sscos,1,xtarget,ytarget,ztarget);
-                for (int i=0;i<n_sr;i++) psr[i].f_init_focused((1-2*(f_reflection2=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,sigma0,xlength/2-x0-dx*x0_sr[i],-x0,b_sign,phase,y00,-z00,1,0,sscos,1,xtarget,ytarget,ztarget);
+                psr->f_init_focused((1-2*(f_reflection2=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,sigma0,xlength/2-x0-dx*x0_sr[i],-x0,b_sign,phase,y00,z00,1,0,sscos,1,xtarget,ytarget,ztarget);
+                psr->f_init_focused((1-2*(f_reflection2=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,sigma0,xlength/2-x0-dx*x0_sr[i],-x0,b_sign,phase,y00,-z00,1,0,sscos,1,xtarget,ytarget,ztarget);
                 if (lp_reflection3=="xz") {
-                    for (int i=0;i<n_sr;i++) psr[i].f_init_focused((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,sigma0,xlength/2-x0-dx*x0_sr[i],-x0,b_sign,phase,-y00,z00,1,0,sscos,1,xtarget,ytarget,ztarget);
-                    for (int i=0;i<n_sr;i++) psr[i].f_init_focused((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,sigma0,xlength/2+x0-dx*x0_sr[i],x0,b_sign,phase,-y00,z00,1,0,sscos,1,xtarget,ytarget,ztarget);
-                    for (int i=0;i<n_sr;i++) psr[i].f_init_focused((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,sigma0,xlength/2-x0-dx*x0_sr[i],-x0,b_sign,phase,-y00,-z00,1,0,sscos,1,xtarget,ytarget,ztarget);
-                    for (int i=0;i<n_sr;i++) psr[i].f_init_focused((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,sigma0,xlength/2+x0-dx*x0_sr[i],x0,b_sign,phase,-y00,-z00,1,0,sscos,1,xtarget,ytarget,ztarget);
+                    psr->f_init_focused((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,sigma0,xlength/2-x0-dx*x0_sr[i],-x0,b_sign,phase,-y00,z00,1,0,sscos,1,xtarget,ytarget,ztarget);
+                    psr->f_init_focused((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,sigma0,xlength/2+x0-dx*x0_sr[i],x0,b_sign,phase,-y00,z00,1,0,sscos,1,xtarget,ytarget,ztarget);
+                    psr->f_init_focused((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,sigma0,xlength/2-x0-dx*x0_sr[i],-x0,b_sign,phase,-y00,-z00,1,0,sscos,1,xtarget,ytarget,ztarget);
+                    psr->f_init_focused((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,sigma0,xlength/2+x0-dx*x0_sr[i],x0,b_sign,phase,-y00,-z00,1,0,sscos,1,xtarget,ytarget,ztarget);
                 }
             }
         }
         else if (lp_reflection1=="xz") {
-            for (int i=0;i<n_sr;i++) psr[i].f_init_focused((1-2*(f_reflection1=="y"))*a0y,(1-2*(f_reflection1=="z"))*a0z,xsigma,sigma0,xlength/2+x0-dx*x0_sr[i],x0,b_sign,phase,-y00,z00,1,0,sscos,1,xtarget,ytarget,ztarget);
+            psr->f_init_focused((1-2*(f_reflection1=="y"))*a0y,(1-2*(f_reflection1=="z"))*a0z,xsigma,sigma0,xlength/2+x0-dx*x0_sr[i],x0,b_sign,phase,-y00,z00,1,0,sscos,1,xtarget,ytarget,ztarget);
             if (lp_reflection2=="yz") {
-                for (int i=0;i<n_sr;i++) psr[i].f_init_focused((1-2*(f_reflection2=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,sigma0,xlength/2-x0-dx*x0_sr[i],-x0,b_sign,phase,-y00,z00,1,0,sscos,1,xtarget,ytarget,ztarget);
-                for (int i=0;i<n_sr;i++) psr[i].f_init_focused((1-2*(f_reflection2=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,sigma0,xlength/2-x0-dx*x0_sr[i],-x0,b_sign,phase,y00,z00,1,0,sscos,1,xtarget,ytarget,ztarget);
+                psr->f_init_focused((1-2*(f_reflection2=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,sigma0,xlength/2-x0-dx*x0_sr[i],-x0,b_sign,phase,-y00,z00,1,0,sscos,1,xtarget,ytarget,ztarget);
+                psr->f_init_focused((1-2*(f_reflection2=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,sigma0,xlength/2-x0-dx*x0_sr[i],-x0,b_sign,phase,y00,z00,1,0,sscos,1,xtarget,ytarget,ztarget);
             }
         }
         else if (lp_reflection1=="yz") {
-            for (int i=0;i<n_sr;i++) psr[i].f_init_focused((1-2*(f_reflection1=="y"))*a0y,(1-2*(f_reflection1=="z"))*a0z,xsigma,sigma0,xlength/2-x0-dx*x0_sr[i],-x0,b_sign,phase,y00,z00,1,0,sscos,1,xtarget,ytarget,ztarget);
+            psr->f_init_focused((1-2*(f_reflection1=="y"))*a0y,(1-2*(f_reflection1=="z"))*a0z,xsigma,sigma0,xlength/2-x0-dx*x0_sr[i],-x0,b_sign,phase,y00,z00,1,0,sscos,1,xtarget,ytarget,ztarget);
         }
     } else if (f_envelope == "uniformB") {
-        for (int i = 0; i < n_sr; ++i)
-            psr[i].f_init_uniformB(a0y, a0z);
+        psr->f_init_uniformB(a0y, a0z);
     }
     else // f_envelope == "cos"
     {
@@ -1091,54 +1209,55 @@ void init_fields()
                 f_reflection3 += tmpf[jj];
             }
         }
-        for (int i=0;i<n_sr;i++) psr[i].f_init_cos(a0y,a0z,xsigma,ysigma,zsigma,xlength/2+x0-dx*x0_sr[i],sscos,b_sign,x0,phase,y00,z00,true,0,xtarget,ytarget,ztarget);
+        psr->f_init_cos(a0y,a0z,xsigma,ysigma,zsigma,xlength/2+x0-dx*x0_sr[i],sscos,b_sign,x0,phase,y00,z00,true,0,xtarget,ytarget,ztarget);
         if (phi!=0) {
-            for (int i=0;i<n_sr;i++) psr[i].f_init_cos(a0y,a0z,xsigma,ysigma,zsigma,xlength/2-x0-dx*x0_sr[i],sscos,b_sign,-x0,phase,-y00,-z00,1,phi,xtarget,ytarget,ztarget);
+            psr->f_init_cos(a0y,a0z,xsigma,ysigma,zsigma,xlength/2-x0-dx*x0_sr[i],sscos,b_sign,-x0,phase,-y00,-z00,1,phi,xtarget,ytarget,ztarget);
         }
         else if (lp_reflection1=="xy") {
-            for (int i=0;i<n_sr;i++) psr[i].f_init_cos((1-2*(f_reflection1=="y"))*a0y,(1-2*(f_reflection1=="z"))*a0z,xsigma,ysigma,zsigma,xlength/2+x0-dx*x0_sr[i],sscos,b_sign,x0,phase,y00,-z00,1,0,xtarget,ytarget,ztarget);
+            psr->f_init_cos((1-2*(f_reflection1=="y"))*a0y,(1-2*(f_reflection1=="z"))*a0z,xsigma,ysigma,zsigma,xlength/2+x0-dx*x0_sr[i],sscos,b_sign,x0,phase,y00,-z00,1,0,xtarget,ytarget,ztarget);
             if (lp_reflection2=="xz") {
-                for (int i=0;i<n_sr;i++) psr[i].f_init_cos((1-2*(f_reflection2=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,xlength/2+x0-dx*x0_sr[i],sscos,b_sign,x0,phase,-y00,z00,1,0,xtarget,ytarget,ztarget);
-                for (int i=0;i<n_sr;i++) psr[i].f_init_cos((1-2*(f_reflection2=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,xlength/2+x0-dx*x0_sr[i],sscos,b_sign,x0,phase,-y00,-z00,1,0,xtarget,ytarget,ztarget);
+                psr->f_init_cos((1-2*(f_reflection2=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,xlength/2+x0-dx*x0_sr[i],sscos,b_sign,x0,phase,-y00,z00,1,0,xtarget,ytarget,ztarget);
+                psr->f_init_cos((1-2*(f_reflection2=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,xlength/2+x0-dx*x0_sr[i],sscos,b_sign,x0,phase,-y00,-z00,1,0,xtarget,ytarget,ztarget);
                 if (lp_reflection3=="yz") {
-                    for (int i=0;i<n_sr;i++) psr[i].f_init_cos((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,-x0+xlength/2-dx*x0_sr[i],sscos,b_sign,-x0,phase,y00,z00,1,0,xtarget,ytarget,ztarget);
-                    for (int i=0;i<n_sr;i++) psr[i].f_init_cos((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,-x0+xlength/2-dx*x0_sr[i],sscos,b_sign,-x0,phase,y00,-z00,1,0,xtarget,ytarget,ztarget);
-                    for (int i=0;i<n_sr;i++) psr[i].f_init_cos((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,-x0+xlength/2-dx*x0_sr[i],sscos,b_sign,-x0,phase,-y00,z00,1,0,xtarget,ytarget,ztarget);
-                    for (int i=0;i<n_sr;i++) psr[i].f_init_cos((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,-x0+xlength/2-dx*x0_sr[i],sscos,b_sign,-x0,phase,-y00,-z00,1,0,xtarget,ytarget,ztarget);
+                    psr->f_init_cos((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,-x0+xlength/2-dx*x0_sr[i],sscos,b_sign,-x0,phase,y00,z00,1,0,xtarget,ytarget,ztarget);
+                    psr->f_init_cos((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,-x0+xlength/2-dx*x0_sr[i],sscos,b_sign,-x0,phase,y00,-z00,1,0,xtarget,ytarget,ztarget);
+                    psr->f_init_cos((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,-x0+xlength/2-dx*x0_sr[i],sscos,b_sign,-x0,phase,-y00,z00,1,0,xtarget,ytarget,ztarget);
+                    psr->f_init_cos((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,-x0+xlength/2-dx*x0_sr[i],sscos,b_sign,-x0,phase,-y00,-z00,1,0,xtarget,ytarget,ztarget);
                 }
             }
             else if (lp_reflection2=="yz") {
-                for (int i=0;i<n_sr;i++) psr[i].f_init_cos((1-2*(f_reflection2=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,-x0+xlength/2-dx*x0_sr[i],sscos,b_sign,-x0,phase,y00,z00,1,0,xtarget,ytarget,ztarget);
-                for (int i=0;i<n_sr;i++) psr[i].f_init_cos((1-2*(f_reflection2=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,-x0+xlength/2-dx*x0_sr[i],sscos,b_sign,-x0,phase,y00,-z00,1,0,xtarget,ytarget,ztarget);
+                psr->f_init_cos((1-2*(f_reflection2=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,-x0+xlength/2-dx*x0_sr[i],sscos,b_sign,-x0,phase,y00,z00,1,0,xtarget,ytarget,ztarget);
+                psr->f_init_cos((1-2*(f_reflection2=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,-x0+xlength/2-dx*x0_sr[i],sscos,b_sign,-x0,phase,y00,-z00,1,0,xtarget,ytarget,ztarget);
                 if (lp_reflection3=="xz") {
-                    for (int i=0;i<n_sr;i++) psr[i].f_init_cos((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,-x0+xlength/2-dx*x0_sr[i],sscos,b_sign,-x0,phase,-y00,z00,1,0,xtarget,ytarget,ztarget);
-                    for (int i=0;i<n_sr;i++) psr[i].f_init_cos((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,x0+xlength/2-dx*x0_sr[i],sscos,x0,b_sign,phase,-y00,z00,1,0,xtarget,ytarget,ztarget);
-                    for (int i=0;i<n_sr;i++) psr[i].f_init_cos((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,-x0+xlength/2-dx*x0_sr[i],sscos,b_sign,-x0,phase,-y00,-z00,1,0,xtarget,ytarget,ztarget);
-                    for (int i=0;i<n_sr;i++) psr[i].f_init_cos((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,x0+xlength/2-dx*x0_sr[i],sscos,b_sign,x0,phase,-y00,-z00,1,0,xtarget,ytarget,ztarget);
+                    psr->f_init_cos((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,-x0+xlength/2-dx*x0_sr[i],sscos,b_sign,-x0,phase,-y00,z00,1,0,xtarget,ytarget,ztarget);
+                    psr->f_init_cos((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,x0+xlength/2-dx*x0_sr[i],sscos,x0,b_sign,phase,-y00,z00,1,0,xtarget,ytarget,ztarget);
+                    psr->f_init_cos((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,-x0+xlength/2-dx*x0_sr[i],sscos,b_sign,-x0,phase,-y00,-z00,1,0,xtarget,ytarget,ztarget);
+                    psr->f_init_cos((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,x0+xlength/2-dx*x0_sr[i],sscos,b_sign,x0,phase,-y00,-z00,1,0,xtarget,ytarget,ztarget);
                 }
             }
         }
         else if (lp_reflection1=="xz") {
-            for (int i=0;i<n_sr;i++) psr[i].f_init_cos((1-2*(f_reflection1=="y"))*a0y,(1-2*(f_reflection1=="z"))*a0z,xsigma,ysigma,zsigma,xlength/2+x0-dx*x0_sr[i],sscos,b_sign,x0,phase,-y00,z00,1,0,xtarget,ytarget,ztarget);
+            psr->f_init_cos((1-2*(f_reflection1=="y"))*a0y,(1-2*(f_reflection1=="z"))*a0z,xsigma,ysigma,zsigma,xlength/2+x0-dx*x0_sr[i],sscos,b_sign,x0,phase,-y00,z00,1,0,xtarget,ytarget,ztarget);
             if (lp_reflection2=="yz") {
-                for (int i=0;i<n_sr;i++) psr[i].f_init_cos((1-2*(f_reflection2=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,-x0+xlength/2-dx*x0_sr[i],sscos,b_sign,-x0,phase,-y00,z00,1,0,xtarget,ytarget,ztarget);
-                for (int i=0;i<n_sr;i++) psr[i].f_init_cos((1-2*(f_reflection2=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,-x0+xlength/2-dx*x0_sr[i],sscos,b_sign,-x0,phase,y00,z00,1,0,xtarget,ytarget,ztarget);
+                psr->f_init_cos((1-2*(f_reflection2=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,-x0+xlength/2-dx*x0_sr[i],sscos,b_sign,-x0,phase,-y00,z00,1,0,xtarget,ytarget,ztarget);
+                psr->f_init_cos((1-2*(f_reflection2=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,-x0+xlength/2-dx*x0_sr[i],sscos,b_sign,-x0,phase,y00,z00,1,0,xtarget,ytarget,ztarget);
             }
         }
         else if (lp_reflection1=="yz") {
-            for (int i=0;i<n_sr;i++) psr[i].f_init_cos((1-2*(f_reflection1=="y"))*a0y,(1-2*(f_reflection1=="z"))*a0z,xsigma,ysigma,zsigma,-x0+xlength/2-dx*x0_sr[i],sscos,b_sign,-x0,phase,y00,z00,1,0,xtarget,ytarget,ztarget);
+            psr->f_init_cos((1-2*(f_reflection1=="y"))*a0y,(1-2*(f_reflection1=="z"))*a0z,xsigma,ysigma,zsigma,-x0+xlength/2-dx*x0_sr[i],sscos,b_sign,-x0,phase,y00,z00,1,0,xtarget,ytarget,ztarget);
         }
     }
 }
 
 void init_beam()
 {
+    int i = mpi_rank;
     if (beam_particles=="p")
-        for(int i=0;i<n_sr;i++) psr[i].add_beam(1,Nb*1.061e-11/(xb*rb*rb*lambda),((epsb>0)-(epsb<0))*sqrt(epsb*epsb/(0.511*0.511)-1),xb,rb,xlength-x0b-dx*x0_sr[i],y0b,phib);
+        psr->add_beam(1,Nb*1.061e-11/(xb*rb*rb*lambda),((epsb>0)-(epsb<0))*sqrt(epsb*epsb/(0.511*0.511)-1),xb,rb,xlength-x0b-dx*x0_sr[i],y0b,phib);
     else if (beam_particles=="ph")
-        for(int i=0;i<n_sr;i++) psr[i].add_beam(0,Nb*1.061e-11/(xb*rb*rb*lambda),epsb/0.511,xb,rb,xlength-x0b-dx*x0_sr[i],y0b,phib);
+        psr->add_beam(0,Nb*1.061e-11/(xb*rb*rb*lambda),epsb/0.511,xb,rb,xlength-x0b-dx*x0_sr[i],y0b,phib);
     else
-        for(int i=0;i<n_sr;i++) psr[i].add_beam(-1,Nb*1.061e-11/(xb*rb*rb*lambda),((epsb>0)-(epsb<0))*sqrt(epsb*epsb/(0.511*0.511)-1),xb,rb,xlength-x0b-dx*x0_sr[i],y0b,phib);
+        psr->add_beam(-1,Nb*1.061e-11/(xb*rb*rb*lambda),((epsb>0)-(epsb<0))*sqrt(epsb*epsb/(0.511*0.511)-1),xb,rb,xlength-x0b-dx*x0_sr[i],y0b,phib);
 }
 
 void init_films()
@@ -1160,24 +1279,168 @@ void init_films()
             tmp_p_film->ne_y0 = tmp_p_film->ne;
             tmp_p_film->ne_y1 = tmp_p_film->ne;
         }
-        for(int i=0;i<n_sr;i++) 
-            psr[i].film(tmp_p_film->x0-dx*x0_sr[i], tmp_p_film->x0+tmp_p_film->filmwidth-dx*x0_sr[i],
-                tmp_p_film->ne_y0/(1.11485e+13/lambda/lambda), tmp_p_film->ne_y1/(1.11485e+13/lambda/lambda),
-                ions=="on", 1/(proton_mass*tmp_p_film->mcr),
-                tmp_p_film->gradwidth, tmp_p_film->y0, tmp_p_film->y1, tmp_p_film->z0, tmp_p_film->z1,
-                tmp_p_film->T, tmp_p_film->vx, nelflow != 0 || nerflow != 0,
-                tmp_p_film->xnpic_film, tmp_p_film->ynpic_film, tmp_p_film->znpic_film, false);
+
+        psr->film(tmp_p_film->x0-dx*x0_sr[mpi_rank], tmp_p_film->x0+tmp_p_film->filmwidth-dx*x0_sr[mpi_rank],
+            tmp_p_film->ne_y0/(1.11485e+13/lambda/lambda), tmp_p_film->ne_y1/(1.11485e+13/lambda/lambda),
+            ions=="on", 1/(proton_mass*tmp_p_film->mcr),
+            tmp_p_film->gradwidth, tmp_p_film->y0, tmp_p_film->y1, tmp_p_film->z0, tmp_p_film->z1,
+            tmp_p_film->T, tmp_p_film->vx, nelflow != 0 || nerflow != 0,
+            tmp_p_film->xnpic_film, tmp_p_film->ynpic_film, tmp_p_film->znpic_film, false);
         tmp_p_film = tmp_p_film->prev;
+    }
+}
+
+void send_cell(int i, int j, int k, int destination_rank, int & tag) {
+    const int length = 12;
+    double data[length] = {
+            psr->ce[i][j][k].ex,
+            psr->ce[i][j][k].ey,
+            psr->ce[i][j][k].ez,
+            psr->cb[i][j][k].bx,
+            psr->cb[i][j][k].by,
+            psr->cb[i][j][k].bz,
+            psr->cj[i][j][k].jx,
+            psr->cj[i][j][k].jy,
+            psr->cj[i][j][k].jz,
+            psr->cbe[i][j][k].bex,
+            psr->cbe[i][j][k].bey,
+            psr->cbe[i][j][k].bez
+    };
+    MPI_Send(data, length, MPI_DOUBLE, destination_rank, tag++, MPI_COMM_WORLD);
+
+    particle* current = psr->cp[i][j][k].pl.head;
+    int n_particles = 0;
+    while (current != 0) {
+        current = current->next;
+        n_particles++;
+    }
+    MPI_Send(&n_particles, 1, MPI_INT, destination_rank, tag++, MPI_COMM_WORLD);
+
+    current = psr->cp[i][j][k].pl.head;
+    while (current != 0) {
+        MPI_Send(current, sizeof(particle), MPI_BYTE, destination_rank, tag++, MPI_COMM_WORLD);
+        current = current->next;
+    }
+}
+
+void receive_cell(int i, int j, int k, int source_rank, int & tag) {
+    const int length = 12;
+    double data[length];
+    MPI_Recv(data, length, MPI_DOUBLE, source_rank, tag, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    tag++;
+    psr->ce[i][j][k].ex = data[0];
+    psr->ce[i][j][k].ey = data[1];
+    psr->ce[i][j][k].ez = data[2];
+    psr->cb[i][j][k].bx = data[3];
+    psr->cb[i][j][k].by = data[4];
+    psr->cb[i][j][k].bz = data[5];
+    psr->cj[i][j][k].jx = data[6];
+    psr->cj[i][j][k].jy = data[7];
+    psr->cj[i][j][k].jz = data[8];
+    psr->cbe[i][j][k].bex = data[9];
+    psr->cbe[i][j][k].bey = data[10];
+    psr->cbe[i][j][k].bez = data[11];
+
+    plist & pl = psr->cp[i][j][k].pl;
+    psr->erase(pl);
+
+    int n_particles = 0;
+    MPI_Recv(&n_particles, 1, MPI_INT, source_rank, tag++, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+
+    particle * tmp;
+    particle received;
+    for (int ii=0; ii<n_particles; ii++) {
+        MPI_Recv(&received, sizeof(particle), MPI_BYTE, source_rank, tag++, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+
+        tmp = psr->new_particle();
+        *tmp = received;
+        tmp->previous = pl.start;
+        pl.start = tmp;
+    }
+    pl.head = 0;
+    while (pl.start != 0) {
+        pl.start->next = pl.head;
+        pl.head = pl.start;
+        pl.start = pl.start->previous;
+    }
+    pl.start = pl.head;
+}
+
+void synchronize_regions() {
+    int tag = 0;
+    int nm1, nm2;
+    if (mwindow==1&&(l+1)*dt*mwspeed>nmw*dx) {
+        nm1 = nm-1;
+        nm2 = nm+1;
+    } else {
+        nm1 = nm;
+        nm2 = nm;
+    }
+
+    for (int i=0; i<n_sr-1; i++) {
+        tag = 0;
+        if (mpi_rank == i+1) {
+            for (int ii=nm1; ii<nm1 + nm2; ii++) {
+                for (int j=0;j<ny_global;j++) {
+                    for (int k=0;k<nz_global;k++) {
+                        send_cell(ii, j, k, mpi_rank-1, tag);
+                    }
+                }
+            }
+        }
+
+        tag = 0;
+        if (mpi_rank == i) {
+            const int left = psr->get_nx() - nm2;
+            for (int ii=left;ii<left+nm2;ii++) {
+                for (int j=0;j<ny_global;j++) {
+                    for (int k=0;k<nz_global;k++) {
+                        receive_cell(ii, j, k, mpi_rank+1, tag);
+                        psr->cp[ii][j][k].pl.xplus(nx_sr[mpi_rank] - nx_ich);
+                    }
+                }
+            }
+        }
+
+        tag = 0;
+        if (mpi_rank == i) {
+            const int left = psr->get_nx() - nm2 - nm1;
+            for (int ii=left;ii<left+nm1;ii++) {
+                for (int j=0;j<ny_global;j++) {
+                    for (int k=0;k<nz_global;k++) {
+                        send_cell(ii, j, k, mpi_rank+1, tag);
+                    }
+                }
+            }
+        }
+
+        tag = 0;
+        if (mpi_rank == i+1) {
+            for (int ii=0; ii<nm1; ii++) {
+                for (int j=0;j<ny_global;j++) {
+                    for (int k=0;k<nz_global;k++) {
+                        receive_cell(ii, j, k, mpi_rank-1, tag);
+                        psr->cp[ii][j][k].pl.xplus(-nx_sr[mpi_rank-1]+nx_ich);
+                    }
+                }
+            }
+        }
+
+        MPI_Barrier(MPI_COMM_WORLD);
     }
 }
 
 void start_tracking()
 {
-    cout << "Tracking started for particles: " << particles_to_track << endl;
+    if (mpi_rank == 0) {
+        cout << "Tracking started for particles: " << particles_to_track << endl;
+    }
     if (xtr1 < 0 || xtr2 < 0 || ytr1 < 0 || ytr2 < 0 || ztr1 < 0 || ztr2 < 0 ||
         xtr1 >= xlength || xtr2 >= xlength || ytr1 >= ylength || ytr2 >= ylength || ztr1 >= zlength || ztr2 >= zlength)
     {
-        cout << "Error - tracks outside of compulational domain" << endl;
+        if (mpi_rank == 0) {
+            cout << "Error - tracks outside of compulational domain" << endl;
+        }
         return;
     }
     long trn = 1; // trn = 0 for untracked particles
@@ -1201,7 +1464,99 @@ void start_tracking()
                     n = n - 1;
                     x = x + nx_sr[n] - nx_ich;
                 }
-                particle* h = psr[n].cp[x][y2][z2].pl.head;
+                if (mpi_rank == n) {
+                    particle* h = psr->cp[x][y2][z2].pl.head;
+                    particle* p = h;
+                    bool b = 1;
+                    if (particles_to_track.find('e') != string::npos)
+                    {
+                        while (p!=0 && b) {
+                            if (p->cmr==-1) {
+                                p->trn = trn;
+                                trn++;
+                                b = 0;
+                            }
+                            p = p->next;
+                        }
+                    }
+                    if (particles_to_track.find('p') != string::npos)
+                    {
+                        p = h;
+                        b = 1;
+                        while (p!=0 && b) {
+                            if (p->cmr==1) {
+                                p->trn = trn;
+                                trn++;
+                                b = 0;
+                            }
+                            p = p->next;
+                        }
+                    }
+                    if (particles_to_track.find('g') != string::npos)
+                    {
+                        p = h;
+                        b = 1;
+                        while (p!=0 && b) {
+                            if (p->cmr==0) {
+                                p->trn = trn;
+                                trn++;
+                                b = 0;
+                            }
+                            p = p->next;
+                        }
+                    }
+                    if (particles_to_track.find('i') != string::npos)
+                    {
+                        for (int m=0;m<n_ion_populations;m++) {
+                            p = h;
+                            b = 1;
+                            while (p!=0 && b) {
+                                if (p->cmr==icmr[m]) {
+                                    p->trn = trn;
+                                    trn++;
+                                    b = 0;
+                                }
+                                p = p->next;
+                            }
+                        }
+                    }
+                    for (int ii=0; ii<n_sr; ii++) {
+                        if (ii == mpi_rank) continue;
+                        MPI_Send(&trn, 1, MPI_LONG, ii, 0, MPI_COMM_WORLD);
+                    }
+                } else {
+                    MPI_Recv(&trn, 1, MPI_LONG, n, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                }
+            }
+        }
+    } else {
+        for (int i=0;i<n_tracks;i++) {
+            int x1,y1,z1;
+            if (mpi_rank == 0) {
+                x1 = ( xtr1 + ( xtr2 - xtr1 ) * rand( ) / RAND_MAX ) / dx;
+                y1 = ( ytr1 + ( ytr2 - ytr1 ) * rand( ) / RAND_MAX ) / dy;
+                z1 = ( ztr1 + ( ztr2 - ztr1 ) * rand( ) / RAND_MAX ) / dz;
+                int buf[3] = {x1, y1, z1};
+                for (int ii = 1; ii < n_sr; ii++) {
+                    MPI_Send(buf, 3, MPI_INT, ii, i, MPI_COMM_WORLD);
+                }
+            } else {
+                int buf[3];
+                MPI_Recv(buf, 3, MPI_INT, 0, i, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                x1 = buf[0];
+                y1 = buf[1];
+                z1 = buf[2];
+            }
+
+            int n,x;
+            n = get_sr_for_index(x1);
+            x = x1 - x0_sr[n];
+            if (n!=0 && x<nm) {
+                n = n - 1;
+                x = x + nx_sr[n] - nx_ich;
+            }
+            if (mpi_rank == n) {
+                particle* h = psr->cp[x][y1][z1].pl.head;
                 particle* p = h;
                 bool b = 1;
                 if (particles_to_track.find('e') != string::npos)
@@ -1256,144 +1611,122 @@ void start_tracking()
                         }
                     }
                 }
-            }
-        }
-    } else {
-        for (int i=0;i<n_tracks;i++) {
-            int x1,y1,z1;
-            x1 = ( xtr1 + ( xtr2 - xtr1 ) * rand( ) / RAND_MAX ) / dx;
-            y1 = ( ytr1 + ( ytr2 - ytr1 ) * rand( ) / RAND_MAX ) / dy;
-            z1 = ( ztr1 + ( ztr2 - ztr1 ) * rand( ) / RAND_MAX ) / dz;
-            int n,x;
-            n = get_sr_for_index(x1);
-            x = x1 - x0_sr[n];
-            if (i!=0 && x<nm) {
-                n = n - 1;
-                x = x + nx_sr[n] - nx_ich;
-            }
-            particle* h = psr[n].cp[x][y1][z1].pl.head;
-            particle* p = h;
-            bool b = 1;
-            if (particles_to_track.find('e') != string::npos)
-            {
-                while (p!=0 && b) {
-                    if (p->cmr==-1) {
-                        p->trn = trn;
-                        trn++;
-                        b = 0;
-                    }
-                    p = p->next;
+                for (int ii=0; ii<n_sr; ii++) {
+                    if (ii == mpi_rank) continue;
+                    MPI_Send(&trn, 1, MPI_LONG, ii, 0, MPI_COMM_WORLD);
                 }
-            }
-            if (particles_to_track.find('p') != string::npos)
-            {
-                p = h;
-                b = 1;
-                while (p!=0 && b) {
-                    if (p->cmr==1) {
-                        p->trn = trn;
-                        trn++;
-                        b = 0;
-                    }
-                    p = p->next;
-                }
-            }
-            if (particles_to_track.find('g') != string::npos)
-            {
-                p = h;
-                b = 1;
-                while (p!=0 && b) {
-                    if (p->cmr==0) {
-                        p->trn = trn;
-                        trn++;
-                        b = 0;
-                    }
-                    p = p->next;
-                }
-            }
-            if (particles_to_track.find('i') != string::npos)
-            {
-                for (int m=0;m<n_ion_populations;m++) {
-                    p = h;
-                    b = 1;
-                    while (p!=0 && b) {
-                        if (p->cmr==icmr[m]) {
-                            p->trn = trn;
-                            trn++;
-                            b = 0;
-                        }
-                        p = p->next;
-                    }
-                }
+            } else {
+                MPI_Recv(&trn, 1, MPI_LONG, n, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
             }
         }
     }
+
+    // make the same particles tracked in all regions, so that tracks aren't lost at the first exchange
+    synchronize_regions();
 }
 
 void evaluate_merging_condition()
 {
-    int N_qp_e, N_qp_p, N_qp_g;
-    int* N_qp_i;
-    N_qp_e = 0;
-    N_qp_p = 0;
-    N_qp_g = 0;
-    N_qp_i = new int[n_ion_populations];
-    for (int i=0;i<n_ion_populations;i++)
-        N_qp_i[i] = 0;
-    for (int i=0;i<n_sr;i++) {
-        N_qp_e += psr[i].N_qp_e;
-        N_qp_p += psr[i].N_qp_p;
-        N_qp_g += psr[i].N_qp_g;
+    int count = n_ion_populations + 3;
+    int data[count];
+    if (mpi_rank == 0) {
+        int N_qp_e, N_qp_p, N_qp_g;
+        int* N_qp_i;
+
+        N_qp_e = psr->N_qp_e;
+        N_qp_p = psr->N_qp_p;
+        N_qp_g = psr->N_qp_g;
+        N_qp_i = new int[n_ion_populations];
         for (int j=0;j<n_ion_populations;j++)
-            N_qp_i[j] += psr[i].N_qp_i[j];
-    }
-    double crnp = crpc*xlength*ylength*zlength/(dx*dy*dz);
-    pmerging_now = "off";
-    if (pmerging=="ti") {
-        int N_qp;
-        N_qp = N_qp_e + N_qp_p + N_qp_g;
-        for (int i = 0; i < n_ion_populations; i++)
-            N_qp += N_qp_i[i];
-        if (N_qp>(3+n_ion_populations)*crnp) {
-            pmerging_now = "on";
-            // portion of particles that will be deleted
-            ppd[0] = (N_qp - (3+n_ion_populations)*crnp)/N_qp;
-            cout<<"\t\033[36m"<<"ppd = "<<ppd[0]<<TERM_NO_COLOR;
-        }
-    } else if (pmerging=="nl") {
-        bool merge = (N_qp_e>crnp)||(N_qp_p>crnp)||(N_qp_g>crnp);
-        for (int i = 0; i < n_ion_populations; ++i)
-            merge = merge || (N_qp_i[i]>crnp);
-        if (merge) {
-            pmerging_now = "on";
-            // portion of particles that will be deleted
-            for (int i=0;i<3+n_ion_populations;i++)
-                ppd[i] = 0;
-            if (N_qp_e>crnp)
-                ppd[0] = (N_qp_e - crnp)/N_qp_e;
-            if (N_qp_p>crnp)
-                ppd[1] = (N_qp_p - crnp)/N_qp_p;
-            if (N_qp_g>crnp)
-                ppd[2] = (N_qp_g - crnp)/N_qp_g;
-            for (int i=0;i<n_ion_populations;i++) {
-                if (N_qp_i[i]>crnp)
-                    ppd[3+i] = (N_qp_i[i] - crnp)/N_qp_i[i];
+            N_qp_i[j] = psr->N_qp_i[j];
+        for (int n=1; n<n_sr; n++) {
+            MPI_Recv(data, count, MPI_INT, n, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+            N_qp_e += data[0];
+            N_qp_p += data[1];
+            N_qp_g += data[2];
+            for (int j=0;j<n_ion_populations;j++) {
+                N_qp_i[j] += data[3+j];
             }
-            cout<<"\t\033[36m"<<"ppd =";
-            for (int i=0;i<3+n_ion_populations;i++) {
-                cout<<' '<<ppd[i];
+        }
+
+        double crnp = crpc*xlength*ylength*zlength/(dx*dy*dz);
+        pmerging_now = "off";
+        if (pmerging=="ti") {
+            int N_qp;
+            N_qp = N_qp_e + N_qp_p + N_qp_g;
+            for (int i = 0; i < n_ion_populations; i++)
+                N_qp += N_qp_i[i];
+            if (N_qp>(3+n_ion_populations)*crnp) {
+                pmerging_now = "on";
+                // portion of particles that will be deleted
+                ppd[0] = (N_qp - (3+n_ion_populations)*crnp)/N_qp;
+                cout<<"\t\033[36m"<<"ppd = "<<ppd[0]<<TERM_NO_COLOR;
             }
-            cout<<TERM_NO_COLOR;
+        } else if (pmerging=="nl") {
+            bool merge = (N_qp_e>crnp)||(N_qp_p>crnp)||(N_qp_g>crnp);
+            for (int i = 0; i < n_ion_populations; ++i)
+                merge = merge || (N_qp_i[i]>crnp);
+            if (merge) {
+                pmerging_now = "on";
+                // portion of particles that will be deleted
+                for (int i=0;i<3+n_ion_populations;i++)
+                    ppd[i] = 0;
+                if (N_qp_e>crnp)
+                    ppd[0] = (N_qp_e - crnp)/N_qp_e;
+                if (N_qp_p>crnp)
+                    ppd[1] = (N_qp_p - crnp)/N_qp_p;
+                if (N_qp_g>crnp)
+                    ppd[2] = (N_qp_g - crnp)/N_qp_g;
+                for (int i=0;i<n_ion_populations;i++) {
+                    if (N_qp_i[i]>crnp)
+                        ppd[3+i] = (N_qp_i[i] - crnp)/N_qp_i[i];
+                }
+                cout<<"\t\033[36m"<<"ppd =";
+                for (int i=0;i<3+n_ion_populations;i++) {
+                    cout<<' '<<ppd[i];
+                }
+                cout<<TERM_NO_COLOR;
+            }
+        }
+        delete[] N_qp_i;
+
+        bool pmerging_flag = (pmerging_now == "on");
+        for (int n=1; n<n_sr; n++) {
+            MPI_Send(&pmerging_flag, 1, MPI_BYTE, n, 0, MPI_COMM_WORLD);
+
+            MPI_Send(ppd, 3+n_ion_populations, MPI_DOUBLE, n, 1, MPI_COMM_WORLD);
+        }
+
+    } else {
+        data[0] = psr->N_qp_e;
+        data[1] = psr->N_qp_p;
+        data[2] = psr->N_qp_g;
+        for (int j=0;j<n_ion_populations;j++) {
+            data[3+j] = psr->N_qp_i[j];
+        }
+        MPI_Send(data, count, MPI_INT, 0, 0, MPI_COMM_WORLD);
+
+        bool pmerging_flag;
+        MPI_Recv(&pmerging_flag, 1, MPI_BYTE, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+
+        MPI_Recv(ppd, 3+n_ion_populations, MPI_DOUBLE, 0, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+
+        if (pmerging_flag) {
+            pmerging_now = "on";
+        } else {
+            pmerging_now = "off";
         }
     }
-    delete[] N_qp_i;
 }
 
 void add_moving_window_particles()
 {
     if (mwindow == 1 && (l + 1) * dt * mwspeed > nmw * dx && (l + 1) * dt < t_add_mw)
     {
-        nmw = nmw + 1;
+        nmw++;
+        if (mpi_rank != n_sr-1) {
+            return;
+        }
         if (mwseed==1) {
             double n;
             n=1/(k0*k0);
@@ -1421,7 +1754,7 @@ void add_moving_window_particles()
                     double modifier = lin_interpolation(r, ne_profile_r_coords, ne_profile_r_values);
                     if (modifier != 0.0)
                     {
-                        psr[n_sr-1].fill_cell_by_particles(-1,cell_pos,v_npic,n*modifier);
+                        psr->fill_cell_by_particles(-1,cell_pos,v_npic,n*modifier);
                     }
                     //if (ions=="on")
                     // psr[n_sr-1].fill_cell_by_particles(-1,cell_pos,v_npic,n); // bug??! this adds electrons, not ions; qwe
@@ -1432,7 +1765,7 @@ void add_moving_window_particles()
         film* tmp_p_film = p_last_film;
         while (tmp_p_film != 0)
         {
-            psr[n_sr-1].film(tmp_p_film->x0-dx*x0_sr[n_sr-1]-dx*nmw, tmp_p_film->x0+tmp_p_film->filmwidth-dx*x0_sr[n_sr-1]-dx*nmw,
+            psr->film(tmp_p_film->x0-dx*x0_sr[n_sr-1]-dx*nmw, tmp_p_film->x0+tmp_p_film->filmwidth-dx*x0_sr[n_sr-1]-dx*nmw,
                 tmp_p_film->ne_y0/(1.11485e+13/lambda/lambda), tmp_p_film->ne_y1/(1.11485e+13/lambda/lambda),
                 ions=="on", 1/(proton_mass*tmp_p_film->mcr),
                 tmp_p_film->gradwidth, tmp_p_film->y0, tmp_p_film->y1, tmp_p_film->z0, tmp_p_film->z1,
@@ -1478,9 +1811,11 @@ void add_neutral_flow_particles(short direction, double neflow, double vflow, do
                     tmp = cos(0.5 * PI * tmp * tmp * tmp * tmp * tmp);
                     tr_env *= tmp * tmp;
                     
-                    psr[index].fill_cell_by_particles(-1,cell_pos,v_npic, n * tr_env, direction * vflow/sqrt(1-vflow*vflow), 0, (direction > 0 ? x0 : 1-x0)-0.5,Tflow); // 0.5 - for a compensation in fill_cell... for xnpic = 1
-                    if (ions == "on")
-                        psr[index].fill_cell_by_particles(1/(proton_mass*mcrflow),cell_pos,v_npic, n * tr_env, direction * vflow/sqrt(1-vflow*vflow), 0, (direction > 0 ? x0 : 1-x0)-0.5,Tflow / (proton_mass * mcrflow));
+                    if (mpi_rank == index) {
+                        psr->fill_cell_by_particles(-1,cell_pos,v_npic, n * tr_env, direction * vflow/sqrt(1-vflow*vflow), 0, (direction > 0 ? x0 : 1-x0)-0.5,Tflow); // 0.5 - for a compensation in fill_cell... for xnpic = 1
+                        if (ions == "on")
+                            psr->fill_cell_by_particles(1/(proton_mass*mcrflow),cell_pos,v_npic, n * tr_env, direction * vflow/sqrt(1-vflow*vflow), 0, (direction > 0 ? x0 : 1-x0)-0.5,Tflow / (proton_mass * mcrflow));
+                    }
                 }
             }
         }
@@ -1496,36 +1831,60 @@ void print_number_of_quasiparticles()
     int N_qp_p_total = 0;
     int N_qp_g_total = 0;
     int N_qp_i_total = 0;
-    for (int i=0; i<n_sr; i++)
-    {
-        N_qp_e_total += psr[i].N_qp_e;
-        N_qp_p_total += psr[i].N_qp_p;
-        N_qp_g_total += psr[i].N_qp_g;
-        cout << " Thread #" << i << ":\t" << psr[i].N_qp_e << " e, " << psr[i].N_qp_p << " p, " << psr[i].N_qp_g << " g";
+
+    int count = 3 + n_ion_populations;
+    int data[count];
+    data[0] = psr->N_qp_e;
+    data[1] = psr->N_qp_p;
+    data[2] = psr->N_qp_g;
+    for (int j=0; j<n_ion_populations; j++) {
+        data[3+j] = psr->N_qp_i[j];
+    }
+
+    if (mpi_rank == 0) {
+        for (int i=0; i<n_sr; i++) {
+            if (i != 0) {
+                MPI_Recv(data, count, MPI_INT, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+            }
+            N_qp_e_total += data[0];
+            N_qp_p_total += data[1];
+            N_qp_g_total += data[2];
+            cout << " Thread #" << i << ":\t" << data[0] << " e, " << data[1] << " p, " << data[2] << " g";
+            if (n_ion_populations >= 0)
+            {
+                int N_qp_i = 0;
+                for (int j=0; j<n_ion_populations; j++)
+                {
+                    N_qp_i += data[3+j];
+                }
+                N_qp_i_total += N_qp_i;
+                cout << ", " << N_qp_i << " i";
+            }
+            cout << endl;
+        }
+        cout << "Total:  \t" << N_qp_e_total << " e, " << N_qp_p_total << " p, " << N_qp_g_total << " g";
         if (n_ion_populations >= 0)
         {
-            int N_qp_i = 0;
-            for (int j=0; j<n_ion_populations; j++)
-            {
-                N_qp_i += psr[i].N_qp_i[j];
-            }
-            N_qp_i_total += N_qp_i;
-            cout << ", " << N_qp_i << " i";
+            cout << ", " << N_qp_i_total << " i";
         }
         cout << endl;
+    } else {
+        MPI_Send(data, count, MPI_INT, 0, 0, MPI_COMM_WORLD);
     }
-    cout << "Total:  \t" << N_qp_e_total << " e, " << N_qp_p_total << " p, " << N_qp_g_total << " g";
-    if (n_ion_populations >= 0)
-    {
-        cout << ", " << N_qp_i_total << " i";
-    }
-    cout << endl;
 }
 
-int main()
+int main(int argc, char * argv[])
 {
-    cout<<"\n\033[1m"<<"hi!"<<"\033[0m\n"<<endl;
-    
+    MPI_Init(&argc, &argv);
+    MPI_Comm_size(MPI_COMM_WORLD, &n_sr);
+    MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
+
+    if (mpi_rank == 0) {
+        cout<<"\n\033[1m"<<"hi!"<<"\033[0m\n"<<endl;
+    }
+
+    MPI_Barrier(MPI_COMM_WORLD);
+
     string hostname;
     ifstream hostname_file("/proc/sys/kernel/hostname");
     if (hostname_file.good())
@@ -1533,7 +1892,10 @@ int main()
       getline(hostname_file, hostname);
     }
     hostname_file.close();
-    cout << "Quill process id = " << getpid() << ", hostname = " << hostname << endl;
+    //TODO all output to stdout should be on rank 0
+    cout << "Quill process rank = " << mpi_rank << ", id = " << getpid() << ", hostname = " << hostname << endl;
+    MPI_Barrier(MPI_COMM_WORLD);
+
     up_time = times(&tms_struct);
     start_time = times(&tms_struct);
     inaccurate_time = time(NULL);
@@ -1542,14 +1904,24 @@ int main()
     nm = nx_ich/2;
     file_name_accuracy = 100;
 
-    if (init()==1) return 1;
+    if (init()==1) {
+        MPI_Abort(MPI_COMM_WORLD, 1);
+        return 1;
+    }
 
-    ofstream fout_log(data_folder+"/log",ios::app); // ios:app mode - append to the file
-    fout_log<<"start time: "<<ctime(&inaccurate_time);
+    nx_global = (int) (xlength / dx);
+    ny_global = (int) (ylength / dy);
+    nz_global = (int) (zlength / dz);
+
+    ofstream fout_log;
+    if (mpi_rank == 0) {
+        fout_log = ofstream(data_folder+"/log",ios::app); // ios:app mode - append to the file
+        fout_log<<"start time: "<<ctime(&inaccurate_time);
+    }
 
     ppd = new double[3+n_ion_populations];
 
-    const int nx = (int)( xlength/dx ) + nx_ich*(n_sr-1); // nx = nx_sr*n_sr - nx_ich*(n_sr-1);
+    const int nx = nx_global + nx_ich*(n_sr-1); // nx = nx_sr*n_sr - nx_ich*(n_sr-1);
     nx_sr = vector<int>(n_sr, nx / n_sr);
     for (int i=0; i < (nx % n_sr); i++) {
         nx_sr[i]++;
@@ -1560,35 +1932,24 @@ int main()
         x0_sr[i] = x0_sr[i-1] + nx_sr[i-1] - nx_ich;
     }
 
-    if(nx_ich*(n_sr-1)>=xlength/dx) {cout<<TERM_RED<<"main: too many slices, aborting..."<<TERM_NO_COLOR<<endl; return 1;}
+    if(nx_ich*(n_sr-1)>=nx_global) {
+        cout<<TERM_RED<<"main: too many slices, aborting..."<<TERM_NO_COLOR<<endl;
+        MPI_Abort(MPI_COMM_WORLD, 1);
+        return 1;
+    }
 
-    pthread_t* sr_thread = new pthread_t[n_sr];
-    pthread_t* listener_thread = new pthread_t;
-    sr_mutex_c = new pthread_mutex_t[n_sr];
-    sr_mutex1 = new pthread_mutex_t[n_sr];
-    sr_mutex2 = new pthread_mutex_t[n_sr];
-    sr_mutex_m = new pthread_mutex_t[n_sr];
-    sr_mutex_m2 = new pthread_mutex_t[n_sr];
-    sr_mutex_rho1 = new pthread_mutex_t[n_sr];
-    sr_mutex_rho2 = new pthread_mutex_t[n_sr];
-    sr_mutex_j1 = new pthread_mutex_t[n_sr];
-    sr_mutex_j2 = new pthread_mutex_t[n_sr];
+    MPI_Barrier(MPI_COMM_WORLD);
 
     main_thread_time = times(&tms_struct);
-    cout<<"Creating arrays..."<<flush;
-    psr = new spatial_region[n_sr];
-    int node;
-    for(int i=0;i<n_sr;i++) 
-    {
-        node = i*n_numa_nodes/n_sr;
-        //
-        psr[i].init(i,dx,dy,dz,dt,lambda/2.4263086e-10,xnpic,ynpic,znpic,node,n_ion_populations,icmr,data_folder,solver,pusher);
-        psr[i].create_arrays(nx_sr[i],int(ylength/dy),int(zlength/dz),i+times(&tms_struct),node);
-        //
+    if (mpi_rank == 0) {
+        cout<<"Creating arrays..."<<flush;
     }
+    psr = unique_ptr<spatial_region>(new spatial_region());
+    psr->init(mpi_rank,dx,dy,dz,dt,lambda/2.4263086e-10,xnpic,ynpic,znpic,n_ion_populations,icmr,data_folder,solver,pusher);
+    psr->create_arrays(nx_sr[mpi_rank],ny_global,nz_global,mpi_rank+times(&tms_struct));
     
     init_fields();
-    
+
     if (beam=="on")
     {
         init_beam();
@@ -1596,109 +1957,96 @@ int main()
 
     init_films();
 
-    for (int i=0; i<n_sr; i++) {
-        psr[i].f_init_boundaries();
-        psr[i].interpolate_be();
-    }
+    psr->f_init_boundaries();
+    psr->interpolate_be();
+
+    MPI_Barrier(MPI_COMM_WORLD);
 
     main_thread_time = times(&tms_struct) - main_thread_time;
     seconds = main_thread_time/100.0;
-    cout<<"done!"<<endl;
-    fout_log<<"fill arrays: "<<seconds<<"s"<<endl;
 
-    for(int i=0;i<n_sr;i++) pthread_mutex_init(&sr_mutex_c[i], 0);
-    for(int i=0;i<n_sr;i++) pthread_mutex_lock(&sr_mutex_c[i]);
-    for(int i=0;i<n_sr;i++) pthread_mutex_init(&sr_mutex1[i], 0);
-    for(int i=0;i<n_sr;i++) pthread_mutex_lock(&sr_mutex1[i]);
-    for(int i=0;i<n_sr;i++) pthread_mutex_init(&sr_mutex2[i], 0);
-    for(int i=0;i<n_sr;i++) pthread_mutex_lock(&sr_mutex2[i]);
-    for(int i=0;i<n_sr;i++) pthread_mutex_init(&sr_mutex_m[i], 0);
-    for(int i=0;i<n_sr;i++) pthread_mutex_lock(&sr_mutex_m[i]);
-    for(int i=0;i<n_sr;i++) pthread_mutex_init(&sr_mutex_m2[i], 0);
-    for(int i=0;i<n_sr;i++) pthread_mutex_lock(&sr_mutex_m2[i]);
-    for(int i=0;i<n_sr;i++) pthread_mutex_init(&sr_mutex_rho1[i], 0);
-    for(int i=0;i<n_sr;i++) pthread_mutex_lock(&sr_mutex_rho1[i]);
-    for(int i=0;i<n_sr;i++) pthread_mutex_init(&sr_mutex_rho2[i], 0);
-    for(int i=0;i<n_sr;i++) pthread_mutex_lock(&sr_mutex_rho2[i]);
-    for(int i=0;i<n_sr;i++) pthread_mutex_init(&sr_mutex_j1[i], 0);
-    for(int i=0;i<n_sr;i++) pthread_mutex_lock(&sr_mutex_j1[i]);
-    for(int i=0;i<n_sr;i++) pthread_mutex_init(&sr_mutex_j2[i], 0);
-    for(int i=0;i<n_sr;i++) pthread_mutex_lock(&sr_mutex_j2[i]);
-
-    for(int i=0;i<n_sr;i++)
-    {
-        int* p_i;
-        p_i = &i;
-        pthread_create(&sr_thread[i],0,thread_function,p_i);
-        pthread_mutex_lock(&sr_mutex_c[i]);
+    if (mpi_rank == 0) {
+        cout<<"done!"<<endl;
+        fout_log<<"fill arrays: "<<seconds<<"s"<<endl;
     }
-    
-    pthread_create(listener_thread, 0, listen_for_param_updates, 0);
 
     l=0;
-    ofstream fout_N(data_folder+"/N");
-    ofstream fout_energy(data_folder+"/energy");
+
+    ofstream fout_N;
+    ofstream fout_energy;
+    if (mpi_rank == 0) {
+        fout_N.open(data_folder+"/N");
+        fout_energy.open(data_folder+"/energy");
+    }
+
     ofstream fout_energy_deleted;
-    if (catching_enabled || dump_photons)
+    if ((mpi_rank == 0) && (catching_enabled || dump_photons))
     {
         fout_energy_deleted.open(data_folder+"/energy_deleted");
     }
     
     while(l<p_last_ddi->t_end/dt)
     {
+        if (pmerging_now=="on")
+            psr->pmerging(ppd,pmerging);
+        int i = mpi_rank;
+        psr->birth_from_vacuum(8*PI*PI/(dx*dy*dz)*2.818e-13/lambda); // 2.818e-13 = e^2/mc^2
+        psr->padvance(external_bz);
+        psr->compute_N(nm*(i!=0),nm*(i!=n_sr-1),dx*dy*dz*1.11485e13*lambda/(8*PI*PI*PI));
+        psr->compute_energy(nm*(i!=0),nm*(i!=n_sr-1),0.5*dx*dy*dz*3.691e4*lambda/1e7,8.2e-14*dx*dy*dz*1.11485e13*lambda/(8*PI*PI*PI)); // энергия в Джоулях
+        psr->fout_tracks((x0_sr[i]+nmw)*dx/2/PI,nm);
+        psr->fadvance();
+        if (mwindow==1) psr->moving_window(l,nmw,mwspeed);
+
+        MPI_Barrier(MPI_COMM_WORLD);
+
+        synchronize_regions();
+
+        MPI_Barrier(MPI_COMM_WORLD);
+
         /* вывод плотности, спектра и 'phasespace'-данных для фотонов,
            электронов и позитронов в файлы */
+
         if(l*dt >= [](ddi* a) {double b=a->f*a->output_period; if(a->prev!=0) b+=(a->prev)->t_end; return b;} (p_current_ddi))
         {
-            for (int i=0; i<n_sr; i++) pthread_mutex_lock(&sr_mutex_j1[i]);
-
             if (write_jx || write_jy || write_jz) {
                 write_density(write_jx, write_jy, write_jz, "jx", "jy", "jz", false, true);
             }
-
-            for (int i=0; i<n_sr; i++) pthread_mutex_unlock(&sr_mutex_j2[i]);
-            for (int i=0; i<n_sr; i++) pthread_mutex_lock(&sr_mutex_rho1[i]);
             
+            psr->compute_rho();
+
             write_density(true, write_p, write_ph, "rho", "rho_p", "rho_ph", true);
+
             write_spectrum_phasespace(write_p, write_ph);            
             
             if (catching_enabled || dump_photons)
             {
-                write_deleted_particles(fout_energy_deleted, write_p, write_ph);
+                write_deleted_particles(write_p, write_ph);
             }
-            
-            for(int i=0;i<n_sr;i++) pthread_mutex_unlock(&sr_mutex_rho2[i]);
         }
 
-        for(int i=0;i<n_sr;i++) pthread_mutex_lock(&sr_mutex1[i]);
 
         if (!particles_to_track.empty() && l == int(tr_start/dt)) 
         {
             start_tracking();
         }
 
-        int N_ep = write_N(fout_N);
+
+        write_N(fout_N);
         write_energy(fout_energy);
         if (catching_enabled || dump_photons)
         {
             write_energy_deleted(fout_energy_deleted);
         }
 
-        cout<<"\033[33m"<<"ct/lambda = "<<l*dt/2/PI<<"\tstep# "<<l<<TERM_NO_COLOR;
+        if (mpi_rank == 0) {
+            cout<<"\033[33m"<<"ct/lambda = "<<l*dt/2/PI<<"\tstep# "<<l<<TERM_NO_COLOR<<endl;
+        }
 
         evaluate_merging_condition();
 
-        if (freezing==1)
-        {
-            int N_freezed;
-            N_freezed = 0;
-            for (int i=0;i<n_sr;i++) N_freezed += psr[i].N_freezed;
-            if (N_freezed!=0)
-                cout<<"\t\033[36m"<<"N_f/N_c = "<<N_freezed*dx*dy*dz*1.11485e13*lambda/(8*PI*PI*PI)/(N_ep)<<TERM_NO_COLOR;
-        }
-        cout<<endl;
-
         add_moving_window_particles();
+
 
         if (nelflow != 0)
         {
@@ -1711,6 +2059,7 @@ int main()
             add_neutral_flow_particles(-1, nerflow, vrflow, Trflow, mcrrflow);
         }
 
+
         // вывод данных в файлы (продолжение)
         if(l*dt>=[](ddi* a) {double b=a->f*a->output_period; if(a->prev!=0) b+=(a->prev)->t_end; return b;} (p_current_ddi))
         {
@@ -1719,47 +2068,38 @@ int main()
                 print_number_of_quasiparticles();
             }
             
-            cout<<"output# "<<"\033[1m"<<int([](ddi* a) {double b=a->f*a->output_period; if(a->prev!=0) b+=(a->prev)->t_end; return b;} (p_current_ddi)/2/PI*file_name_accuracy)/file_name_accuracy<<TERM_NO_COLOR<<flush;
-            
+            if (mpi_rank == 0) {
+                cout<<"output# "<<"\033[1m"<<int([](ddi* a) {double b=a->f*a->output_period; if(a->prev!=0) b+=(a->prev)->t_end; return b;} (p_current_ddi)/2/PI*file_name_accuracy)/file_name_accuracy<<TERM_NO_COLOR<<flush;
+            }
+
             write_fields(); // Ex..Ez, Bx..Bz, w (field energy density), inv (E^2-B^2 - relativistic invariant)
             
-            cout<<"\t"<<"up: "<<(times(&tms_struct)-start_time)/100.0<<" s"<<endl;
+            if (mpi_rank == 0) {
+                cout<<"\t"<<"up: "<<(times(&tms_struct)-start_time)/100.0<<" s"<<endl;
+            }
             p_current_ddi->f++;
         }
-        
+
+
         if (l*dt>=p_current_ddi->t_end)
         {
             p_current_ddi = p_current_ddi->next;
         }
 
         l++;
-        for(int i=0;i<n_sr;i++) pthread_mutex_unlock(&sr_mutex2[i]);
     }
 
-    for (int i=0; i<n_sr; i++) {
-        void ** pv;
-        pthread_join(sr_thread[i], pv);
-    }
-
-    delete[] sr_thread;
-    delete listener_thread;
-    delete[] sr_mutex_c;
-    delete[] sr_mutex1;
-    delete[] sr_mutex2;
-    delete[] sr_mutex_m;
-    delete[] sr_mutex_m2;
-    delete[] sr_mutex_rho1;
-    delete[] sr_mutex_rho2;
-    delete[] sr_mutex_j1;
-    delete[] sr_mutex_j2;
     delete[] icmr;
 
     delete[] ppd;
-    fout_N.close();
-    fout_energy.close();
-    if (fout_energy_deleted.is_open())
-    {
-        fout_energy_deleted.close();
+
+    if (mpi_rank == 0) {
+        fout_N.close();
+        fout_energy.close();
+        if (fout_energy_deleted.is_open())
+        {
+            fout_energy_deleted.close();
+        }
     }
 
     while(p_last_ddi!=0)
@@ -1769,14 +2109,18 @@ int main()
         p_last_ddi = tmp;
     }
 
-    inaccurate_time = time(NULL);
-    fout_log<<"stop time: "<<ctime(&inaccurate_time);
-    up_time = times(&tms_struct) - up_time;
-    seconds = up_time/100.0;
-    fout_log<<"uptime: "<<seconds<<"s"<<endl;
-    fout_log.close();
+    if (mpi_rank == 0) {
+        inaccurate_time = time(NULL);
+        fout_log<<"stop time: "<<ctime(&inaccurate_time);
+        up_time = times(&tms_struct) - up_time;
+        seconds = up_time/100.0;
+        fout_log<<"uptime: "<<seconds<<"s"<<endl;
+        fout_log.close();
 
-    cout<<"\n\033[1mbye!\033[0m\n"<<endl;
+        cout<<"\n\033[1mbye!\033[0m\n"<<endl;
+    }
+
+    MPI_Finalize();
     return 0;
 }
 
@@ -1820,7 +2164,8 @@ vector<double> find_array(var * element, string name, string desired_units, stri
 
 int init()
 {
-    cout<<"Initialization"<<'\n'<<flush;
+    if (mpi_rank == 0)
+        cout<<"Initialization"<<'\n'<<flush;
     var* first;
     var* current;
     var* tmp;
@@ -1831,6 +2176,7 @@ int init()
         current->next = new var;
         current = current->next;
     }
+
     //
     current = find("dx",first);
     dx = current->value*2*PI; // from lambda to c/\omega
@@ -1875,6 +2221,7 @@ int init()
             return 1;
         }
     }
+
     //
     current = find("xlength",first);
     if (current->units=="um")
@@ -2632,12 +2979,6 @@ int init()
     current = find("enthp_i",first);
     enthp_i = current->value;
     if (enthp_i==0) enthp_i = enthp;
-    current = find("n_sr",first);
-    n_sr = current->value;
-    if (n_sr==0) n_sr = 8;
-    current = find("n_numa_nodes",first);
-    n_numa_nodes = current->value;
-    if (n_numa_nodes==0) n_numa_nodes = 2;
     
     std::string particles_for_output;
     current = find("particles_for_output",first);
@@ -2661,11 +3002,6 @@ int init()
     current = find("f_reflection",first);
     f_reflection = current->units;
     if(f_reflection=="") f_reflection = "off";
-    current = find("freezing",first);
-    if (current->units=="on")
-        freezing = 1;
-    else
-        freezing = 0;
     current = find("n_tracks",first);
     n_tracks = current->value;
     current = find("particles_to_track",first);
@@ -2812,6 +3148,9 @@ int init()
     else
         output_mode = ios_base::out;
     //
+    if (mpi_rank != 0) {
+        output_mode = output_mode | ios_base::app;
+    }
 
     current = find("pusher", first);
     string pusher_str = current->units;
@@ -2855,170 +3194,173 @@ int init()
         current = tmp;
     }
     delete current; // удаление последней переменной
-    //
-    ofstream fout_log(data_folder+"/log");
-    fout_log<<"dx\n"<<dx/2/PI<<"\n";
-    fout_log<<"dy\n"<<dy/2/PI<<"\n";
-    fout_log<<"dz\n"<<dz/2/PI<<"\n";
-    fout_log<<"dt\n"<<dt/2/PI<<"\n";
-    fout_log<<"nx\n"<<int(xlength/dx)<<"\n";
-    fout_log<<"ny\n"<<int(ylength/dy)<<"\n";
-    fout_log<<"nz\n"<<int(zlength/dz)<<"\n";
-    fout_log<<"lambda\n"<<lambda<<"\n";
-    fout_log<<"ne\n"<<ne<<"\n";
 
     ddi* tmp_ddi = p_last_ddi;
-    while (tmp_ddi!=0) {
-        fout_log<<"t_end\n"<<tmp_ddi->t_end/2/PI<<"\n";
-        fout_log<<"output_period\n"<<tmp_ddi->output_period/2/PI<<"\n";
+    while (tmp_ddi != 0) {
         p_current_ddi = tmp_ddi; // hence after the loop p_current_ddi points to the first ddi
         tmp_ddi = tmp_ddi->prev;
     }
-    fout_log << "t_add_mw\n" << t_add_mw / (2 * PI) << '\n';
-    fout_log<<"xsigma\n"<<xsigma/2/PI<<"\n";
-    fout_log<<"ysigma\n"<<ysigma/2/PI<<"\n";
-    fout_log<<"zsigma\n"<<zsigma/2/PI<<"\n";
-    fout_log<<"x0fout\n"<<x0fout/2/PI<<"\n";
-    fout_log<<"a0y\n"<<a0y<<"\n";
-    fout_log<<"a0z\n"<<a0z<<"\n";
-    fout_log << "external_bz\n" << external_bz << "\n";
-    if (mwindow==0)
-        fout_log<<"mwindow\n"<<"off"<<"\n";
-    else
-        fout_log<<"mwindow\n"<<"on"<<"\n";
-    if (mwseed==0)
-        fout_log<<"mwseed\n"<<"off"<<"\n";
-    else
-        fout_log<<"mwseed\n"<<"on"<<"\n";
-    fout_log<<"e_components_for_output\n"<<e_components_for_output<<"\n";
-    fout_log<<"b_components_for_output\n"<<b_components_for_output<<"\n";
-    if (sscos==0) {
-        fout_log<<"f_envelope\n"<<f_envelope<<"\n";
-    } else if (sscos == 1) {
-        fout_log<<"f_envelope\n"<<"sscos"<<"\n";
-    } else if (sscos == 2) {
-        fout_log<<"f_envelope\n"<<"pearl"<<"\n";
-    } else {
-        fout_log<<"f_envelope\n"<<"not known type of envelope!"<<"\n";
-    }
-    fout_log<<"b_sign\n"<<2.0*b_sign-1<<"\n";
-    fout_log<<"x0\n"<<x0/2/PI<<"\n";
-    fout_log<<"y0\n"<<y00/2/PI<<"\n";
-    fout_log<<"z0\n"<<z00/2/PI<<"\n";
-    fout_log<<"xtarget\n"<<xtarget/2/PI<<"\n";
-    fout_log<<"ytarget\n"<<ytarget/2/PI<<"\n";
-    fout_log<<"ztarget\n"<<ztarget/2/PI<<"\n";
-    fout_log<<"phase\n"<<phase<<"\n";
-    fout_log<<"lp_reflection\n"<<lp_reflection<<"\n";
-    fout_log<<"f_reflection\n"<<f_reflection<<"\n";
-    fout_log<<"phi\n"<<phi<<"\n";
-    fout_log<<"shenergy\n"<<shenergy<<"\n";
-    fout_log<<"shphase\n"<<shphase<<"\n";
-    fout_log<<"beam\n"<<beam<<"\n";
-    fout_log<<"beam_particles\n"<<beam_particles<<"\n";
-    fout_log<<"Nb\n"<<Nb<<"\n";
-    fout_log<<"epsb\n"<<epsb<<"\n";
-    fout_log<<"xb\n"<<xb/2/PI<<"\n";
-    fout_log<<"rb\n"<<rb/2/PI<<"\n";
-    fout_log<<"x0b\n"<<x0b/2/PI<<"\n";
-    fout_log<<"y0b\n"<<y0b/2/PI<<"\n";
-    fout_log<<"phib\n"<<phib<<"\n";
-    fout_log<<"mwspeed\n"<<mwspeed<<"\n";
-    fout_log<<"nelflow\n"<<nelflow<<"\n";
-    fout_log<<"vlflow\n"<<vlflow<<"\n";
-    fout_log<<"mcrlflow\n"<<mcrlflow<<"\n";
-    fout_log<<"Tlflow\n"<<Tlflow<<"\n";
-    fout_log<<"nerflow\n"<<nerflow<<"\n";
-    fout_log<<"vrflow\n"<<vrflow<<"\n";
-    fout_log<<"mcrrflow\n"<<mcrrflow<<"\n";
-    fout_log<<"Trflow\n"<<Trflow<<"\n";
-    fout_log<<"ions\n"<<ions<<"\n";
-    tmp_p_film = p_last_film;
-    while (tmp_p_film!=0)
-    {
-        fout_log<<"film\n"<<"on"<<"\n";
-        fout_log<<"x0film\n"<<tmp_p_film->x0/2/PI<<"\n";
-        fout_log<<"filmwidth\n"<<tmp_p_film->filmwidth/2/PI<<"\n";
-        fout_log<<"gradwidth\n"<<tmp_p_film->gradwidth/2/PI<<"\n";
-        fout_log<<"y0film\n"<<tmp_p_film->y0/2/PI<<"\n";
-        fout_log<<"y1film\n"<<tmp_p_film->y1/2/PI<<"\n";
-        fout_log<<"z0film\n"<<tmp_p_film->z0/2/PI<<"\n";
-        fout_log<<"z1film\n"<<tmp_p_film->z1/2/PI<<"\n";
-        fout_log<<"nfilm\n"<<tmp_p_film->ne<<"\n";
-        fout_log<<"mcr\n"<<tmp_p_film->mcr<<"\n";
-        fout_log<<"Tfilm\n"<<tmp_p_film->T<<"\n";
-        fout_log<<"vxfilm\n"<<tmp_p_film->vx<<"\n";
-        fout_log<<"xnpic_film\n"<<tmp_p_film->xnpic_film<<"\n";
-        fout_log<<"ynpic_film\n"<<tmp_p_film->ynpic_film<<"\n";
-        fout_log<<"znpic_film\n"<<tmp_p_film->znpic_film<<"\n";
-        tmp_p_film = tmp_p_film->prev;
-    }
-    fout_log<<"n_ion_populations\n"<<n_ion_populations<<"\n";
-    for (int i=0;i<n_ion_populations;i++)
-        fout_log<<"icmr\n"<<icmr[i]<<"\n";
-    fout_log<<"xnpic\n"<<xnpic<<"\n";
-    fout_log<<"ynpic\n"<<ynpic<<"\n";
-    fout_log<<"znpic\n"<<znpic<<"\n";
-    fout_log<<"particles_for_output\n"<<particles_for_output<<"\n";
-    fout_log<<"deps\n"<<deps<<"\n";
-    fout_log<<"neps\n"<<neps<<"\n";
-    fout_log<<"enthp\n"<<enthp<<"\n";
-    fout_log<<"deps_p\n"<<deps_p<<"\n";
-    fout_log<<"neps_p\n"<<neps_p<<"\n";
-    fout_log<<"enthp_p\n"<<enthp_p<<"\n";
-    fout_log<<"deps_ph\n"<<deps_ph<<"\n";
-    fout_log<<"neps_ph\n"<<neps_ph<<"\n";
-    fout_log<<"enthp_ph\n"<<enthp_ph<<"\n";
-    fout_log<<"deps_i\n"<<deps_i<<"\n";
-    fout_log<<"neps_i\n"<<neps_i<<"\n";
-    fout_log<<"enthp_i\n"<<enthp_i<<"\n";
-    fout_log<<"n_sr\n"<<n_sr<<"\n";
-    fout_log<<"n_numa_nodes\n"<<n_numa_nodes<<"\n";
-    fout_log<<"n_tracks\n"<<n_tracks<<"\n";
-    fout_log<<"particles_to_track\n"<<particles_to_track<<"\n";
-    fout_log<<"tr_start\n"<<tr_start/2/PI<<"\n";
-    fout_log<<"tr_init\n"<<tr_init<<"\n";
-    fout_log<<"xtr1\n"<<xtr1<<"\n";
-    fout_log<<"ytr1\n"<<ytr1<<"\n";
-    fout_log<<"ztr1\n"<<ztr1<<"\n";
-    fout_log<<"xtr2\n"<<xtr2<<"\n";
-    fout_log<<"ytr2\n"<<ytr2<<"\n";
-    fout_log<<"ztr2\n"<<ztr2<<"\n";
-    fout_log<<"pmerging\n"<<pmerging<<"\n";
-    fout_log<<"crpc\n"<<crpc<<"\n";
-    fout_log<<"$\n";
-    fout_log<<"freezing\n";
-    if (freezing==1) fout_log<<"on"; else fout_log<<"off";
-    fout_log<<'\n';
 
-    fout_log << "catching" << endl << (catching_enabled ? "on" : "off") << endl;
-    fout_log << "dump_photons" << endl << (dump_photons ? "on" : "off") << endl;
-    fout_log << "qed" << endl;
-    fout_log << (qed_enabled ? "on" : "off") << endl;
+    if (mpi_rank == 0) {
+        ofstream fout_log(data_folder+"/log");
+        fout_log<<"dx\n"<<dx/2/PI<<"\n";
+        fout_log<<"dy\n"<<dy/2/PI<<"\n";
+        fout_log<<"dz\n"<<dz/2/PI<<"\n";
+        fout_log<<"dt\n"<<dt/2/PI<<"\n";
+        fout_log<<"nx\n"<<int(xlength/dx)<<"\n";
+        fout_log<<"ny\n"<<int(ylength/dy)<<"\n";
+        fout_log<<"nz\n"<<int(zlength/dz)<<"\n";
+        fout_log<<"lambda\n"<<lambda<<"\n";
+        fout_log<<"ne\n"<<ne<<"\n";
 
-    if (output_mode == (ios_base::out | ios_base::binary))
-        fout_log << "output_mode\n" << 1 << '\n';
-    else if (output_mode == ios_base::out)
-        fout_log << "output_mode\n" << 0 << '\n';
-    fout_log<<"#------------------------------\n";
-    fout_log<<"polarization = "<<polarization<<"\n";
-    fout_log<<"P = "<<(a0y*(a0y>a0z)+a0z*(a0z>=a0y))*(a0y*(a0y>a0z)+a0z*(a0z>=a0y))/8*ysigma*zsigma*8.75e9/1e12<<" TW\n";
-    fout_log<<"I = "<<PI*(a0y*(a0y>a0z)+a0z*(a0z>=a0y))*(a0y*(a0y>a0z)+a0z*(a0z>=a0y))*8.75e9/(lambda*lambda)<<" W/cm^2\n";
-    fout_log<<"W = "<<(a0y*a0y+a0z*a0z)*xsigma*ysigma*zsigma*PI*sqrt(PI/2)/4*lambda*3.691e4/1e7<<" J\n";
-    if (f_envelope=="focused")
-    {
-        //fout_log<<"a0 in focal plane = "<<(a0y*(a0y>a0z)+a0z*(a0z>=a0y))*sigma/sigma0<<"\n";
-        fout_log<<"aperture: F/"<<sigma0/2<<"\n";
+        ddi* tmp_ddi = p_last_ddi;
+        while (tmp_ddi!=0) {
+            fout_log<<"t_end\n"<<tmp_ddi->t_end/2/PI<<"\n";
+            fout_log<<"output_period\n"<<tmp_ddi->output_period/2/PI<<"\n";
+            tmp_ddi = tmp_ddi->prev;
+        }
+        fout_log << "t_add_mw\n" << t_add_mw / (2 * PI) << '\n';
+        fout_log<<"xsigma\n"<<xsigma/2/PI<<"\n";
+        fout_log<<"ysigma\n"<<ysigma/2/PI<<"\n";
+        fout_log<<"zsigma\n"<<zsigma/2/PI<<"\n";
+        fout_log<<"x0fout\n"<<x0fout/2/PI<<"\n";
+        fout_log<<"a0y\n"<<a0y<<"\n";
+        fout_log<<"a0z\n"<<a0z<<"\n";
+        fout_log << "external_bz\n" << external_bz << "\n";
+        if (mwindow==0)
+            fout_log<<"mwindow\n"<<"off"<<"\n";
+        else
+            fout_log<<"mwindow\n"<<"on"<<"\n";
+        if (mwseed==0)
+            fout_log<<"mwseed\n"<<"off"<<"\n";
+        else
+            fout_log<<"mwseed\n"<<"on"<<"\n";
+        fout_log<<"e_components_for_output\n"<<e_components_for_output<<"\n";
+        fout_log<<"b_components_for_output\n"<<b_components_for_output<<"\n";
+        if (sscos==0) {
+            fout_log<<"f_envelope\n"<<f_envelope<<"\n";
+        } else if (sscos == 1) {
+            fout_log<<"f_envelope\n"<<"sscos"<<"\n";
+        } else if (sscos == 2) {
+            fout_log<<"f_envelope\n"<<"pearl"<<"\n";
+        } else {
+            fout_log<<"f_envelope\n"<<"not known type of envelope!"<<"\n";
+        }
+        fout_log<<"b_sign\n"<<2.0*b_sign-1<<"\n";
+        fout_log<<"x0\n"<<x0/2/PI<<"\n";
+        fout_log<<"y0\n"<<y00/2/PI<<"\n";
+        fout_log<<"z0\n"<<z00/2/PI<<"\n";
+        fout_log<<"xtarget\n"<<xtarget/2/PI<<"\n";
+        fout_log<<"ytarget\n"<<ytarget/2/PI<<"\n";
+        fout_log<<"ztarget\n"<<ztarget/2/PI<<"\n";
+        fout_log<<"phase\n"<<phase<<"\n";
+        fout_log<<"lp_reflection\n"<<lp_reflection<<"\n";
+        fout_log<<"f_reflection\n"<<f_reflection<<"\n";
+        fout_log<<"phi\n"<<phi<<"\n";
+        fout_log<<"shenergy\n"<<shenergy<<"\n";
+        fout_log<<"shphase\n"<<shphase<<"\n";
+        fout_log<<"beam\n"<<beam<<"\n";
+        fout_log<<"beam_particles\n"<<beam_particles<<"\n";
+        fout_log<<"Nb\n"<<Nb<<"\n";
+        fout_log<<"epsb\n"<<epsb<<"\n";
+        fout_log<<"xb\n"<<xb/2/PI<<"\n";
+        fout_log<<"rb\n"<<rb/2/PI<<"\n";
+        fout_log<<"x0b\n"<<x0b/2/PI<<"\n";
+        fout_log<<"y0b\n"<<y0b/2/PI<<"\n";
+        fout_log<<"phib\n"<<phib<<"\n";
+        fout_log<<"mwspeed\n"<<mwspeed<<"\n";
+        fout_log<<"nelflow\n"<<nelflow<<"\n";
+        fout_log<<"vlflow\n"<<vlflow<<"\n";
+        fout_log<<"mcrlflow\n"<<mcrlflow<<"\n";
+        fout_log<<"Tlflow\n"<<Tlflow<<"\n";
+        fout_log<<"nerflow\n"<<nerflow<<"\n";
+        fout_log<<"vrflow\n"<<vrflow<<"\n";
+        fout_log<<"mcrrflow\n"<<mcrrflow<<"\n";
+        fout_log<<"Trflow\n"<<Trflow<<"\n";
+        fout_log<<"ions\n"<<ions<<"\n";
+        tmp_p_film = p_last_film;
+        while (tmp_p_film!=0)
+        {
+            fout_log<<"film\n"<<"on"<<"\n";
+            fout_log<<"x0film\n"<<tmp_p_film->x0/2/PI<<"\n";
+            fout_log<<"filmwidth\n"<<tmp_p_film->filmwidth/2/PI<<"\n";
+            fout_log<<"gradwidth\n"<<tmp_p_film->gradwidth/2/PI<<"\n";
+            fout_log<<"y0film\n"<<tmp_p_film->y0/2/PI<<"\n";
+            fout_log<<"y1film\n"<<tmp_p_film->y1/2/PI<<"\n";
+            fout_log<<"z0film\n"<<tmp_p_film->z0/2/PI<<"\n";
+            fout_log<<"z1film\n"<<tmp_p_film->z1/2/PI<<"\n";
+            fout_log<<"nfilm\n"<<tmp_p_film->ne<<"\n";
+            fout_log<<"mcr\n"<<tmp_p_film->mcr<<"\n";
+            fout_log<<"Tfilm\n"<<tmp_p_film->T<<"\n";
+            fout_log<<"vxfilm\n"<<tmp_p_film->vx<<"\n";
+            fout_log<<"xnpic_film\n"<<tmp_p_film->xnpic_film<<"\n";
+            fout_log<<"ynpic_film\n"<<tmp_p_film->ynpic_film<<"\n";
+            fout_log<<"znpic_film\n"<<tmp_p_film->znpic_film<<"\n";
+            tmp_p_film = tmp_p_film->prev;
+        }
+        fout_log<<"n_ion_populations\n"<<n_ion_populations<<"\n";
+        for (int i=0;i<n_ion_populations;i++)
+            fout_log<<"icmr\n"<<icmr[i]<<"\n";
+        fout_log<<"xnpic\n"<<xnpic<<"\n";
+        fout_log<<"ynpic\n"<<ynpic<<"\n";
+        fout_log<<"znpic\n"<<znpic<<"\n";
+        fout_log<<"particles_for_output\n"<<particles_for_output<<"\n";
+        fout_log<<"deps\n"<<deps<<"\n";
+        fout_log<<"neps\n"<<neps<<"\n";
+        fout_log<<"enthp\n"<<enthp<<"\n";
+        fout_log<<"deps_p\n"<<deps_p<<"\n";
+        fout_log<<"neps_p\n"<<neps_p<<"\n";
+        fout_log<<"enthp_p\n"<<enthp_p<<"\n";
+        fout_log<<"deps_ph\n"<<deps_ph<<"\n";
+        fout_log<<"neps_ph\n"<<neps_ph<<"\n";
+        fout_log<<"enthp_ph\n"<<enthp_ph<<"\n";
+        fout_log<<"deps_i\n"<<deps_i<<"\n";
+        fout_log<<"neps_i\n"<<neps_i<<"\n";
+        fout_log<<"enthp_i\n"<<enthp_i<<"\n";
+        fout_log<<"n_sr\n"<<n_sr<<"\n";
+        fout_log<<"n_tracks\n"<<n_tracks<<"\n";
+        fout_log<<"particles_to_track\n"<<particles_to_track<<"\n";
+        fout_log<<"tr_start\n"<<tr_start/2/PI<<"\n";
+        fout_log<<"tr_init\n"<<tr_init<<"\n";
+        fout_log<<"xtr1\n"<<xtr1<<"\n";
+        fout_log<<"ytr1\n"<<ytr1<<"\n";
+        fout_log<<"ztr1\n"<<ztr1<<"\n";
+        fout_log<<"xtr2\n"<<xtr2<<"\n";
+        fout_log<<"ytr2\n"<<ytr2<<"\n";
+        fout_log<<"ztr2\n"<<ztr2<<"\n";
+        fout_log<<"pmerging\n"<<pmerging<<"\n";
+        fout_log<<"crpc\n"<<crpc<<"\n";
+        fout_log<<"$\n";
+
+        fout_log << "catching" << endl << (catching_enabled ? "on" : "off") << endl;
+        fout_log << "dump_photons" << endl << (dump_photons ? "on" : "off") << endl;
+        fout_log << "qed" << endl;
+        fout_log << (qed_enabled ? "on" : "off") << endl;
+
+        if (output_mode == (ios_base::out | ios_base::binary))
+            fout_log << "output_mode\n" << 1 << '\n';
+        else if (output_mode == ios_base::out)
+            fout_log << "output_mode\n" << 0 << '\n';
+        fout_log<<"#------------------------------\n";
+        fout_log<<"polarization = "<<polarization<<"\n";
+        fout_log<<"P = "<<(a0y*(a0y>a0z)+a0z*(a0z>=a0y))*(a0y*(a0y>a0z)+a0z*(a0z>=a0y))/8*ysigma*zsigma*8.75e9/1e12<<" TW\n";
+        fout_log<<"I = "<<PI*(a0y*(a0y>a0z)+a0z*(a0z>=a0y))*(a0y*(a0y>a0z)+a0z*(a0z>=a0y))*8.75e9/(lambda*lambda)<<" W/cm^2\n";
+        fout_log<<"W = "<<(a0y*a0y+a0z*a0z)*xsigma*ysigma*zsigma*PI*sqrt(PI/2)/4*lambda*3.691e4/1e7<<" J\n";
+        if (f_envelope=="focused")
+        {
+            //fout_log<<"a0 in focal plane = "<<(a0y*(a0y>a0z)+a0z*(a0z>=a0y))*sigma/sigma0<<"\n";
+            fout_log<<"aperture: F/"<<sigma0/2<<"\n";
+        }
+        fout_log<<"lambda = "<<lambda*1e4<<" um\n";
+        fout_log<<"xsigma = "<<xsigma/2/PI*lambda*1e4<<" um = c*"<<xsigma/2/PI*lambda/2.99792458e10*1e15<<" fs\n";
+        fout_log<<"ysigma = "<<ysigma/2/PI*lambda*1e4<<" um\n";
+        fout_log<<"zsigma = "<<zsigma/2/PI*lambda*1e4<<" um\n";
+        fout_log<<"last_t_end = "<<p_last_ddi->t_end/2/PI*lambda*10<<" mm\n";
+        fout_log<<"n_cr = "<<PI/(2.818e-13*lambda*lambda)<<" cm^{-3}\n";
+        fout_log<<"ne/n_cr = "<<ne/(PI/(2.818e-13*lambda*lambda))<<"\n";
+        fout_log<<"#------------------------------\n";
+        fout_log.close();
+        cout<<"Initialization done!\n";
     }
-    fout_log<<"lambda = "<<lambda*1e4<<" um\n";
-    fout_log<<"xsigma = "<<xsigma/2/PI*lambda*1e4<<" um = c*"<<xsigma/2/PI*lambda/2.99792458e10*1e15<<" fs\n";
-    fout_log<<"ysigma = "<<ysigma/2/PI*lambda*1e4<<" um\n";
-    fout_log<<"zsigma = "<<zsigma/2/PI*lambda*1e4<<" um\n";
-    fout_log<<"last_t_end = "<<p_last_ddi->t_end/2/PI*lambda*10<<" mm\n";
-    fout_log<<"n_cr = "<<PI/(2.818e-13*lambda*lambda)<<" cm^{-3}\n";
-    fout_log<<"ne/n_cr = "<<ne/(PI/(2.818e-13*lambda*lambda))<<"\n";
-    fout_log<<"#------------------------------\n";
-    fout_log.close();
-    cout<<"Initialization done!\n";
     return 0;
 }

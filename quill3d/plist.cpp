@@ -101,33 +101,6 @@ void spatial_region::p_boundary()
     }
 }
 
-void spatial_region::copy(plist& b, plist& a)
-{
-    erase(a);
-    //
-    particle* current;
-    particle* tmp;
-    current = b.head;
-    //
-    a.start = 0;
-    while(current!=0)
-    {
-        tmp = new_particle();
-        *tmp = *current;
-        tmp->previous = a.start;
-        a.start = tmp;
-        current = current->next;
-    }
-    a.head = 0;
-    while(a.start!=0)
-    {
-        a.start->next = a.head;
-        a.head = a.start;
-        a.start = a.start->previous;
-    }
-    a.start = a.head;
-}
-
 void spatial_region::erase(plist& a)
 {
     particle* current;
@@ -141,20 +114,4 @@ void spatial_region::erase(plist& a)
     }
     a.head = 0;
     a.start = 0;
-}
-
-void copy(spatial_region& a, int a1, int a2, int a3, spatial_region& b, int b1, int b2, int b3)
-{ // copy fields from a to b
-    b.ce[b1][b2][b3].ex = a.ce[a1][a2][a3].ex;
-    b.ce[b1][b2][b3].ey = a.ce[a1][a2][a3].ey;
-    b.ce[b1][b2][b3].ez = a.ce[a1][a2][a3].ez;
-    b.cb[b1][b2][b3].bx = a.cb[a1][a2][a3].bx;
-    b.cb[b1][b2][b3].by = a.cb[a1][a2][a3].by;
-    b.cb[b1][b2][b3].bz = a.cb[a1][a2][a3].bz;
-    b.cj[b1][b2][b3].jx = a.cj[a1][a2][a3].jx;
-    b.cj[b1][b2][b3].jy = a.cj[a1][a2][a3].jy;
-    b.cj[b1][b2][b3].jz = a.cj[a1][a2][a3].jz;
-    b.cbe[b1][b2][b3].bex = a.cbe[a1][a2][a3].bex;
-    b.cbe[b1][b2][b3].bey = a.cbe[a1][a2][a3].bey;
-    b.cbe[b1][b2][b3].bez = a.cbe[a1][a2][a3].bez;
 }

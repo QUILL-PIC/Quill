@@ -180,6 +180,3 @@ ztr2 = 15 # default: lambda; possible: um
 pmerging = on # default: off; possible: on
 # критическое отношение числа квазичастиц к числу ячеек
 crpc = 0.5
-
-# алгоритм «заморозки» частиц в магнитном поле
-freezing = off # default: off; possible: on

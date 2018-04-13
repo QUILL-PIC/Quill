@@ -1,7 +1,8 @@
 #include <iostream>
 #include <algorithm>
 #include <memory>
-#include <numa.h>
+#include <cstdlib>
+#include <unistd.h>
 #include "main.h"
 #include "maxwell.h"
 #include "containers.h"
@@ -9,6 +10,7 @@
 
 extern bool catching_enabled;
 extern double lambda;
+extern int mpi_rank;
 
 spatial_region::spatial_region()
 {
@@ -37,13 +39,12 @@ spatial_region::spatial_region()
     n_f = 0;
     npwpa = 0;
     npwpo = 0;
-    //page_size = numa_pagesize();
     // page_size should not be very small to avoid OS problems with allocation
     const size_t PS = 64 * 1024 * 1024; // bytes
-    if (numa_pagesize() < PS) {
+    if (getpagesize() < PS) {
         page_size = PS;
     } else {
-        page_size = numa_pagesize();
+        page_size = getpagesize();
     }
     particle_size = sizeof(particle);
     pointer_size = sizeof(particle*);
@@ -57,7 +58,7 @@ spatial_region::spatial_region()
 }
 
 void spatial_region::init(int sr_id0, double dx0, double dy0, double dz0, double dt0, double e_s0, int xnpic0,
-        int ynpic0, int znpic0, int node_number0, int n_ion_populations0, double* icmr0, std::string df,
+        int ynpic0, int znpic0, int n_ion_populations0, double* icmr0, std::string df,
         maxwell_solver_enum solver0, pusher_enum pusher)
 {
     sr_id = sr_id0;
@@ -69,7 +70,6 @@ void spatial_region::init(int sr_id0, double dx0, double dy0, double dz0, double
     xnpic = xnpic0;
     ynpic = ynpic0;
     znpic = znpic0;
-    node_number = node_number0;
     n_ion_populations = n_ion_populations0;
     icmr = icmr0;
     data_folder = df;
@@ -77,7 +77,7 @@ void spatial_region::init(int sr_id0, double dx0, double dy0, double dz0, double
     // we should always have at least one page for free particles (to avoid performance issues)
     pwpo* b = new pwpo;
     b->previous = 0;
-    b->head = (particle**) numa_alloc_onnode(page_size,node_number);
+    b->head = (particle**) malloc(page_size);
     npwpo++;
     p_lapwpo = b;
 
@@ -104,7 +104,7 @@ void spatial_region::init(int sr_id0, double dx0, double dy0, double dz0, double
     }
 }
 
-void spatial_region::create_arrays(int nx0, int ny0, int nz0, int seed, int node_number)
+void spatial_region::create_arrays(int nx0, int ny0, int nz0, int seed)
 {
     nx = nx0;
     ny = ny0;
@@ -112,20 +112,20 @@ void spatial_region::create_arrays(int nx0, int ny0, int nz0, int seed, int node
 
     void* pv;
 
-    ce = field3d<celle>(nx, ny, nz, node_number);
-    cb = field3d<cellb>(nx, ny, nz, node_number);
-    cj = field3d<cellj>(nx, ny, nz, node_number);
-    cbe = field3d<cellbe>(nx, ny, nz, node_number);
-    cp = field3d<cellp>(nx, ny, nz, node_number);
+    ce = field3d<celle>(nx, ny, nz);
+    cb = field3d<cellb>(nx, ny, nz);
+    cj = field3d<cellj>(nx, ny, nz);
+    cbe = field3d<cellbe>(nx, ny, nz);
+    cp = field3d<cellp>(nx, ny, nz);
 
-    pv = numa_alloc_onnode(sizeof(field3d<double>)*n_ion_populations, node_number);
+    pv = malloc(sizeof(field3d<double>)*n_ion_populations);
     irho = (field3d<double> *) pv;
     for (int n=0;n<n_ion_populations;n++)
     {
-        irho[n] = field3d<double>(nx, ny, nz, node_number);
+        irho[n] = field3d<double>(nx, ny, nz);
     }
 
-    pv = numa_alloc_onnode(sizeof(double)*55,node_number);
+    pv = malloc(sizeof(double)*55);
     random = (double*) pv;
     srand(seed);
     for(int i=0;i<55;i++)
@@ -133,16 +133,16 @@ void spatial_region::create_arrays(int nx0, int ny0, int nz0, int seed, int node
         random[i] = (double)rand()/(double)RAND_MAX;
     }
 
-    pv = numa_alloc_onnode(sizeof(double)*n_ion_populations,node_number);
+    pv = malloc(sizeof(double)*n_ion_populations);
     ienergy = (double*) pv;
-    pv = numa_alloc_onnode(sizeof(double)*n_ion_populations,node_number);
+    pv = malloc(sizeof(double)*n_ion_populations);
     ienergy_deleted = (double*) pv;
     for (int i=0; i<n_ion_populations; ++i)
     {
         ienergy_deleted[i] = 0.0;
     }
 
-    pv = numa_alloc_onnode(sizeof(int)*n_ion_populations,node_number);
+    pv = malloc(sizeof(int)*n_ion_populations);
     N_qp_i = (int*) pv;
 }
 
@@ -153,7 +153,7 @@ spatial_region::~spatial_region()
         pwpo* a;
         a = p_lapwpo;
         p_lapwpo = p_lapwpo->previous;
-        numa_free((void*) a->head,page_size);
+        free((void*) a->head);
         //free(a->head);
         delete a;
     }
@@ -161,7 +161,7 @@ spatial_region::~spatial_region()
         pwpa* a;
         a = p_lapwpa;
         p_lapwpa = p_lapwpa->previous;
-        numa_free((void*) a->head,page_size);
+        free((void*) a->head);
         //free(a->head);
         delete a;
     }
@@ -169,18 +169,18 @@ spatial_region::~spatial_region()
     void* pv;
 
     pv = (void*) irho;
-    numa_free(pv, sizeof(field3d<double>)*n_ion_populations);
+    free(pv);
 
     pv = (void*) random;
-    numa_free(pv, sizeof(double)*55);
+    free(pv);
 
     pv = (void*) ienergy;
-    numa_free(pv, sizeof(double*)*n_ion_populations);
+    free(pv);
     pv = (void*) ienergy_deleted;
-    numa_free(pv, sizeof(double*)*n_ion_populations);
+    free(pv);
 
     pv = (void*) N_qp_i;
-    numa_free(pv, sizeof(int*)*n_ion_populations);
+    free(pv);
 }
 
 particle* spatial_region::new_particle()
@@ -193,7 +193,7 @@ particle* spatial_region::new_particle()
             pwpa* a;
             a = new pwpa;
             a->previous = p_lapwpa;
-            a->head = (particle*) numa_alloc_onnode(page_size,node_number);
+            a->head = (particle*) malloc(page_size);
             //a->head = (plist::particle*) malloc(page_size);
             p_lapwpa = a;
             p_lap = a->head;
@@ -220,7 +220,7 @@ particle* spatial_region::new_particle()
             if (npwpo > 1) // don't delete the last page with pointers
             {
                 npwpo--;
-                numa_free((void*) pp_lfp,page_size);
+                free((void*) pp_lfp);
                 //free(pp_lfp);
                 pwpo* a;
                 a = p_lapwpo;
@@ -268,7 +268,7 @@ void spatial_region::delete_particle(particle* a, bool force_delete)
         pwpo* b;
         b = new pwpo;
         b->previous = p_lapwpo;
-        b->head = (particle**) numa_alloc_onnode(page_size,node_number);
+        b->head = (particle**) malloc(page_size);
         //b->head = (plist::particle**) malloc(page_size);
         p_lapwpo = b;
         pp_lfp = b->head;
@@ -377,7 +377,9 @@ int var::read()
     cin>>name;
     if (name!="$")
     {
-        cout<<name;
+        if (mpi_rank == 0) {
+            cout<<name;
+        }
         cin>>tmp;
         if (tmp[0]=='['){ //detecting the start of an array
             int num=1; //character counter
@@ -410,25 +412,35 @@ int var::read()
         }
         else{
             value = (tmp != "#" ? stof(tmp) : 0.0);
-            cout<<"..."<<value;
+            if (mpi_rank == 0) {
+                cout<<"..."<<value;
+            }
         }
         cin>>units;
-        cout<<"..."<<units<<"...";
+        if (mpi_rank == 0) {
+            cout<<"..."<<units<<"...";
+        }
         cin>>stmp;
         if (stmp=="$")
         {
-            cout<<"\033[1m\033[32m"<<"ok"<<"\033[0m\n";
+            if (mpi_rank == 0) {
+                cout<<"\033[1m\033[32m"<<"ok"<<"\033[0m\n";
+            }
             return 0;
         }
         else
         {
-            cout<<"\033[1m\033[31m[!]\033[0m\n";
+            if (mpi_rank == 0) {
+                cout<<"\033[1m\033[31m[!]\033[0m\n";
+            }
             return 1;
         }
     }
     else
     {
-        cout<<"...reading finished\n";
+        if (mpi_rank == 0) {
+            cout<<"...reading finished\n";
+        }
         return 1;
     }
 }

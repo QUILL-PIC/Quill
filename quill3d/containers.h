@@ -40,7 +40,7 @@ class field3d
 public:
     field3d() : nx(0), ny(0), nz(0), p(nullptr) {}
     field3d(field3d<T>&) = delete;
-    field3d(int nx, int ny, int nz, int node_number);
+    field3d(int nx, int ny, int nz);
     ~field3d();
     inline T** const & operator[](int i) const { return p[i]; }
     field3d<T> & operator=(field3d<T> &) = delete;
@@ -51,7 +51,7 @@ public:
 private:
     int nx, ny, nz;
     T*** p;
-    void free();
+    void free_memory();
 };
 
 struct particle
