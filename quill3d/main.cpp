@@ -779,7 +779,7 @@ void write_spectrum_phasespace(bool write_p, bool write_ph)
             spectrum_norm_i =  1.11485e13*lambda*dx*dy*dz/(8*PI*PI*PI)/(icmr[m]*deps_i);
             for(int i=0;i<neps_i;i++)
             {
-                spectrum_i[m][i] = spectrum_i[m][i]*spectrum_norm_ph;
+                spectrum_i[m][i] = spectrum_i[m][i]*spectrum_norm_i;
                 fout_spectrum_i[m]<<spectrum_i[m][i]<<"\n";
             }
         }
