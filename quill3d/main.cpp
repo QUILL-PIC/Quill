@@ -1367,7 +1367,6 @@ void receive_cell(int i, int j, int k, int source_rank, int & tag) {
 }
 
 void synchronize_regions() {
-    int tag = 0;
     int nm1, nm2;
     if (mwindow==1&&(l+1)*dt*mwspeed>nmw*dx) {
         nm1 = nm-1;
@@ -1377,50 +1376,55 @@ void synchronize_regions() {
         nm2 = nm;
     }
 
-    for (int i=0; i<n_sr-1; i++) {
-        tag = 0;
-        if (mpi_rank == i+1) {
-            for (int ii=nm1; ii<nm1 + nm2; ii++) {
-                for (int j=0;j<ny_global;j++) {
-                    for (int k=0;k<nz_global;k++) {
-                        send_cell(ii, j, k, mpi_rank-1, tag);
+    for (int mod=0; mod<2; mod++) {
+        int tag = 0;
+
+        // first even processes send, while odd receive, then vice versa
+        if (mpi_rank % 2 == mod) {
+            if (mpi_rank > 0) {
+                tag = 0;
+                for (int ii=nm1; ii<nm1 + nm2; ii++) {
+                    for (int j=0;j<ny_global;j++) {
+                        for (int k=0;k<nz_global;k++) {
+                            send_cell(ii, j, k, mpi_rank-1, tag);
+                        }
                     }
                 }
             }
-        }
 
-        tag = 0;
-        if (mpi_rank == i) {
-            const int left = psr->get_nx() - nm2;
-            for (int ii=left;ii<left+nm2;ii++) {
-                for (int j=0;j<ny_global;j++) {
-                    for (int k=0;k<nz_global;k++) {
-                        receive_cell(ii, j, k, mpi_rank+1, tag);
-                        psr->cp[ii][j][k].pl.xplus(nx_sr[mpi_rank] - nx_ich);
+            if (mpi_rank < n_sr-1) {
+                tag = 0;
+                const int left = psr->get_nx() - nm2 - nm1;
+                for (int ii=left;ii<left+nm1;ii++) {
+                    for (int j=0;j<ny_global;j++) {
+                        for (int k=0;k<nz_global;k++) {
+                            send_cell(ii, j, k, mpi_rank+1, tag);
+                        }
                     }
                 }
             }
-        }
-
-        tag = 0;
-        if (mpi_rank == i) {
-            const int left = psr->get_nx() - nm2 - nm1;
-            for (int ii=left;ii<left+nm1;ii++) {
-                for (int j=0;j<ny_global;j++) {
-                    for (int k=0;k<nz_global;k++) {
-                        send_cell(ii, j, k, mpi_rank+1, tag);
+        } else {
+            if (mpi_rank < n_sr-1) {
+                tag = 0;
+                const int left = psr->get_nx() - nm2;
+                for (int ii=left;ii<left+nm2;ii++) {
+                    for (int j=0;j<ny_global;j++) {
+                        for (int k=0;k<nz_global;k++) {
+                            receive_cell(ii, j, k, mpi_rank+1, tag);
+                            psr->cp[ii][j][k].pl.xplus(nx_sr[mpi_rank] - nx_ich);
+                        }
                     }
                 }
             }
-        }
 
-        tag = 0;
-        if (mpi_rank == i+1) {
-            for (int ii=0; ii<nm1; ii++) {
-                for (int j=0;j<ny_global;j++) {
-                    for (int k=0;k<nz_global;k++) {
-                        receive_cell(ii, j, k, mpi_rank-1, tag);
-                        psr->cp[ii][j][k].pl.xplus(-nx_sr[mpi_rank-1]+nx_ich);
+            if (mpi_rank > 0) {
+                tag = 0;
+                for (int ii=0; ii<nm1; ii++) {
+                    for (int j=0;j<ny_global;j++) {
+                        for (int k=0;k<nz_global;k++) {
+                            receive_cell(ii, j, k, mpi_rank-1, tag);
+                            psr->cp[ii][j][k].pl.xplus(-nx_sr[mpi_rank-1]+nx_ich);
+                        }
                     }
                 }
             }
