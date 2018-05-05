@@ -1885,19 +1885,30 @@ int main(int argc, char * argv[])
 
     if (mpi_rank == 0) {
         cout<<"\n\033[1m"<<"hi!"<<"\033[0m\n"<<endl;
+        cout <<"Number of MPI processes: " << n_sr << endl;
     }
 
-    MPI_Barrier(MPI_COMM_WORLD);
+    char hostname[MPI_MAX_PROCESSOR_NAME];
+    int hostname_len;
+    MPI_Get_processor_name(hostname, &hostname_len);
+    unsigned long pid = getpid();
 
-    string hostname;
-    ifstream hostname_file("/proc/sys/kernel/hostname");
-    if (hostname_file.good())
-    {
-      getline(hostname_file, hostname);
+    if (mpi_rank == 0) {
+        for (int i=0; i<n_sr; i++) {
+            if (i != 0) {
+                MPI_Recv(&pid, 1, MPI_UNSIGNED_LONG, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                MPI_Status status;
+                MPI_Probe(i, 1, MPI_COMM_WORLD, &status);
+                MPI_Get_count(&status, MPI_CHAR, &hostname_len);
+                MPI_Recv(hostname, hostname_len, MPI_CHAR, i, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+            }
+            cout << "Quill process rank = " << i << ", id = " << pid << ", hostname = " << hostname << endl;
+        }
+    } else {
+        MPI_Send(&pid, 1, MPI_UNSIGNED_LONG, 0, 0, MPI_COMM_WORLD);
+        MPI_Send(hostname, hostname_len + 1, MPI_CHAR, 0, 1, MPI_COMM_WORLD);
     }
-    hostname_file.close();
-    //TODO all output to stdout should be on rank 0
-    cout << "Quill process rank = " << mpi_rank << ", id = " << getpid() << ", hostname = " << hostname << endl;
+
     MPI_Barrier(MPI_COMM_WORLD);
 
     up_time = times(&tms_struct);
