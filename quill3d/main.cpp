@@ -1919,7 +1919,7 @@ int main(int argc, char * argv[])
 
     ofstream fout_log;
     if (mpi_rank == 0) {
-        fout_log = ofstream(data_folder+"/log",ios::app); // ios:app mode - append to the file
+        fout_log.open(data_folder+"/log",ios::app); // ios:app mode - append to the file
         fout_log<<"start time: "<<ctime(&inaccurate_time);
     }
 
