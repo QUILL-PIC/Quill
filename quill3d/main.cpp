@@ -1291,23 +1291,6 @@ void init_films()
 }
 
 void send_cell(int i, int j, int k, int destination_rank, int & tag) {
-    const int length = 12;
-    double data[length] = {
-            psr->ce[i][j][k].ex,
-            psr->ce[i][j][k].ey,
-            psr->ce[i][j][k].ez,
-            psr->cb[i][j][k].bx,
-            psr->cb[i][j][k].by,
-            psr->cb[i][j][k].bz,
-            psr->cj[i][j][k].jx,
-            psr->cj[i][j][k].jy,
-            psr->cj[i][j][k].jz,
-            psr->cbe[i][j][k].bex,
-            psr->cbe[i][j][k].bey,
-            psr->cbe[i][j][k].bez
-    };
-    MPI_Send(data, length, MPI_DOUBLE, destination_rank, tag++, MPI_COMM_WORLD);
-
     particle* current = psr->cp[i][j][k].pl.head;
     int n_particles = 0;
     while (current != 0) {
@@ -1324,36 +1307,16 @@ void send_cell(int i, int j, int k, int destination_rank, int & tag) {
 }
 
 void receive_cell(int i, int j, int k, int source_rank, int & tag) {
-    const int length = 12;
-    double data[length];
-    MPI_Recv(data, length, MPI_DOUBLE, source_rank, tag, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-    tag++;
-    psr->ce[i][j][k].ex = data[0];
-    psr->ce[i][j][k].ey = data[1];
-    psr->ce[i][j][k].ez = data[2];
-    psr->cb[i][j][k].bx = data[3];
-    psr->cb[i][j][k].by = data[4];
-    psr->cb[i][j][k].bz = data[5];
-    psr->cj[i][j][k].jx = data[6];
-    psr->cj[i][j][k].jy = data[7];
-    psr->cj[i][j][k].jz = data[8];
-    psr->cbe[i][j][k].bex = data[9];
-    psr->cbe[i][j][k].bey = data[10];
-    psr->cbe[i][j][k].bez = data[11];
-
     plist & pl = psr->cp[i][j][k].pl;
     psr->erase(pl);
 
     int n_particles = 0;
     MPI_Recv(&n_particles, 1, MPI_INT, source_rank, tag++, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
-    particle * tmp;
-    particle received;
-    for (int ii=0; ii<n_particles; ii++) {
-        MPI_Recv(&received, sizeof(particle), MPI_BYTE, source_rank, tag++, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
-        tmp = psr->new_particle();
-        *tmp = received;
+    for (int ii=0; ii<n_particles; ii++) {
+        particle * tmp = psr->new_particle();
+        MPI_Recv(tmp, sizeof(particle), MPI_BYTE, source_rank, tag++, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
         tmp->previous = pl.start;
         pl.start = tmp;
     }
@@ -1364,6 +1327,43 @@ void receive_cell(int i, int j, int k, int source_rank, int & tag) {
         pl.start = pl.start->previous;
     }
     pl.start = pl.head;
+}
+
+void send_slice(int left, int width, int destination_rank) {
+    int tag = 0;
+
+    const int size = 3 * width * ny_global * nz_global;
+    MPI_Send(psr->ce[left][0], size, MPI_DOUBLE, destination_rank, tag++, MPI_COMM_WORLD);
+    MPI_Send(psr->cb[left][0], size, MPI_DOUBLE, destination_rank, tag++, MPI_COMM_WORLD);
+    MPI_Send(psr->cj[left][0], size, MPI_DOUBLE, destination_rank, tag++, MPI_COMM_WORLD);
+    MPI_Send(psr->cbe[left][0], size, MPI_DOUBLE, destination_rank, tag++, MPI_COMM_WORLD);
+
+    for (int i=left; i<left+width; i++) {
+        for (int j=0;j<ny_global;j++) {
+            for (int k=0;k<nz_global;k++) {
+                send_cell(i, j, k, destination_rank, tag);
+            }
+        }
+    }
+}
+
+void receive_slice(int left, int width, int source_rank, double x_diff) {
+    int tag = 0;
+
+    const int size = 3 * width * ny_global * nz_global;
+    MPI_Recv(psr->ce[left][0], size, MPI_DOUBLE, source_rank, tag++, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    MPI_Recv(psr->cb[left][0], size, MPI_DOUBLE, source_rank, tag++, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    MPI_Recv(psr->cj[left][0], size, MPI_DOUBLE, source_rank, tag++, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    MPI_Recv(psr->cbe[left][0], size, MPI_DOUBLE, source_rank, tag++, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+
+    for (int i=left; i<left+width; i++) {
+        for (int j=0;j<ny_global;j++) {
+            for (int k=0;k<nz_global;k++) {
+                receive_cell(i, j, k, source_rank, tag);
+                psr->cp[i][j][k].pl.xplus(x_diff);
+            }
+        }
+    }
 }
 
 void synchronize_regions() {
@@ -1377,60 +1377,25 @@ void synchronize_regions() {
     }
 
     for (int mod=0; mod<2; mod++) {
-        int tag = 0;
 
         // first even processes send, while odd receive, then vice versa
         if (mpi_rank % 2 == mod) {
             if (mpi_rank > 0) {
-                tag = 0;
-                for (int ii=nm1; ii<nm1 + nm2; ii++) {
-                    for (int j=0;j<ny_global;j++) {
-                        for (int k=0;k<nz_global;k++) {
-                            send_cell(ii, j, k, mpi_rank-1, tag);
-                        }
-                    }
-                }
+                send_slice(nm1, nm2, mpi_rank-1);
             }
 
             if (mpi_rank < n_sr-1) {
-                tag = 0;
-                const int left = psr->get_nx() - nm2 - nm1;
-                for (int ii=left;ii<left+nm1;ii++) {
-                    for (int j=0;j<ny_global;j++) {
-                        for (int k=0;k<nz_global;k++) {
-                            send_cell(ii, j, k, mpi_rank+1, tag);
-                        }
-                    }
-                }
+                send_slice(psr->get_nx() - nm2 - nm1, nm1, mpi_rank+1);
             }
         } else {
             if (mpi_rank < n_sr-1) {
-                tag = 0;
-                const int left = psr->get_nx() - nm2;
-                for (int ii=left;ii<left+nm2;ii++) {
-                    for (int j=0;j<ny_global;j++) {
-                        for (int k=0;k<nz_global;k++) {
-                            receive_cell(ii, j, k, mpi_rank+1, tag);
-                            psr->cp[ii][j][k].pl.xplus(nx_sr[mpi_rank] - nx_ich);
-                        }
-                    }
-                }
+                receive_slice(psr->get_nx() - nm2, nm2, mpi_rank+1, nx_sr[mpi_rank] - nx_ich);
             }
 
             if (mpi_rank > 0) {
-                tag = 0;
-                for (int ii=0; ii<nm1; ii++) {
-                    for (int j=0;j<ny_global;j++) {
-                        for (int k=0;k<nz_global;k++) {
-                            receive_cell(ii, j, k, mpi_rank-1, tag);
-                            psr->cp[ii][j][k].pl.xplus(-nx_sr[mpi_rank-1]+nx_ich);
-                        }
-                    }
-                }
+                receive_slice(0, nm1, mpi_rank-1, -nx_sr[mpi_rank-1]+nx_ich);
             }
         }
-
-        MPI_Barrier(MPI_COMM_WORLD);
     }
 }
 
@@ -2013,11 +1978,7 @@ int main(int argc, char * argv[])
         psr->fadvance();
         if (mwindow==1) psr->moving_window(l,nmw,mwspeed);
 
-        MPI_Barrier(MPI_COMM_WORLD);
-
         synchronize_regions();
-
-        MPI_Barrier(MPI_COMM_WORLD);
 
         /* вывод плотности, спектра и 'phasespace'-данных для фотонов,
            электронов и позитронов в файлы */
