@@ -134,29 +134,12 @@ inline int get_xindex_in_sr(double x) {
 
 void write_N(ofstream& fout_N)
 {
+    double N_e,N_p,N_ph;
+    MPI_Reduce(&(psr->N_e), &N_e, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+    MPI_Reduce(&(psr->N_p), &N_p, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+    MPI_Reduce(&(psr->N_ph), &N_ph, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
     if (mpi_rank == 0) {
-        double N_e,N_p,N_ph;
-        N_e = psr->N_e;
-        N_p = psr->N_p;
-        N_ph = psr->N_ph;
-
-        for (int i=1;i<n_sr;i++) {
-            int tag = 0;
-            double value;
-            MPI_Recv(&value, 1, MPI_DOUBLE, i, tag++, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-            N_e += value;
-            MPI_Recv(&value, 1, MPI_DOUBLE, i, tag++, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-            N_p += value;
-            MPI_Recv(&value, 1, MPI_DOUBLE, i, tag++, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-            N_ph += value;
-        }
-
         fout_N<<N_e<<'\t'<<N_p<<'\t'<<N_ph<<endl;
-    } else {
-        int tag = 0;
-        MPI_Send(&(psr->N_e), 1, MPI_DOUBLE, 0, tag++, MPI_COMM_WORLD);
-        MPI_Send(&(psr->N_p), 1, MPI_DOUBLE, 0, tag++, MPI_COMM_WORLD);
-        MPI_Send(&(psr->N_ph), 1, MPI_DOUBLE, 0, tag++, MPI_COMM_WORLD);
     }
 }
 
