@@ -1391,33 +1391,18 @@ void start_tracking()
                             }
                         }
                     }
-                    for (int ii=0; ii<n_sr; ii++) {
-                        if (ii == mpi_rank) continue;
-                        MPI_Send(&trn, 1, MPI_LONG, ii, 0, MPI_COMM_WORLD);
-                    }
-                } else {
-                    MPI_Recv(&trn, 1, MPI_LONG, n, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
                 }
+                MPI_Bcast(&trn, 1, MPI_LONG, n, MPI_COMM_WORLD);
             }
         }
     } else {
         for (int i=0;i<n_tracks;i++) {
-            int x1,y1,z1;
-            if (mpi_rank == 0) {
-                x1 = ( xtr1 + ( xtr2 - xtr1 ) * rand( ) / RAND_MAX ) / dx;
-                y1 = ( ytr1 + ( ytr2 - ytr1 ) * rand( ) / RAND_MAX ) / dy;
-                z1 = ( ztr1 + ( ztr2 - ztr1 ) * rand( ) / RAND_MAX ) / dz;
-                int buf[3] = {x1, y1, z1};
-                for (int ii = 1; ii < n_sr; ii++) {
-                    MPI_Send(buf, 3, MPI_INT, ii, i, MPI_COMM_WORLD);
-                }
-            } else {
-                int buf[3];
-                MPI_Recv(buf, 3, MPI_INT, 0, i, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-                x1 = buf[0];
-                y1 = buf[1];
-                z1 = buf[2];
-            }
+            int x1 = ( xtr1 + ( xtr2 - xtr1 ) * rand( ) / RAND_MAX ) / dx;
+            int y1 = ( ytr1 + ( ytr2 - ytr1 ) * rand( ) / RAND_MAX ) / dy;
+            int z1 = ( ztr1 + ( ztr2 - ztr1 ) * rand( ) / RAND_MAX ) / dz;
+            MPI_Bcast(&x1, 1, MPI_INT, 0, MPI_COMM_WORLD);
+            MPI_Bcast(&y1, 1, MPI_INT, 0, MPI_COMM_WORLD);
+            MPI_Bcast(&z1, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
             int n,x;
             n = get_sr_for_index(x1);
@@ -1482,13 +1467,8 @@ void start_tracking()
                         }
                     }
                 }
-                for (int ii=0; ii<n_sr; ii++) {
-                    if (ii == mpi_rank) continue;
-                    MPI_Send(&trn, 1, MPI_LONG, ii, 0, MPI_COMM_WORLD);
-                }
-            } else {
-                MPI_Recv(&trn, 1, MPI_LONG, n, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
             }
+            MPI_Bcast(&trn, 1, MPI_LONG, n, MPI_COMM_WORLD);
         }
     }
 
