@@ -295,16 +295,9 @@ void write_deleted_particles(bool write_p, bool write_ph)
     if (write_ph) {
         //gathering photon spectra on process rank 0
         if (mpi_rank == 0) {
-            double * buffer = new double[neps_ph];
-            for (int n=1;n<n_sr;n++) {
-                MPI_Recv(buffer, neps_ph, MPI_DOUBLE, n, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-                for (int i=0;i<neps_ph;i++) {
-                    spectrum_ph[i] += buffer[i];
-                }
-            }
-            delete [] buffer;
+            MPI_Reduce(MPI_IN_PLACE, spectrum_ph, neps_ph, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
         } else {
-            MPI_Send(spectrum_ph, neps_ph, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD);
+            MPI_Reduce(spectrum_ph, spectrum_ph, neps_ph, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
         }
 
         //spectrum output
