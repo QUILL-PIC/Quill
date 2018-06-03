@@ -65,7 +65,8 @@ std::string beam_particles;
 bool write_p;
 bool write_ph;
 bool write_jx = false, write_jy = false, write_jz = false;
-std::string pmerging,pmerging_now;
+std::string pmerging;
+bool pmerging_now;
 std::string lp_reflection,f_reflection;
 std::string ions;
 std::string data_folder;
@@ -1478,37 +1479,25 @@ void start_tracking()
 
 void evaluate_merging_condition()
 {
-    int count = n_ion_populations + 3;
-    int data[count];
+    int N_qp_e, N_qp_p, N_qp_g;
+    auto N_qp_i = vector<int>(n_ion_populations);
+    int pmerging_flag = 0; // bools are not supported by MPI
+
+    MPI_Reduce(&(psr->N_qp_e), &N_qp_e, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+    MPI_Reduce(&(psr->N_qp_p), &N_qp_p, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+    MPI_Reduce(&(psr->N_qp_g), &N_qp_g, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+    MPI_Reduce(psr->N_qp_i, &(N_qp_i[0]), n_ion_populations, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+
     if (mpi_rank == 0) {
-        int N_qp_e, N_qp_p, N_qp_g;
-        int* N_qp_i;
-
-        N_qp_e = psr->N_qp_e;
-        N_qp_p = psr->N_qp_p;
-        N_qp_g = psr->N_qp_g;
-        N_qp_i = new int[n_ion_populations];
-        for (int j=0;j<n_ion_populations;j++)
-            N_qp_i[j] = psr->N_qp_i[j];
-        for (int n=1; n<n_sr; n++) {
-            MPI_Recv(data, count, MPI_INT, n, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-            N_qp_e += data[0];
-            N_qp_p += data[1];
-            N_qp_g += data[2];
-            for (int j=0;j<n_ion_populations;j++) {
-                N_qp_i[j] += data[3+j];
-            }
-        }
-
         double crnp = crpc*xlength*ylength*zlength/(dx*dy*dz);
-        pmerging_now = "off";
+        pmerging_now = false;
         if (pmerging=="ti") {
             int N_qp;
             N_qp = N_qp_e + N_qp_p + N_qp_g;
             for (int i = 0; i < n_ion_populations; i++)
                 N_qp += N_qp_i[i];
             if (N_qp>(3+n_ion_populations)*crnp) {
-                pmerging_now = "on";
+                pmerging_now = true;
                 // portion of particles that will be deleted
                 ppd[0] = (N_qp - (3+n_ion_populations)*crnp)/N_qp;
                 cout<<"\t\033[36m"<<"ppd = "<<ppd[0]<<TERM_NO_COLOR;
@@ -1518,7 +1507,7 @@ void evaluate_merging_condition()
             for (int i = 0; i < n_ion_populations; ++i)
                 merge = merge || (N_qp_i[i]>crnp);
             if (merge) {
-                pmerging_now = "on";
+                pmerging_now = true;
                 // portion of particles that will be deleted
                 for (int i=0;i<3+n_ion_populations;i++)
                     ppd[i] = 0;
@@ -1539,35 +1528,12 @@ void evaluate_merging_condition()
                 cout<<TERM_NO_COLOR;
             }
         }
-        delete[] N_qp_i;
-
-        bool pmerging_flag = (pmerging_now == "on");
-        for (int n=1; n<n_sr; n++) {
-            MPI_Send(&pmerging_flag, 1, MPI_BYTE, n, 0, MPI_COMM_WORLD);
-
-            MPI_Send(ppd, 3+n_ion_populations, MPI_DOUBLE, n, 1, MPI_COMM_WORLD);
-        }
-
-    } else {
-        data[0] = psr->N_qp_e;
-        data[1] = psr->N_qp_p;
-        data[2] = psr->N_qp_g;
-        for (int j=0;j<n_ion_populations;j++) {
-            data[3+j] = psr->N_qp_i[j];
-        }
-        MPI_Send(data, count, MPI_INT, 0, 0, MPI_COMM_WORLD);
-
-        bool pmerging_flag;
-        MPI_Recv(&pmerging_flag, 1, MPI_BYTE, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-
-        MPI_Recv(ppd, 3+n_ion_populations, MPI_DOUBLE, 0, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-
-        if (pmerging_flag) {
-            pmerging_now = "on";
-        } else {
-            pmerging_now = "off";
-        }
+        pmerging_flag = pmerging_now;
     }
+    MPI_Bcast(&pmerging_flag, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Bcast(ppd, 3+n_ion_populations, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+
+    pmerging_now = (pmerging_flag == 1);
 }
 
 void add_moving_window_particles()
@@ -1849,7 +1815,7 @@ int main(int argc, char * argv[])
     
     while(l<p_last_ddi->t_end/dt)
     {
-        if (pmerging_now=="on")
+        if (pmerging_now)
             psr->pmerging(ppd,pmerging);
         int i = mpi_rank;
         psr->birth_from_vacuum(8*PI*PI/(dx*dy*dz)*2.818e-13/lambda); // 2.818e-13 = e^2/mc^2
@@ -1898,10 +1864,14 @@ int main(int argc, char * argv[])
         }
 
         if (mpi_rank == 0) {
-            cout<<"\033[33m"<<"ct/lambda = "<<l*dt/2/PI<<"\tstep# "<<l<<TERM_NO_COLOR<<endl;
+            cout<<"\033[33m"<<"ct/lambda = "<<l*dt/2/PI<<"\tstep# "<<l<<TERM_NO_COLOR;
         }
 
         evaluate_merging_condition();
+
+        if (mpi_rank == 0) {
+            cout << endl;
+        }
 
         add_moving_window_particles();
 
