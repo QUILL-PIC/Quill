@@ -118,8 +118,7 @@ void spatial_region::create_arrays(int nx0, int ny0, int nz0, int seed)
     cbe = field3d<cellbe>(nx, ny, nz);
     cp = field3d<cellp>(nx, ny, nz);
 
-    pv = malloc(sizeof(field3d<double>)*n_ion_populations);
-    irho = (field3d<double> *) pv;
+    irho = vector<field3d<double> >(n_ion_populations);
     for (int n=0;n<n_ion_populations;n++)
     {
         irho[n] = field3d<double>(nx, ny, nz);
@@ -167,9 +166,6 @@ spatial_region::~spatial_region()
     }
 
     void* pv;
-
-    pv = (void*) irho;
-    free(pv);
 
     pv = (void*) random;
     free(pv);

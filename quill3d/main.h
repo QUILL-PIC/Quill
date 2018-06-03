@@ -27,7 +27,7 @@ class spatial_region
     //
     int n_ion_populations;
     double* icmr; // ion charge to mass ratios (=1/proton_mass for proton)
-    field3d<double> * irho; // ion densities
+    vector<field3d<double> > irho; // ion densities
     //
     int n_ap; // number of allocated particles
     int n_f; // number of free places
