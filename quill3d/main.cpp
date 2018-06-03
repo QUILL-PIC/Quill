@@ -145,46 +145,19 @@ void write_N(ofstream& fout_N)
 
 void write_energy(ofstream& fout_energy)
 {
-    if (mpi_rank == 0) {
-        double energy_f,energy_e,energy_p,energy_ph;
-        double* ienergy = new double[n_ion_populations];
-        energy_f = psr->energy_f;
-        energy_e = psr->energy_e;
-        energy_p = psr->energy_p;
-        energy_ph = psr->energy_ph;
-        for (int n=0;n<n_ion_populations;n++)
-            ienergy[n] = psr->ienergy[n];
+    double energy_f, energy_e, energy_p, energy_ph;
+    auto ienergy = unique_ptr<double[]>(new double[n_ion_populations]);
+    MPI_Reduce(&(psr->energy_f), &energy_f, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+    MPI_Reduce(&(psr->energy_e), &energy_e, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+    MPI_Reduce(&(psr->energy_p), &energy_p, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+    MPI_Reduce(&(psr->energy_ph), &energy_ph, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+    MPI_Reduce(psr->ienergy, ienergy.get(), n_ion_populations, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
 
-        for (int i=1;i<n_sr;i++) {
-            int tag = 0;
-            double value;
-            MPI_Recv(&value, 1, MPI_DOUBLE, i, tag++, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-            energy_f += value;
-            MPI_Recv(&value, 1, MPI_DOUBLE, i, tag++, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-            energy_e += value;
-            MPI_Recv(&value, 1, MPI_DOUBLE, i, tag++, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-            energy_p += value;
-            MPI_Recv(&value, 1, MPI_DOUBLE, i, tag++, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-            energy_ph += value;
-            for (int n=0;n<n_ion_populations;n++) {
-                MPI_Recv(&value, 1, MPI_DOUBLE, i, tag++, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-                ienergy[n] += value;
-            }
-        }
+    if (mpi_rank == 0) {
         fout_energy<<energy_f<<'\t'<<energy_e<<'\t'<<energy_p<<'\t'<<energy_ph;
             for (int n=0;n<n_ion_populations;n++)
                 fout_energy<<'\t'<<ienergy[n];
             fout_energy<<endl;
-        delete [] ienergy;
-    } else {
-        int tag = 0;
-        MPI_Send(&(psr->energy_f), 1, MPI_DOUBLE, 0, tag++, MPI_COMM_WORLD);
-        MPI_Send(&(psr->energy_e), 1, MPI_DOUBLE, 0, tag++, MPI_COMM_WORLD);
-        MPI_Send(&(psr->energy_p), 1, MPI_DOUBLE, 0, tag++, MPI_COMM_WORLD);
-        MPI_Send(&(psr->energy_ph), 1, MPI_DOUBLE, 0, tag++, MPI_COMM_WORLD);
-        for (int n=0; n<n_ion_populations; n++) {
-            MPI_Send(&(psr->ienergy[n]), 1, MPI_DOUBLE, 0, tag++, MPI_COMM_WORLD);
-        }
     }
 }
 
