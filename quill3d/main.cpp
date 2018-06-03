@@ -610,40 +610,18 @@ void write_spectrum_phasespace(bool write_p, bool write_ph)
 
     // gathering spectra on rank 0 process
     if (mpi_rank == 0) {
-        int size = neps;
-        if (neps_p > size) size = neps_p;
-        if (neps_ph > size) size = neps_ph;
-        if (neps_i > size) size = neps_i;
-        double * buffer = new double[size];
-        for (int n=1;n<n_sr;n++) {
-            int tag = 0;
-            MPI_Recv(buffer, neps, MPI_DOUBLE, n, tag++, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-            for (int i=0;i<neps;i++) {
-                spectrum[i] += buffer[i];
-            }
-            MPI_Recv(buffer, neps_p, MPI_DOUBLE, n, tag++, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-            for (int i=0;i<neps_p;i++) {
-                spectrum_p[i] += buffer[i];
-            }
-            MPI_Recv(buffer, neps_ph, MPI_DOUBLE, n, tag++, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-            for (int i=0;i<neps_ph;i++) {
-                spectrum_ph[i] += buffer[i];
-            }
-            for (int m=0;m<n_ion_populations;m++) {
-                MPI_Recv(buffer, neps_i, MPI_DOUBLE, n, tag++, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-                for (int i=0;i<neps_i;i++) {
-                    spectrum_i[m][i] += buffer[i];
-                }
-            }
+        MPI_Reduce(MPI_IN_PLACE, spectrum, neps, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+        MPI_Reduce(MPI_IN_PLACE, spectrum_p, neps_p, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+        MPI_Reduce(MPI_IN_PLACE, spectrum_ph, neps_ph, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+        for (int i=0; i<n_ion_populations; i++) {
+            MPI_Reduce(MPI_IN_PLACE, spectrum_i[i], neps_i, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
         }
-        delete [] buffer;
     } else {
-        int tag = 0;
-        MPI_Send(spectrum, neps, MPI_DOUBLE, 0, tag++, MPI_COMM_WORLD);
-        MPI_Send(spectrum_p, neps_p, MPI_DOUBLE, 0, tag++, MPI_COMM_WORLD);
-        MPI_Send(spectrum_ph, neps_ph, MPI_DOUBLE, 0, tag++, MPI_COMM_WORLD);
-        for (int m=0;m<n_ion_populations;m++) {
-            MPI_Send(spectrum_i[m], neps_i, MPI_DOUBLE, 0, tag++, MPI_COMM_WORLD);
+        MPI_Reduce(spectrum, spectrum, neps, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+        MPI_Reduce(spectrum_p, spectrum_p, neps_p, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+        MPI_Reduce(spectrum_ph, spectrum_ph, neps_ph, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+        for (int i=0; i<n_ion_populations; i++) {
+            MPI_Reduce(spectrum_i[i], spectrum_i[i], neps_i, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
         }
     }
 
