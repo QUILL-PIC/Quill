@@ -1822,7 +1822,9 @@ int main(int argc, char * argv[])
         psr->padvance(external_bz);
         psr->compute_N(nm*(i!=0),nm*(i!=n_sr-1),dx*dy*dz*1.11485e13*lambda/(8*PI*PI*PI));
         psr->compute_energy(nm*(i!=0),nm*(i!=n_sr-1),0.5*dx*dy*dz*3.691e4*lambda/1e7,8.2e-14*dx*dy*dz*1.11485e13*lambda/(8*PI*PI*PI)); // энергия в Джоулях
-        psr->fout_tracks((x0_sr[i]+nmw)*dx/2/PI,nm);
+        if (n_tracks > 0) {
+            psr->fout_tracks((x0_sr[i]+nmw)*dx/2/PI,nm);
+        }
         psr->fadvance();
         if (mwindow==1) psr->moving_window(l,nmw,mwspeed);
 
