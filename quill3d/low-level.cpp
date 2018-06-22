@@ -403,8 +403,10 @@ int var::read()
                 }
                 num++;
             }
-            for (int i=0;i<input_array.size();i++)
-                    cout<<"..."<<input_array.at(i);
+            if (mpi_rank == 0) {
+                for (auto v : input_array)
+                    cout << "..." << v;
+            }
         }
         else{
             value = (tmp != "#" ? stof(tmp) : 0.0);
