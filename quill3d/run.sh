@@ -12,7 +12,7 @@ sleep 1.5  # so the user has time to see the data folder
 threads=`./parse.py "$1" | grep -A1 n_sr | tail -n1`
 if [[ -z "$threads" ]]
 then
-    threads=1
+    threads=8
 fi
 echo "Threads: $threads"
 
