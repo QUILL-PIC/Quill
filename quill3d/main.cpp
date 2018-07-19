@@ -1193,33 +1193,72 @@ void init_films()
     }
 }
 
-void send_cell(int i, int j, int k, int destination_rank, int & tag) {
-    particle* current = psr->cp[i][j][k].pl.head;
-    int n_particles = 0;
-    while (current != 0) {
-        current = current->next;
-        n_particles++;
-    }
-    MPI_Send(&n_particles, 1, MPI_INT, destination_rank, tag++, MPI_COMM_WORLD);
+void send_field_slice(int left, int width, int destination_rank) {
+    int tag = 0;
 
-    current = psr->cp[i][j][k].pl.head;
-    while (current != 0) {
-        MPI_Send(current, sizeof(particle), MPI_BYTE, destination_rank, tag++, MPI_COMM_WORLD);
-        current = current->next;
+    const int size = 3 * width * ny_global * nz_global;
+    MPI_Send(psr->ce[left][0], size, MPI_DOUBLE, destination_rank, tag++, MPI_COMM_WORLD);
+    MPI_Send(psr->cb[left][0], size, MPI_DOUBLE, destination_rank, tag++, MPI_COMM_WORLD);
+    MPI_Send(psr->cj[left][0], size, MPI_DOUBLE, destination_rank, tag++, MPI_COMM_WORLD);
+    MPI_Send(psr->cbe[left][0], size, MPI_DOUBLE, destination_rank, tag++, MPI_COMM_WORLD);
+}
+
+void receive_field_slice(int left, int width, int source_rank, double x_diff) {
+    int tag = 0;
+
+    const int size = 3 * width * ny_global * nz_global;
+    MPI_Recv(psr->ce[left][0], size, MPI_DOUBLE, source_rank, tag++, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    MPI_Recv(psr->cb[left][0], size, MPI_DOUBLE, source_rank, tag++, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    MPI_Recv(psr->cj[left][0], size, MPI_DOUBLE, source_rank, tag++, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    MPI_Recv(psr->cbe[left][0], size, MPI_DOUBLE, source_rank, tag++, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+}
+
+void exchange_fields(int nm1, int nm2) {
+    for (int mod=0; mod<2; mod++) {
+
+        // first even processes send, while odd receive, then vice versa
+        if (mpi_rank % 2 == mod) {
+            if (mpi_rank > 0) {
+                send_field_slice(nm1, nm2, mpi_rank-1);
+            }
+
+            if (mpi_rank < n_sr-1) {
+                send_field_slice(psr->get_nx() - nm2 - nm1, nm1, mpi_rank+1);
+            }
+        } else {
+            if (mpi_rank < n_sr-1) {
+                receive_field_slice(psr->get_nx() - nm2, nm2, mpi_rank+1, nx_sr[mpi_rank] - nx_ich);
+            }
+
+            if (mpi_rank > 0) {
+                receive_field_slice(0, nm1, mpi_rank-1, -nx_sr[mpi_rank-1]+nx_ich);
+            }
+        }
     }
 }
 
-void receive_cell(int i, int j, int k, int source_rank, int & tag) {
+void pack_cell(int i, int j, int k, vector<int> & particle_numbers, int & pn_index, vector<particle> & particles, int & p_index) {
+    particle* current = psr->cp[i][j][k].pl.head;
+    particle_numbers[pn_index] = 0;
+    while (current != 0) {
+        if (particles.size() <= p_index) {
+            particles.resize(3 * particles.size() / 2 + 1);
+        }
+        particles[p_index++] = *current;
+
+        current = current->next;
+        particle_numbers[pn_index]++;
+    }
+    pn_index++;
+}
+
+void unpack_cell(int i, int j, int k, vector<int> & particle_numbers, int & pn_index, vector<particle> & particles, int & p_index) {
     plist & pl = psr->cp[i][j][k].pl;
     psr->erase(pl);
 
-    int n_particles = 0;
-    MPI_Recv(&n_particles, 1, MPI_INT, source_rank, tag++, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-
-
-    for (int ii=0; ii<n_particles; ii++) {
+    for (int ii=0; ii<particle_numbers[pn_index]; ii++) {
         particle * tmp = psr->new_particle();
-        MPI_Recv(tmp, sizeof(particle), MPI_BYTE, source_rank, tag++, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        *tmp = particles[p_index++];
         tmp->previous = pl.start;
         pl.start = tmp;
     }
@@ -1230,43 +1269,90 @@ void receive_cell(int i, int j, int k, int source_rank, int & tag) {
         pl.start = pl.start->previous;
     }
     pl.start = pl.head;
+
+    pn_index++;
 }
 
-void send_slice(int left, int width, int destination_rank) {
-    int tag = 0;
-
-    const int size = 3 * width * ny_global * nz_global;
-    MPI_Send(psr->ce[left][0], size, MPI_DOUBLE, destination_rank, tag++, MPI_COMM_WORLD);
-    MPI_Send(psr->cb[left][0], size, MPI_DOUBLE, destination_rank, tag++, MPI_COMM_WORLD);
-    MPI_Send(psr->cj[left][0], size, MPI_DOUBLE, destination_rank, tag++, MPI_COMM_WORLD);
-    MPI_Send(psr->cbe[left][0], size, MPI_DOUBLE, destination_rank, tag++, MPI_COMM_WORLD);
+int pack_particle_slice(int left, int width, vector<int> & particle_numbers, vector<particle> & particles) {
+    int pn_index = 0;
+    int p_index = 0;
 
     for (int i=left; i<left+width; i++) {
         for (int j=0;j<ny_global;j++) {
             for (int k=0;k<nz_global;k++) {
-                send_cell(i, j, k, destination_rank, tag);
+                pack_cell(i, j, k, particle_numbers, pn_index, particles, p_index);
             }
         }
     }
+
+    return p_index;
 }
 
-void receive_slice(int left, int width, int source_rank, double x_diff) {
-    int tag = 0;
-
-    const int size = 3 * width * ny_global * nz_global;
-    MPI_Recv(psr->ce[left][0], size, MPI_DOUBLE, source_rank, tag++, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-    MPI_Recv(psr->cb[left][0], size, MPI_DOUBLE, source_rank, tag++, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-    MPI_Recv(psr->cj[left][0], size, MPI_DOUBLE, source_rank, tag++, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-    MPI_Recv(psr->cbe[left][0], size, MPI_DOUBLE, source_rank, tag++, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+void unpack_particle_slice(int left, int width, vector<int> & particle_numbers, vector<particle> & particles, int x_diff) {
+    int pn_index = 0;
+    int p_index = 0;
 
     for (int i=left; i<left+width; i++) {
         for (int j=0;j<ny_global;j++) {
             for (int k=0;k<nz_global;k++) {
-                receive_cell(i, j, k, source_rank, tag);
+                unpack_cell(i, j, k, particle_numbers, pn_index, particles, p_index);
                 psr->cp[i][j][k].pl.xplus(x_diff);
             }
         }
     }
+}
+
+void exchange_particle_slices(int send_left, int send_width, int receive_left, int receive_width, int rank,
+        vector<int> & particle_numbers, int pn_size, vector<particle> & particles, int x_diff) {
+    int particles_to_send = pack_particle_slice(send_left, send_width, particle_numbers, particles);
+    int particles_to_receive = 0;
+
+    MPI_Sendrecv(&particles_to_send, 1, MPI_INT, rank, 0, &particles_to_receive, 1, MPI_INT, rank, 0, MPI_COMM_WORLD,
+            MPI_STATUS_IGNORE);
+
+    if (particles_to_receive > particles.size()) {
+        particles.resize(3 * particles_to_receive / 2 + 1);
+    }
+
+    MPI_Sendrecv_replace(&(particle_numbers[0]), pn_size, MPI_INT, rank, 1, rank, 1, MPI_COMM_WORLD,
+    MPI_STATUSES_IGNORE);
+
+    int particles_size = max(particles_to_receive, particles_to_send);
+
+    MPI_Sendrecv_replace(&(particles[0]), particles_size * sizeof(particle), MPI_BYTE, rank, 2, rank, 2, MPI_COMM_WORLD,
+            MPI_STATUS_IGNORE);
+
+    unpack_particle_slice(receive_left, receive_width, particle_numbers, particles, x_diff);
+}
+
+void exchange_particles(const int nm1, const int nm2) {
+    static vector<int> particle_numbers{};
+    static vector<particle> particles{};
+
+    const int size1 = ny_global * nz_global * nm1;
+    const int size2 = ny_global * nz_global * nm2;
+    const int size = max(size1, size2);
+
+    if (particle_numbers.size() < size) {
+        particle_numbers.resize(size);
+    }
+
+    for (int mod=0; mod<2; mod++) {
+
+        // first even processes send, while odd receive, then vice versa
+        if (mpi_rank % 2 == mod) {
+            if (mpi_rank > 0) {
+                exchange_particle_slices(nm1, nm2, 0, nm1, mpi_rank - 1, particle_numbers, size, particles,
+                        -nx_sr[mpi_rank - 1] + nx_ich);
+            }
+        } else {
+            if (mpi_rank < n_sr-1) {
+                exchange_particle_slices(psr->get_nx() - nm2 - nm1, nm1, psr->get_nx() - nm2, nm2, mpi_rank + 1,
+                        particle_numbers, size, particles, nx_sr[mpi_rank] - nx_ich);
+            }
+        }
+    }
+
 }
 
 void synchronize_regions() {
@@ -1279,27 +1365,8 @@ void synchronize_regions() {
         nm2 = nm;
     }
 
-    for (int mod=0; mod<2; mod++) {
-
-        // first even processes send, while odd receive, then vice versa
-        if (mpi_rank % 2 == mod) {
-            if (mpi_rank > 0) {
-                send_slice(nm1, nm2, mpi_rank-1);
-            }
-
-            if (mpi_rank < n_sr-1) {
-                send_slice(psr->get_nx() - nm2 - nm1, nm1, mpi_rank+1);
-            }
-        } else {
-            if (mpi_rank < n_sr-1) {
-                receive_slice(psr->get_nx() - nm2, nm2, mpi_rank+1, nx_sr[mpi_rank] - nx_ich);
-            }
-
-            if (mpi_rank > 0) {
-                receive_slice(0, nm1, mpi_rank-1, -nx_sr[mpi_rank-1]+nx_ich);
-            }
-        }
-    }
+    exchange_fields(nm1, nm2);
+    exchange_particles(nm1, nm2);
 }
 
 void start_tracking()
