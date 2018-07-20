@@ -29,9 +29,9 @@ public:
 
 class ndfx_solver: public maxwell_solver {
 private:
-    constexpr static double kappa = 1.25 * (sqrt(3) - 1) * 0.5 / sqrt(3);
-    constexpr static double bx = 1 - kappa;
-    constexpr static double ax = 0.5 * (1 - bx);
+    const static double kappa;
+    const static double bx;
+    const static double ax;
     double ay;
     double by;
     double az;

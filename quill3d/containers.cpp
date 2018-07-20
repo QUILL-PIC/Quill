@@ -41,6 +41,8 @@ field3d<T> & field3d<T>::operator =(field3d<T> && other) {
     other.nx = 0;
     other.ny = 0;
     other.nz = 0;
+
+    return *this;
 }
 
 template <typename T>

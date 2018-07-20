@@ -20,6 +20,10 @@ void maxwell_solver::advance() {
     advance_b_boundaries();
 }
 
+const double ndfx_solver::kappa = 1.25 * (sqrt(3) - 1) * 0.5 / sqrt(3);
+const double ndfx_solver::bx = (1 - kappa);
+const double ndfx_solver::ax = 0.5 * (1 - bx);
+
 ndfx_solver::ndfx_solver(field3d<celle> & ce0, field3d<cellb> & cb0, field3d<cellj> & cj0, double dt, double dx,
         double dy, double dz) :
         maxwell_solver(ce0, cb0, cj0, dt, dx, dy, dz),
