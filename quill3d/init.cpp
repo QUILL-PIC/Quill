@@ -29,7 +29,7 @@ void spatial_region::f_init_cos(double a0y, double a0z, double xsigma, double ys
      * 1/e^2 (по интенсивности). E_x не вычисляется, а полагается равным нулю. */
     // sscos = 3 - sscos transverse, cos longutudinal
     double x,y,z,xi;
-    double xs, ys, zs;
+    double xs{0}, ys{0}, zs{0};
     if (sscos==0) {
         xs = xsigma*2*sqrt(2*PI)/3;
         ys = ysigma*2*sqrt(2*PI)/3;
@@ -90,7 +90,7 @@ void spatial_region::f_init_cos(double a0y, double a0z, double xsigma, double ys
         z0y = zy*c - yy*s;
         z0z = zz*c - yz*s;
     }
-    double ex,ey,ez,bx,by,bz;
+    double ex{0}, ey{0}, ez{0}, bx{0}, by{0}, bz{0};
     for(int i=0;i<nx;i++)
     {
         for(int j=0;j<ny;j++)

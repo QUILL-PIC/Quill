@@ -61,7 +61,7 @@ bool spatial_region::is_inside_global(int i, int j, int k)
         return 0;    
 }
 
-bool spatial_region::is_in_exchange_area(int i, int j, int k)
+bool spatial_region::is_in_exchange_area(int i)
 {
     if (sr_id > 0 && i >= 0 && i < nm)
         return true;

@@ -4,7 +4,7 @@ DEPFLAGS = -MMD -MP -MF $(DEPDIR)/$*.Td
 POSTCOMPILE = @mv -f $(DEPDIR)/$*.Td $(DEPDIR)/$*.d && touch $@
 
 CXX := mpicxx
-CXXFLAGS := -O3 -march=native -ffast-math -std=c++0x
+CXXFLAGS := -O3 -march=native -ffast-math -std=c++0x -Wall -Wextra
 debug: CXXFLAGS := -g -std=c++0x
 CXXLIBS := 
 OBJECTS := advance.o deposition.o fout.o init.o low-level.o main.o mc.o plist.o pusher.o maxwell.o containers.o
