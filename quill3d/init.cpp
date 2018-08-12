@@ -603,7 +603,7 @@ void spatial_region::film(double x0, double x1, double ne_y0, double ne_y1, int 
                         if (ions == 1)
                             fill_cell_by_particles(cmr, a, b, nes1, ux0, 0, 0, T * cmr);
                         if (ions == 2)
-                            fill_cell_by_particles(1, a, b, nes1, ux0, 0, 0, T * cmr);
+                            fill_cell_by_particles(1, a, b, nes1, ux0, 0, 0, T);
                     }
                     else
                     {
@@ -611,7 +611,7 @@ void spatial_region::film(double x0, double x1, double ne_y0, double ne_y1, int 
                         if (ions == 1)
                             fill_cell_by_particles(cmr, a, b, nes1*(i*dx-x0)/gradwidth, ux0, 0, 0, T * cmr);
                         if (ions == 2)
-                            fill_cell_by_particles(1, a, b, nes1*(i*dx-x0)/gradwidth, ux0, 0, 0, T * cmr);
+                            fill_cell_by_particles(1, a, b, nes1*(i*dx-x0)/gradwidth, ux0, 0, 0, T);
                     }
                 } else {
                     if (i>=int((x0-gradwidth)/dx))
@@ -620,7 +620,7 @@ void spatial_region::film(double x0, double x1, double ne_y0, double ne_y1, int 
                         if (ions == 1)
                             fill_cell_by_particles(cmr, a, b, nes1, ux0, 0, 0, T * cmr);
                         if (ions == 2)
-                            fill_cell_by_particles(1, a, b, nes1, ux0, 0, 0, T * cmr);
+                            fill_cell_by_particles(1, a, b, nes1, ux0, 0, 0, T);
                     }
                     else
                     {
@@ -628,7 +628,7 @@ void spatial_region::film(double x0, double x1, double ne_y0, double ne_y1, int 
                         if (ions == 1)
                             fill_cell_by_particles(cmr, a, b, nes1 * (1 + (i * dx - x0) / gradwidth), ux0, 0, 0, T * cmr);
                         if (ions == 2)
-                            fill_cell_by_particles(1, a, b, nes1 * (1 + (i * dx - x0) / gradwidth), ux0, 0, 0, T * cmr);
+                            fill_cell_by_particles(1, a, b, nes1 * (1 + (i * dx - x0) / gradwidth), ux0, 0, 0, T);
                     }
                 }
             }
