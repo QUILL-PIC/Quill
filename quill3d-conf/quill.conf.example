@@ -166,7 +166,7 @@ y0b = 0 # default: lambda; possible: um
 phib = 0 deg # default: rad
 
 # включение ионов (только для плёнок)
-ions = off # default: off; possible: on
+ions = off # default: off; possible: on (uses mcr), positrons (mcr is ignored, ions are initiated as positrons)
 
 # список плёнок; все параметры плёнки должны быть обязательно
 # определены после film = on для данной плёнки и до того, как

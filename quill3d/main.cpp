@@ -409,7 +409,7 @@ void write_density(bool write_x, bool write_y, bool write_z,
         if (pof_z) delete pof_z;
     }
 
-    if (write_ions && (ions=="on"))
+    if (write_ions && (ions=="on" || ions=="positrons"))
     {
         char s_cmr[20];
         for (int n=0;n<n_ion_populations;n++)
@@ -1185,7 +1185,8 @@ void init_films()
 
         psr->film(tmp_p_film->x0-dx*x0_sr[mpi_rank], tmp_p_film->x0+tmp_p_film->filmwidth-dx*x0_sr[mpi_rank],
             tmp_p_film->ne_y0/(1.11485e+13/lambda/lambda), tmp_p_film->ne_y1/(1.11485e+13/lambda/lambda),
-            ions=="on", 1/(proton_mass*tmp_p_film->mcr),
+            (ions == "on" || ions == "positrons") ? (ions == "on" ? 1 : 2) : 0, // defining ion type            
+            1/(proton_mass*tmp_p_film->mcr),
             tmp_p_film->gradwidth, tmp_p_film->y0, tmp_p_film->y1, tmp_p_film->z0, tmp_p_film->z1,
             tmp_p_film->T, tmp_p_film->vx, nelflow != 0 || nerflow != 0,
             tmp_p_film->xnpic_film, tmp_p_film->ynpic_film, tmp_p_film->znpic_film, false);
@@ -1651,7 +1652,8 @@ void add_moving_window_particles()
         {
             psr->film(tmp_p_film->x0-dx*x0_sr[n_sr-1]-dx*nmw, tmp_p_film->x0+tmp_p_film->filmwidth-dx*x0_sr[n_sr-1]-dx*nmw,
                 tmp_p_film->ne_y0/(1.11485e+13/lambda/lambda), tmp_p_film->ne_y1/(1.11485e+13/lambda/lambda),
-                ions=="on", 1/(proton_mass*tmp_p_film->mcr),
+                (ions == "on" || ions == "positrons") ? (ions == "on" ? 1 : 2) : 0,
+                1/(proton_mass*tmp_p_film->mcr),
                 tmp_p_film->gradwidth, tmp_p_film->y0, tmp_p_film->y1, tmp_p_film->z0, tmp_p_film->z1,
                 tmp_p_film->T, tmp_p_film->vx, nelflow != 0 || nerflow != 0,
                 tmp_p_film->xnpic_film, tmp_p_film->ynpic_film, tmp_p_film->znpic_film, true);
@@ -2755,7 +2757,7 @@ int init()
     if (nelflow!=0 || nerflow!=0)
         mwindow = 0;
     //
-    if (ions=="on")
+    if (ions=="on" || ions=="positrons")
     { // counting of ion populations
         int n;
         n = 0;
