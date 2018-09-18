@@ -105,6 +105,8 @@ int nm; /* используется при обмене данными межд�
 
 int nmw = 1;
 
+MPI_Datatype MPI_PARTICLE; // тип для передачи частиц через MPI
+
 // номер слоя, отвечающий индексу i
 inline int get_sr_for_index(int i)
 {
@@ -1325,7 +1327,7 @@ void exchange_particle_slices(int send_left, int send_width, int receive_left, i
 
     int particles_size = max(particles_to_receive, particles_to_send);
 
-    MPI_Sendrecv_replace(&(particles[0]), particles_size * sizeof(particle), MPI_BYTE, rank, 2, rank, 2, MPI_COMM_WORLD,
+    MPI_Sendrecv_replace(&(particles[0]), particles_size, MPI_PARTICLE, rank, 2, rank, 2, MPI_COMM_WORLD,
             MPI_STATUS_IGNORE);
 
     unpack_particle_slice(receive_left, receive_width, particle_numbers, particles, x_diff);
@@ -1764,6 +1766,21 @@ void print_number_of_quasiparticles()
     }
 }
 
+void register_mpi_particle() {
+    // register MPI_PARTICLE type to be able to send particles
+    // struct particle has 10 doubles and 1 int
+    const int items = 2;
+    int blocklengths[items] = {10, 1};
+    MPI_Datatype types[items] = {MPI_DOUBLE, MPI_INT};
+    MPI_Aint offsets[items];
+    offsets[0] = offsetof(particle, x);
+    offsets[1] = offsetof(particle, trn);
+    MPI_Datatype tmp_particle_type;
+    MPI_Type_create_struct(items, blocklengths, offsets, types, &tmp_particle_type);
+    MPI_Type_create_resized(tmp_particle_type, 0, sizeof(particle), &MPI_PARTICLE);
+    MPI_Type_commit(&MPI_PARTICLE);
+}
+
 int main(int argc, char * argv[])
 {
     MPI_Init(&argc, &argv);
@@ -1795,6 +1812,8 @@ int main(int argc, char * argv[])
         MPI_Send(&pid, 1, MPI_UNSIGNED_LONG, 0, 0, MPI_COMM_WORLD);
         MPI_Send(hostname, hostname_len + 1, MPI_CHAR, 0, 1, MPI_COMM_WORLD);
     }
+
+    register_mpi_particle();
 
     MPI_Barrier(MPI_COMM_WORLD);
 
