@@ -534,7 +534,7 @@ void spatial_region::add_beam(double cmr, double n0, double u0, double xb, doubl
 void spatial_region::film(double x0, double x1, double ne_y0, double ne_y1, int ions, double
         cmr, double gradwidth, double y0, double y1, double z0, double z1,
         double T, double vx, bool is_profiled,
-        int xnpic_film, int ynpic_film, int znpic_film, bool append_for_moving_window)
+        int xnpic_film, int ynpic_film, int znpic_film, bool append_for_moving_window, double gradwidth_y)
 { /* x0 - координата левой границы плёнки, x1 - правой, ne -
      концентрация электронов в плёнке, нормированная на критическую
      концентрацию */
@@ -590,6 +590,13 @@ void spatial_region::film(double x0, double x1, double ne_y0, double ne_y1, int 
                     nes1 = nes * tr_env;
                 } else {
                     nes1 = nes;
+                }
+                
+                if (gradwidth_y >= 0 && j-int(y0/dy)-1 < gradwidth_y/dy) {
+                    nes1 *= (j-int(y0/dy)-1) / (gradwidth_y/dy);
+                }
+                if (gradwidth_y >= 0 && int(y1/dy)-2-j < gradwidth_y/dy) {
+                    nes1 *= (int(y1/dy)-2-j) / (gradwidth_y/dy);
                 }
                 //
                 a.i = i;

@@ -1196,7 +1196,7 @@ void init_films()
             1/(proton_mass*tmp_p_film->mcr),
             tmp_p_film->gradwidth, tmp_p_film->y0, tmp_p_film->y1, tmp_p_film->z0, tmp_p_film->z1,
             tmp_p_film->T, tmp_p_film->vx, nelflow != 0 || nerflow != 0,
-            tmp_p_film->xnpic_film, tmp_p_film->ynpic_film, tmp_p_film->znpic_film, false);
+            tmp_p_film->xnpic_film, tmp_p_film->ynpic_film, tmp_p_film->znpic_film, false, tmp_p_film->gradwidth_y);
         tmp_p_film = tmp_p_film->prev;
     }
 }
@@ -1663,7 +1663,7 @@ void add_moving_window_particles()
                 1/(proton_mass*tmp_p_film->mcr),
                 tmp_p_film->gradwidth, tmp_p_film->y0, tmp_p_film->y1, tmp_p_film->z0, tmp_p_film->z1,
                 tmp_p_film->T, tmp_p_film->vx, nelflow != 0 || nerflow != 0,
-                tmp_p_film->xnpic_film, tmp_p_film->ynpic_film, tmp_p_film->znpic_film, true);
+                tmp_p_film->xnpic_film, tmp_p_film->ynpic_film, tmp_p_film->znpic_film, true, tmp_p_film->gradwidth_y);
             tmp_p_film = tmp_p_film->prev;
         }
     }
@@ -2652,6 +2652,18 @@ int init()
             current->units="lambda";
         }
         p_last_film->gradwidth = current->value*2*PI;
+        current = find("gradwidth_y",tmp);
+        if (current->units=="um")
+        {
+            current->value = current->value*1e-4/lambda;
+            current->units="lambda";
+        }
+        if (current->units=="fs")
+        {
+            current->value = current->value*1e-15*2.99792458e10/lambda;
+            current->units="lambda";
+        }
+        p_last_film->gradwidth_y = current->value*2*PI;
         current = find("y0film",tmp);
         if (current->units=="um")
         {
@@ -3208,6 +3220,7 @@ int init()
             fout_log<<"x0film\n"<<tmp_p_film->x0/2/PI<<"\n";
             fout_log<<"filmwidth\n"<<tmp_p_film->filmwidth/2/PI<<"\n";
             fout_log<<"gradwidth\n"<<tmp_p_film->gradwidth/2/PI<<"\n";
+            fout_log<<"gradwidth_y\n"<<tmp_p_film->gradwidth_y/2/PI<<"\n";
             fout_log<<"y0film\n"<<tmp_p_film->y0/2/PI<<"\n";
             fout_log<<"y1film\n"<<tmp_p_film->y1/2/PI<<"\n";
             fout_log<<"z0film\n"<<tmp_p_film->z0/2/PI<<"\n";
