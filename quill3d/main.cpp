@@ -1613,12 +1613,10 @@ void evaluate_merging_condition()
 
 void add_moving_window_particles()
 {
-    if ((l + 1) * dt < t_add_mw)
-    {
-        nmw++;
-        if (mpi_rank != n_sr-1) {
-            return;
-        }
+    if (mpi_rank != n_sr-1) {
+        return;
+    }
+    if ((l + 1) * dt < t_add_mw) {
         if (mwseed==1) {
             double n;
             n=1/(k0*k0);
@@ -1927,6 +1925,7 @@ int main(int argc, char * argv[])
         bool is_moving_window_iteration = check_moving_window(nmw, l);
         if (is_moving_window_iteration) {
             psr->moving_window();
+            nmw++;
         }
 
         synchronize_regions(is_moving_window_iteration);
