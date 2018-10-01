@@ -1363,9 +1363,9 @@ void exchange_particles(const int nm1, const int nm2) {
 
 }
 
-void synchronize_regions() {
+void synchronize_regions(bool is_moving_window_iteration) {
     int nm1, nm2;
-    if (mwindow==1&&(l+1)*dt*mwspeed>nmw*dx) {
+    if (is_moving_window_iteration) {
         nm1 = nm-1;
         nm2 = nm+1;
     } else {
@@ -1549,7 +1549,7 @@ void start_tracking()
     }
 
     // make the same particles tracked in all regions, so that tracks aren't lost at the first exchange
-    synchronize_regions();
+    synchronize_regions(false);
 }
 
 void evaluate_merging_condition()
@@ -1613,7 +1613,7 @@ void evaluate_merging_condition()
 
 void add_moving_window_particles()
 {
-    if (mwindow == 1 && (l + 1) * dt * mwspeed > nmw * dx && (l + 1) * dt < t_add_mw)
+    if ((l + 1) * dt < t_add_mw)
     {
         nmw++;
         if (mpi_rank != n_sr-1) {
@@ -1781,6 +1781,10 @@ void register_mpi_particle() {
     MPI_Type_commit(&MPI_PARTICLE);
 }
 
+bool check_moving_window(int moving_window_iteration, int current_iteration) {
+    return (mwindow == 1) && ((current_iteration + 1) * dt * mwspeed > moving_window_iteration * dx);
+}
+
 int main(int argc, char * argv[])
 {
     MPI_Init(&argc, &argv);
@@ -1919,9 +1923,13 @@ int main(int argc, char * argv[])
             psr->fout_tracks((x0_sr[i]+nmw)*dx/2/PI,nm);
         }
         psr->fadvance();
-        if (mwindow==1) psr->moving_window(l,nmw,mwspeed);
 
-        synchronize_regions();
+        bool is_moving_window_iteration = check_moving_window(nmw, l);
+        if (is_moving_window_iteration) {
+            psr->moving_window();
+        }
+
+        synchronize_regions(is_moving_window_iteration);
 
         /* вывод плотности, спектра и 'phasespace'-данных для фотонов,
            электронов и позитронов в файлы */
@@ -1968,7 +1976,9 @@ int main(int argc, char * argv[])
             cout << endl;
         }
 
-        add_moving_window_particles();
+        if (is_moving_window_iteration) {
+            add_moving_window_particles();
+        }
 
 
         if (nelflow != 0)

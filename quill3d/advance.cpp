@@ -367,73 +367,69 @@ void spatial_region::padvance(double external_bz)
     }
 }
 
-void spatial_region::moving_window(int l, int nmw, double mwspeed)
+void spatial_region::moving_window()
 {
     particle* current;
     //
-    if((l+1)*dt*mwspeed>nmw*dx)
+    for(int j=0;j<ny;j++)
+    {
+        for(int k=0;k<nz;k++)
+        {
+            erase(cp[0][j][k].pl);
+        }
+    }
+    //
+    for(int j=0;j<ny;j++)
+    {
+        for(int i=0;i<nx-1;i++)
+        {
+            for(int k=0;k<nz;k++)
+            {
+                ce[i][j][k].ex = ce[i+1][j][k].ex;
+                ce[i][j][k].ey = ce[i+1][j][k].ey;
+                ce[i][j][k].ez = ce[i+1][j][k].ez;
+                cb[i][j][k].bx = cb[i+1][j][k].bx;
+                cb[i][j][k].by = cb[i+1][j][k].by;
+                cb[i][j][k].bz = cb[i+1][j][k].bz;
+                cbe[i][j][k].bex = cbe[i+1][j][k].bex;
+                cbe[i][j][k].bey = cbe[i+1][j][k].bey;
+                cbe[i][j][k].bez = cbe[i+1][j][k].bez;
+                cp[i][j][k].pl = cp[i+1][j][k].pl;
+            }
+        }
+    }
+    //
+    for(int j=0;j<ny;j++)
+    {
+        for(int k=0;k<nz;k++)
+        {
+            ce[nx-1][j][k].ex = 0;
+            ce[nx-1][j][k].ey = 0;
+            ce[nx-1][j][k].ez = 0;
+            cb[nx-1][j][k].bx = 0;
+            cb[nx-1][j][k].by = 0;
+            cb[nx-1][j][k].bz = 0;
+            cbe[nx-1][j][k].bex = 0;
+            cbe[nx-1][j][k].bey = 0;
+            cbe[nx-1][j][k].bez = 0;
+            cp[nx-1][j][k].pl.head = 0;
+            cp[nx-1][j][k].pl.start = 0;
+        }
+    }
+    //
+    for(int i=0;i<nx;i++)
     {
         for(int j=0;j<ny;j++)
         {
             for(int k=0;k<nz;k++)
             {
-                erase(cp[0][j][k].pl);
-            }
-        }
-        //
-        for(int j=0;j<ny;j++)
-        {
-            for(int i=0;i<nx-1;i++)
-            {
-                for(int k=0;k<nz;k++)
+                current = cp[i][j][k].pl.start;
+                while(current!=0)
                 {
-                    ce[i][j][k].ex = ce[i+1][j][k].ex;
-                    ce[i][j][k].ey = ce[i+1][j][k].ey;
-                    ce[i][j][k].ez = ce[i+1][j][k].ez;
-                    cb[i][j][k].bx = cb[i+1][j][k].bx;
-                    cb[i][j][k].by = cb[i+1][j][k].by;
-                    cb[i][j][k].bz = cb[i+1][j][k].bz;
-                    cbe[i][j][k].bex = cbe[i+1][j][k].bex;
-                    cbe[i][j][k].bey = cbe[i+1][j][k].bey;
-                    cbe[i][j][k].bez = cbe[i+1][j][k].bez;
-                    cp[i][j][k].pl = cp[i+1][j][k].pl;
+                    current->x = current->x - 1;
+                    current = current->next;
                 }
             }
         }
-        //
-        for(int j=0;j<ny;j++)
-        {
-            for(int k=0;k<nz;k++)
-            {
-                ce[nx-1][j][k].ex = 0;
-                ce[nx-1][j][k].ey = 0;
-                ce[nx-1][j][k].ez = 0;
-                cb[nx-1][j][k].bx = 0;
-                cb[nx-1][j][k].by = 0;
-                cb[nx-1][j][k].bz = 0;
-                cbe[nx-1][j][k].bex = 0;
-                cbe[nx-1][j][k].bey = 0;
-                cbe[nx-1][j][k].bez = 0;
-                cp[nx-1][j][k].pl.head = 0;
-                cp[nx-1][j][k].pl.start = 0;
-            }
-        }
-        //
-        for(int i=0;i<nx;i++)
-        {
-            for(int j=0;j<ny;j++)
-            {
-                for(int k=0;k<nz;k++)
-                {
-                    current = cp[i][j][k].pl.start;
-                    while(current!=0)
-                    {
-                        current->x = current->x - 1;
-                        current = current->next;
-                    }
-                }
-            }
-        }
-        //
     }
 }

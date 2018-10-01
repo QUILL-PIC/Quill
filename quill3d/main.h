@@ -129,7 +129,7 @@ class spatial_region
     bool is_in_exchange_area(int);
     vector3d e_to_particle(double&,double&,double&);
     vector3d b_to_particle(double&,double&,double&);
-    void moving_window(int,int,double);
+    void moving_window();
     double get_rand();
     particle* bear_particle(double,vector3d&,vector3d&,double,double,double);
     particle* new_particle();
