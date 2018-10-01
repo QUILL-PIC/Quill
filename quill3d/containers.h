@@ -89,4 +89,8 @@ enum class pusher_enum {
 };
 
 
+enum class moving_window {
+    OFF, ON, AUTO
+};
+
 #endif /* CONTAINERS_H_ */

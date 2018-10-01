@@ -34,7 +34,9 @@ clock_t start_time;
 double seconds;
 clock_t main_thread_time;
 double file_name_accuracy;
-bool mwindow,mwseed;
+bool mwseed;
+moving_window mwindow;
+double mwtolerance; // the relative level of E^2 + B^2 causing the window to move in the AUTO mode
 double crpc;
 double* ppd;
 double phase,phi;
@@ -1780,7 +1782,30 @@ void register_mpi_particle() {
 }
 
 bool check_moving_window(int moving_window_iteration, int current_iteration) {
-    return (mwindow == 1) && ((current_iteration + 1) * dt * mwspeed > moving_window_iteration * dx);
+    switch (mwindow) {
+    case moving_window::OFF:
+        return false;
+        break;
+    case moving_window::ON:
+        return (current_iteration + 1) * dt * mwspeed > moving_window_iteration * dx;
+        break;
+    case moving_window::AUTO:
+        double max_w = psr->get_max_w();
+        MPI_Allreduce(MPI_IN_PLACE, &max_w, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+        double ratio;
+        if (mpi_rank == n_sr-1) {
+            double front_slice_max_w = psr->get_max_w(psr->get_nx() - nm - 2, psr->get_nx() - nm);
+            if (max_w > 0) {
+                ratio = front_slice_max_w / max_w;
+            } else {
+                ratio = 0.0;
+            }
+        }
+        MPI_Bcast(&ratio, 1, MPI_DOUBLE, n_sr-1, MPI_COMM_WORLD);
+        return (ratio > mwtolerance);
+        break;
+    }
+    return false;
 }
 
 int main(int argc, char * argv[])
@@ -2500,11 +2525,20 @@ int init()
         current->value = current->value * PI;
     shphase = current->value;
     current = find("mwindow",first);
-    mwindow = 1;
-    if (current->units=="off") mwindow = 0;
+    mwindow = moving_window::ON;
+    if (current->units == "off") {
+        mwindow = moving_window::OFF;
+    } else if (current->units == "auto") {
+        mwindow = moving_window::AUTO;
+    }
+    current = find("mwtolerance", first);
+    mwtolerance = current->value;
+    if (mwtolerance == 0.0) {
+        mwtolerance = 1e-6;
+    }
     current = find("mwspeed",first);
     mwspeed = current->value;
-    if (mwindow==1 && mwspeed==0)
+    if (mwindow==moving_window::ON && mwspeed==0)
         mwspeed = 1;
     current = find("mwseed",first);
     mwseed = 1;
@@ -2788,7 +2822,7 @@ int init()
     current = find("Trflow",first);
     Trflow = current->value;
     if (nelflow!=0 || nerflow!=0)
-        mwindow = 0;
+        mwindow = moving_window::OFF;
     //
     if (ions=="on" || ions=="positrons")
     { // counting of ion populations
@@ -3159,10 +3193,13 @@ int init()
         fout_log<<"a0y\n"<<a0y<<"\n";
         fout_log<<"a0z\n"<<a0z<<"\n";
         fout_log << "external_bz\n" << external_bz << "\n";
-        if (mwindow==0)
+        if (mwindow==moving_window::OFF) {
             fout_log<<"mwindow\n"<<"off"<<"\n";
-        else
+        } else if (mwindow==moving_window::ON) {
             fout_log<<"mwindow\n"<<"on"<<"\n";
+        } else if (mwindow==moving_window::AUTO) {
+            fout_log<<"mwindow\n"<<"auto"<<"\n";
+        }
         if (mwseed==0)
             fout_log<<"mwseed\n"<<"off"<<"\n";
         else

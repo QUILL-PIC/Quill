@@ -501,3 +501,25 @@ double lin_interpolation(double coordinate, std::vector<double>& density_coords,
         return left + (right - left) * x_rel / dx;
     }
 }
+
+double spatial_region::get_max_w() {
+    return get_max_w(0, nx);
+}
+
+double spatial_region::get_max_w(double left, double right) {
+    double max_w = 0.0;
+    for (int i = left; i < right; i++) {
+        for (int j = 0; j < ny; j++) {
+            for (int k = 0; k < nz; k++) {
+                celle & e = ce[i][j][k];
+                cellb & b = cb[i][j][k];
+                // fields are not interpolated to the same point, but should be fine for estimation
+                double w = e.ex * e.ex + e.ey * e.ey + e.ez * e.ez + b.bx * b.bx + b.by * b.by + b.bz * b.bz;
+                if (w > max_w) {
+                    max_w = w;
+                }
+            }
+        }
+    }
+    return max_w;
+}

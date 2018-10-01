@@ -151,6 +151,9 @@ class spatial_region
     int get_ny() {return ny;}
     int get_nz() {return nz;}
     
+    double get_max_w();
+    double get_max_w(double left, double right);
+
     private:
     void update_energy_deleted(particle*);
 };
