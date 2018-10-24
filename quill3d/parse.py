@@ -18,6 +18,8 @@ dimension_regex = '({0}([/*]{0})*|%)'.format(simple_dimension_regex)
 value_dimension_regex = value_regex + '\s+' + dimension_regex
 # text only values can contain word symbols, digits, dots, slashes, ampersands and hyphens
 text_only_regex = r'([\w\d&-./]+)'
+# Python expressions that are to be evaluated during preprocessing
+eval_regex = r'eval\{(.+)\}'
 
 conf = prefix + sys.argv[1]
 with open(conf, "r") as f:
@@ -27,6 +29,7 @@ with open(conf, "r") as f:
         l = l.strip()
         if l == '':
             continue
+        l = re.sub(eval_regex, lambda m: str(eval(m.group(1))), l)
         key_value = l.split('=')
         if len(key_value) != 2:
             raise Exception('Line [%s] is invalid' % l)

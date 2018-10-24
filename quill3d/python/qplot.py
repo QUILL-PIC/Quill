@@ -341,7 +341,9 @@ def dist_fn(t=0, data_folder=None, particles='e', space='x', energy=False, nbins
 
     if particles == 'i' and len(resread.icmr) == 0:
         raise ValueError('Ions data are missing')
-    file_suffixes = {'e': '', 'p': '_p', 'g': '_ph', 'i': '_' + str(resread.icmr[0]) + '_'}
+    file_suffixes = {'e': '', 'p': '_p', 'g': '_ph'}
+    if len(resread.icmr) > 0:
+        file_suffixes[i] = '_' + str(resread.icmr[0]) + '_'
     caption_suffixes = {'e' : '_e', 'p': '_p', 'g': '_{ph}', 'i': '_i'}
     c_suffix = caption_suffixes[particles[0]]
     filter_expr = expression_parser.to_polish(filter)
@@ -374,19 +376,23 @@ def dist_fn(t=0, data_folder=None, particles='e', space='x', energy=False, nbins
             hist_range = limits_per_space[space[0]] if space[0] in limits_per_space else None
     else:
         hist_range = None
-
+    
     if is_2d:
         weight = np.abs(phspace[2,:]) * (phspace[3,:] - (1.0 if particles in 'ep' else 0.0) if energy else 1.0)
         hist, xedges, yedges = np.histogram2d(phspace[0,:], phspace[1,:], range=hist_range, bins=nbins, weights=weight, normed=True)
+        log_caption = ''
+        if not log_scale is None and 'z' in log_scale:
+            log_caption = '\log\,'
+            hist = np.log(hist)
         plt.imshow(hist.T, origin='lower', aspect='auto', extent=(xedges[1], xedges[-1], yedges[1], yedges[-1]), **kwargs)
         plt.colorbar()
         plt.ylabel(tex_format(space[1]))
-        plt.title(tex_format(r'\varepsilon'+c_suffix if energy else 'N'+c_suffix) + '(' + tex_format(space[0]) + ', ' + tex_format(space[1]) + ')')
+        plt.title(tex_format(log_caption+r'\varepsilon'+c_suffix if energy else log_caption+'N'+c_suffix) + '(' + tex_format(space[0]) + ', ' + tex_format(space[1]) + ')')
     else:
         weight = np.abs(phspace[1,:]) * (phspace[2,:] if energy else 1.0)
         #hist, bin_edges = np.histogram(phspace[0,:], range=hist_range, bins=nbins, weights=weight, density=True)
         #plt.plot(bin_edges[1:], hist)
-        plt.hist(phspace[0,:], range=hist_range, bins=nbins, weights=weight, normed=True, **kwargs)
+        plt.hist(phspace[0,:], range=hist_range, bins=nbins, weights=weight, normed=True, histtype='step', **kwargs)
         plt.ylabel(tex_format(r'\varepsilon'+c_suffix if energy else 'N'+c_suffix) + '(' + tex_format(space[0]) + ')')
     plt.xlabel(tex_format(space[0]))
     if not log_scale is None and 'x' in log_scale:
@@ -533,7 +539,7 @@ def tracks(space=['x','y'], particles='geip', t0=0, t1=0, colors='bgmrcyk', cmap
         plt.savefig(save2)
 
 
-def rpattern(t=None, particles='geip', colors='bgmrcyk', dphi=0.1, save2=None, data_folder=None, catching=True, polar=True, clf=False, **kwargs):
+def rpattern(t=None, particles='geip', colors='bgmrcyk', dphi=0.1, save2=None, data_folder=None, catching=True, polar=True, clf=False, include_deleted=True, **kwargs):
     'Plots radiation pattern of the emitted energy\n\
     Examples:\n\
     rpattern() # plots radiation patterns for all particles\n\
@@ -561,6 +567,8 @@ def rpattern(t=None, particles='geip', colors='bgmrcyk', dphi=0.1, save2=None, d
                 suffix_mapping[s[-1]] = 'i'
     c = list(colors)
     ci = 0
+    if clf:
+        plt.clf()
     if polar:
         plt.subplot(111, polar=True)
     for suffix in s:
@@ -620,7 +628,7 @@ def rpattern(t=None, particles='geip', colors='bgmrcyk', dphi=0.1, save2=None, d
 
 
 def spectrum(t=None, particles='geip', colors='bgmrcyk', sptype='simple', axis=[], save2=None, data_folder=None, smooth=False, xlim=None, ylim=None,
-        smooth_start=20, smooth_max=1000, smooth_width=50, window_type='triangular', multi_mev_threshold=None, clf=False, **kwargs):
+        smooth_start=20, smooth_max=1000, smooth_width=50, window_type='triangular', multi_mev_threshold=None, clf=False, include_deleted=False, **kwargs):
     'spectrum() # plots spectrum for all particles\n\
     at t_end\n\
     Examples:\n\
@@ -731,7 +739,7 @@ def spectrum(t=None, particles='geip', colors='bgmrcyk', sptype='simple', axis=[
         if sptype=='energy' or sptype=='loglog':
             for j in np.arange(len(sp[:,0])):
                 sp[j,1] = sp[j,0]*sp[j,1]
-        if sptype=='loglog':
+        if sptype=='loglog' or sptype=='loglogn':
             plt.xscale('log')
         plt.plot(sp[:,0],sp[:,1],colors[ci[i]])
 
