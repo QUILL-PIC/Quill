@@ -28,7 +28,7 @@ def generate(x0film, dxbrush, y0brush, dybrush, brushperiod, ymax, xnpic, ynpic,
     return "\n".join(res)
 
 
-def generate_horizontal(x0brush, dxbrush, y0brush, y1brush, brushperiod, xmax, xnpic, ynpic, znpic):
+def generate_horizontal(x0brush, dxbrush, y0brush, y1brush, z0brush, z1brush, brushperiod, xmax, xnpic, ynpic, znpic):
     res = []
     xdispl = 0.0
     while xdispl + x0brush + dxbrush <= xmax:
@@ -38,8 +38,8 @@ def generate_horizontal(x0brush, dxbrush, y0brush, y1brush, brushperiod, xmax, x
         res.append('gradwidth = 0')
         res.append('y0film = {0}'.format(y0brush))
         res.append('y1film = {0}'.format(y1brush))
-        res.append('z0film = 0.5')
-        res.append('z1film = 10.5')
+        res.append('z0film = {0}'.format(z0brush))
+        res.append('z1film = {0}'.format(z1brush))
         res.append('nfilm = 1 ne')
         res.append('mcr = 2.0')
         res.append('xnpic_film = {0}'.format(xnpic))
