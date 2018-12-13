@@ -124,9 +124,13 @@ shenergy = 1 # default = 0
 shphase = 0 pi # default: 0; default units: rad, possible: pi
 
 # движущееся окно; выключается при наличии нейтральных потоков (flows)
-mwindow = off # default: on; possible: on, off
+mwindow = off # default: on; possible: on, off, auto
+# в случае использования auto окно автоматически перемещается на основе
+# параметра mwtolerance, который задает максимальный относительный уровень
+# плотности энергии ЭМ поля на правой границе (2 слоя)
+#mwtolerance = 1e-6 # default: 1e-6
 # moving window velocity
-#mwspeed = 0.4 # default: 1
+#mwspeed = 0.4 # default: 1, игнорируется при mwindow = auto
 # включает или отключает добавление частиц на передней границе области
 # при работе движущегося окна
 #mwseed = on # default: on; possible: on, off
