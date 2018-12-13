@@ -1034,7 +1034,7 @@ def N(data_folder=None, particles='gep', save2=None, clf=False, **kwargs):
     data_folder = __get_data_folder(data_folder, kwargs)
     if data_folder is not None:
         resread.data_folder = data_folder
-    resread.read_parameters();
+    resread.read_parameters()
     a = resread.t_data('N')
     t = a[:,0]
     Ne = a[:,1]
@@ -1116,6 +1116,37 @@ def onaxis(t, particles='we', colors='rgbcmyk', norm='true',
     for i, b in enumerate(a):
         plt.plot(x, b, color = colors[i % len(colors)], **plotargs)
     plt.xlabel('$x$')
+    if save2 is not None:
+        plt.savefig(save2)
+
+
+def mwcoordinate(data_folder=None, save2=None, clf=False, **kwargs):
+    """
+    Plots the time dependence of the coordinate of the moving window
+
+    Parameters
+    ----------
+    data_folder or df : path to folder with data
+    save2 : file to save the image to
+    clf : clear figure before plotting
+
+    """
+    data_folder = __get_data_folder(data_folder, kwargs)
+    if data_folder is not None:
+        resread.data_folder = data_folder
+    resread.read_parameters()
+    a = resread.t_data('mwcoordinate')
+    t = a[:, 0]
+    x = a[:, 1]
+
+    linewidth = 1.5
+    if clf:
+        plt.clf()
+    plt.plot(t, x, '-', linewidth=linewidth)
+
+    plt.xlabel(r'$ct/\lambda$')
+    plt.ylabel(r'$x/\lambda$')
+
     if save2 is not None:
         plt.savefig(save2)
 

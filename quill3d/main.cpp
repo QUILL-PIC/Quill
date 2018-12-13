@@ -137,6 +137,12 @@ inline int get_xindex_in_sr(double x) {
     return get_xindex_in_sr(x, get_sr_for_x(x));
 }
 
+void write_mwcoordinate(ofstream & fout_mwcoordinate) {
+    if (mpi_rank == 0) {
+        fout_mwcoordinate << ((nmw - 1) * dx / 2 / PI) << endl;
+    }
+}
+
 void write_N(ofstream& fout_N)
 {
     double N_e,N_p,N_ph;
@@ -1922,17 +1928,21 @@ int main(int argc, char * argv[])
 
     ofstream fout_N;
     ofstream fout_energy;
+    ofstream fout_energy_deleted;
+    ofstream fout_mwcoordinate;
     if (mpi_rank == 0) {
         fout_N.open(data_folder+"/N");
         fout_energy.open(data_folder+"/energy");
+
+        if (catching_enabled || dump_photons) {
+            fout_energy_deleted.open(data_folder+"/energy_deleted");
+        }
+
+        if (mwindow != moving_window::OFF) {
+            fout_mwcoordinate.open(data_folder+"/mwcoordinate");
+        }
     }
 
-    ofstream fout_energy_deleted;
-    if ((mpi_rank == 0) && (catching_enabled || dump_photons))
-    {
-        fout_energy_deleted.open(data_folder+"/energy_deleted");
-    }
-    
     while(l<p_last_ddi->t_end/dt)
     {
         if (pmerging_now)
@@ -1985,6 +1995,9 @@ int main(int argc, char * argv[])
 
         write_N(fout_N);
         write_energy(fout_energy);
+        if (mwindow != moving_window::OFF) {
+            write_mwcoordinate(fout_mwcoordinate);
+        }
         if (catching_enabled || dump_photons)
         {
             write_energy_deleted(fout_energy_deleted);
@@ -2056,6 +2069,9 @@ int main(int argc, char * argv[])
         if (fout_energy_deleted.is_open())
         {
             fout_energy_deleted.close();
+        }
+        if (fout_mwcoordinate.is_open()) {
+            fout_mwcoordinate.close();
         }
     }
 
