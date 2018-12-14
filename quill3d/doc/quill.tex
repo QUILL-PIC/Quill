@@ -21,7 +21,7 @@
 
 \begin{document}
 
-This document describes how the formulas used in the lecture notes \cite{PukhovLectures} and the paper \cite{PukhovCERN} by Prof. Pukhov, which are used as a basis for Quill, are applied in Quill.
+This document describes the mathematical formulas behind the \textsc{Quill} PIC code and how the formulas used in the lecture notes \cite{PukhovLectures} and the paper \cite{PukhovCERN} by Prof. Pukhov translate to the formulas used here.
 
 \tableofcontents
 
@@ -85,7 +85,7 @@ Unlike the grid described in \cite{PukhovLectures, PukhovCERN}, where the charge
 \end{figure}
 
 \section{Indices used in Quill}\label{sec:indices}
-The papers use half-integer indices, which is impossible to do in the code.
+The papers \cite{PukhovLectures, PukhovCERN} use half-integer indices, which is impossible to do in the code.
 Below is the table describing how to translate indices from Quill to the indices used in the papers for different fields.
 
 \begin{tabular}{ l | l l | l l }
@@ -103,6 +103,11 @@ Below is the table describing how to translate indices from Quill to the indices
 \end{tabular}
 
 \section{Maxwell solver}
+
+\subsection{The NDFX solver}
+
+\subsubsection{Scheme}
+
 Using the table from Sec.~\ref{sec:indices}, we write the formulas for the NDFX solver with indices used in the PIC code.
 As the time scheme is of little interest here, the indices will be in superscripts. 
 \begin{align}
@@ -145,7 +150,74 @@ As the time scheme is of little interest here, the indices will be in superscrip
     &- j_z^{i,j,k}
 \end{align}
 
-The simple FDTD solver is obtained by replacing $b_{x,y,z}$ with $1/2$ and $a_{x,y,z}$ with $0$.
+The coefficients $b_\alpha$ and $a_\alpha$ must satisfy the condition 
+\begin{equation}
+b_z + 2 a_z = 1
+\end{equation}
+for the scheme to be valid.
+
+\subsubsection{Dispersion}
+\label{sec:maxwell:ndfx:dispersion}
+
+In order to find the dispersion of this scheme, we consider the fields as plane waves,
+\begin{align}
+    &E_x = E_{x,0} \exp(i \frac{k_x \Delta x}{2}) \exp(-i \omega t + i \vb{k} \vb{r}),\\
+    &E_y = E_{y,0} \exp(i \frac{k_y \Delta y}{2}) \exp(-i \omega t + i \vb{k} \vb{r}),\\
+    &E_z = E_{z,0} \exp(i \frac{k_z \Delta z}{2}) \exp(-i \omega t + i \vb{k} \vb{r}),\\
+    &B_x = B_{x,0} \exp(i \frac{-\omega \Delta t + k_y \Delta y + k_z \Delta z}{2}) \exp(-i \omega t + i \vb{k} \vb{r}),\\
+    &B_y = B_{y,0} \exp(i \frac{-\omega \Delta t + k_x \Delta x + k_z \Delta z}{2}) \exp(-i \omega t + i \vb{k} \vb{r}),\\
+    &B_z = B_{z,0} \exp(i \frac{-\omega \Delta t + k_x \Delta x + k_y \Delta y}{2}) \exp(-i \omega t + i \vb{k} \vb{r}).
+\end{align}
+Here, we have taken into account the fact that the field components are displaced both on the grid and in time with respect to each other.
+
+If we use this plane wave, the scheme becomes
+\begin{alignat}{2}
+    &-A_t B_{x,0} = &- A_y C_z E_{z,0} &+ A_z C_y E_{y,0},\\
+    &-A_t B_{y,0} = & A_x C_z E_{z,0} &- A_z C_x E_{x,0},\\
+    &-A_t B_{z,0} = & A_y C_x E_{x,0} &- A_x C_y E_{y,0},\\
+    &-A_t E_{x,0} = & A_y C_z B_{z,0} &- A_z C_y B_{y,0},\\
+    &-A_t E_{y,0} = & -A_x C_z B_{z,0} &+ A_z C_x B_{x,0},\\
+    &-A_t E_{z,0} = & A_x C_y B_{y,0} &- A_y C_x B_{x,0},
+\end{alignat}
+where 
+\begin{align}
+    &A_t = \frac{1}{\Delta t} \sin(\frac{\omega \Delta t}{2}),\\
+    &A_\alpha = \frac{1}{\Delta \alpha} \sin(\frac{k_\alpha \Delta \alpha}{2}),\\
+    &C_\alpha = b_\alpha + 2 a_\alpha \cos(k_\alpha \Delta \alpha) = 1 - 4 a_\alpha \Delta \alpha^2 A_\alpha^2.
+\end{align}
+
+The equality of the determinant of the system to zero gives us the dispersion relation
+\begin{equation}
+    A_t^2 = A_x^2 C_y C_z + A_y^2 C_x C_z + A_z^2 C_x C_y.
+\end{equation}
+
+\subsection{The FDTD solver}
+
+\subsubsection{Scheme}
+
+The simple FDTD solver is obtained from the NDFX solver by replacing $b_{x,y,z}$ with $1$ and $a_{x,y,z}$ with $0$ and is thus written as
+
+\begin{align}
+    &\frac{\Delta B_x^{i,j,k}}{\Delta t} =& -\frac{1}{\Delta y}\left(E_z^{i,j+1,k} - E_z^{i,j,k} \right) +\frac{1}{\Delta z} \left(E_y^{i,j,k+1} - E_y^{i,j,k}\right) \\
+    &\frac{\Delta B_y^{i,j,k}}{\Delta t} =& \frac{1}{\Delta x}\left(E_z^{i+1,j,k} - E_z^{i,j,k} \right) - \frac{1}{\Delta z} \left(E_x^{i,j,k+1} - E_x^{i,j,k}\right) \\
+    &\frac{\Delta B_z^{i,j,k}}{\Delta t} =& \frac{1}{\Delta y}\left(E_x^{i,j+1,k} - E_x^{i,j,k} \right) - \frac{1}{\Delta x} \left(E_y^{i+1,j,k} - E_y^{i,j,k}\right) \\
+    &\frac{\Delta E_x^{i,j,k}}{\Delta t} = &\frac{1}{\Delta y}\left(B_z^{i,j,k} - B_z^{i,j-1,k} \right) - \frac{1}{\Delta z}\left(B_y^{i,j,k}-B_y^{i,j,k-1}\right) &- j_x^{i,j,k}\\
+    &\frac{\Delta E_y^{i,j,k}}{\Delta t} =& -\frac{1}{\Delta x}\left(B_z^{i,j,k} - B_z^{i-1,j,k}\right) + \frac{1}{\Delta z}\left(B_x^{i,j,k} - B_x^{i,j,k-1}\right) &- j_y^{i,j,k}\\
+    &\frac{\Delta E_z^{i,j,k}}{\Delta t} =& \frac{1}{\Delta x}\left(B_y^{i,j,k} - B_y^{i-1,j,k}\right) - \frac{1}{\Delta y}\left(B_x^{i,j,k} - B_x^{i,j-1,k}\right) &- j_z^{i,j,k}
+\end{align}
+
+\subsubsection{Dispersion}
+\label{sec:maxwell:fdtd:dispersion}
+
+By applying the dispersion relation in Sec.~\ref{sec:maxwell:ndfx:dispersion} to the FDTD scheme, we get
+\begin{multline}
+    \frac{1}{\Delta t^2}\sin^2\left(\frac{\omega \Delta t}{2}\right) \\ 
+    = \frac{1}{\Delta x^2}\sin^2\left(\frac{k_x \Delta x}{2}\right) + \frac{1}{\Delta y^2}\sin^2\left(\frac{k_y \Delta y}{2}\right) + \frac{1}{\Delta z^2}\sin^2\left(\frac{k_z \Delta z}{2}\right).
+\end{multline}
+The FDTD scheme is stable if
+\begin{equation}
+    \frac{1}{\Delta t^2} \leq \frac{1}{\Delta x^2} + \frac{1}{\Delta y^2} + \frac{1}{\Delta z^2}.
+\end{equation}
 
 \section{Interpolation of magnetic field on E-field positions}
 
@@ -283,7 +355,5 @@ Here, $b_{x,y,z} = 1 - a_{x,y,z}$.
     \bibitem{PukhovCERN}
     A. Pukhov, Particle-In-Cell Codes for Plasma-based Particle Acceleration. \href{https://e-publishing.cern.ch/index.php/CYR/article/view/220}{\textit{CERN Yellow Rep.} \textbf{1}, 181 (2016)}.
 \end{thebibliography}
-
-
 
 \end{document}
