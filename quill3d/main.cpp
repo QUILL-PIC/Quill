@@ -37,7 +37,7 @@ double file_name_accuracy;
 bool mwindow,mwseed;
 double crpc;
 double* ppd;
-double phase,phi;
+double phase,phi,phi_rotate;
 double shenergy, shphase; // second harmonic relative energy and phase
 ddi* p_last_ddi; // ddi включает t_end, output_period и f - счётчик для вывода данных в файлы
 ddi* p_current_ddi;
@@ -1119,42 +1119,47 @@ void init_fields()
                 f_reflection3 += tmpf[jj];
             }
         }
-        psr->f_init_cos(a0y,a0z,xsigma,ysigma,zsigma,xlength/2+x0-dx*x0_sr[i],sscos,b_sign,x0,phase,y00,z00,true,0,xtarget,ytarget,ztarget);
-        if (phi!=0) {
-            psr->f_init_cos(a0y,a0z,xsigma,ysigma,zsigma,xlength/2-x0-dx*x0_sr[i],sscos,b_sign,-x0,phase,-y00,-z00,1,phi,xtarget,ytarget,ztarget);
-        }
-        else if (lp_reflection1=="xy") {
-            psr->f_init_cos((1-2*(f_reflection1=="y"))*a0y,(1-2*(f_reflection1=="z"))*a0z,xsigma,ysigma,zsigma,xlength/2+x0-dx*x0_sr[i],sscos,b_sign,x0,phase,y00,-z00,1,0,xtarget,ytarget,ztarget);
-            if (lp_reflection2=="xz") {
-                psr->f_init_cos((1-2*(f_reflection2=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,xlength/2+x0-dx*x0_sr[i],sscos,b_sign,x0,phase,-y00,z00,1,0,xtarget,ytarget,ztarget);
-                psr->f_init_cos((1-2*(f_reflection2=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,xlength/2+x0-dx*x0_sr[i],sscos,b_sign,x0,phase,-y00,-z00,1,0,xtarget,ytarget,ztarget);
-                if (lp_reflection3=="yz") {
-                    psr->f_init_cos((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,-x0+xlength/2-dx*x0_sr[i],sscos,b_sign,-x0,phase,y00,z00,1,0,xtarget,ytarget,ztarget);
-                    psr->f_init_cos((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,-x0+xlength/2-dx*x0_sr[i],sscos,b_sign,-x0,phase,y00,-z00,1,0,xtarget,ytarget,ztarget);
-                    psr->f_init_cos((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,-x0+xlength/2-dx*x0_sr[i],sscos,b_sign,-x0,phase,-y00,z00,1,0,xtarget,ytarget,ztarget);
-                    psr->f_init_cos((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,-x0+xlength/2-dx*x0_sr[i],sscos,b_sign,-x0,phase,-y00,-z00,1,0,xtarget,ytarget,ztarget);
+
+        if (phi_rotate != 0) {
+            psr->f_init_cos(a0y,a0z,xsigma,ysigma,zsigma,xlength/2+x0-dx*x0_sr[i],sscos,b_sign,x0,phase,y00,z00,1,phi_rotate,xtarget,ytarget,ztarget);
+        } else {
+            psr->f_init_cos(a0y,a0z,xsigma,ysigma,zsigma,xlength/2+x0-dx*x0_sr[i],sscos,b_sign,x0,phase,y00,z00,true,0,xtarget,ytarget,ztarget);
+            if (phi!=0) {
+                psr->f_init_cos(a0y,a0z,xsigma,ysigma,zsigma,xlength/2-x0-dx*x0_sr[i],sscos,b_sign,-x0,phase,-y00,-z00,1,phi,xtarget,ytarget,ztarget);
+            }
+            else if (lp_reflection1=="xy") {
+                psr->f_init_cos((1-2*(f_reflection1=="y"))*a0y,(1-2*(f_reflection1=="z"))*a0z,xsigma,ysigma,zsigma,xlength/2+x0-dx*x0_sr[i],sscos,b_sign,x0,phase,y00,-z00,1,0,xtarget,ytarget,ztarget);
+                if (lp_reflection2=="xz") {
+                    psr->f_init_cos((1-2*(f_reflection2=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,xlength/2+x0-dx*x0_sr[i],sscos,b_sign,x0,phase,-y00,z00,1,0,xtarget,ytarget,ztarget);
+                    psr->f_init_cos((1-2*(f_reflection2=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,xlength/2+x0-dx*x0_sr[i],sscos,b_sign,x0,phase,-y00,-z00,1,0,xtarget,ytarget,ztarget);
+                    if (lp_reflection3=="yz") {
+                        psr->f_init_cos((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,-x0+xlength/2-dx*x0_sr[i],sscos,b_sign,-x0,phase,y00,z00,1,0,xtarget,ytarget,ztarget);
+                        psr->f_init_cos((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,-x0+xlength/2-dx*x0_sr[i],sscos,b_sign,-x0,phase,y00,-z00,1,0,xtarget,ytarget,ztarget);
+                        psr->f_init_cos((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,-x0+xlength/2-dx*x0_sr[i],sscos,b_sign,-x0,phase,-y00,z00,1,0,xtarget,ytarget,ztarget);
+                        psr->f_init_cos((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,-x0+xlength/2-dx*x0_sr[i],sscos,b_sign,-x0,phase,-y00,-z00,1,0,xtarget,ytarget,ztarget);
+                    }
+                }
+                else if (lp_reflection2=="yz") {
+                    psr->f_init_cos((1-2*(f_reflection2=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,-x0+xlength/2-dx*x0_sr[i],sscos,b_sign,-x0,phase,y00,z00,1,0,xtarget,ytarget,ztarget);
+                    psr->f_init_cos((1-2*(f_reflection2=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,-x0+xlength/2-dx*x0_sr[i],sscos,b_sign,-x0,phase,y00,-z00,1,0,xtarget,ytarget,ztarget);
+                    if (lp_reflection3=="xz") {
+                        psr->f_init_cos((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,-x0+xlength/2-dx*x0_sr[i],sscos,b_sign,-x0,phase,-y00,z00,1,0,xtarget,ytarget,ztarget);
+                        psr->f_init_cos((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,x0+xlength/2-dx*x0_sr[i],sscos,b_sign,x0,phase,-y00,z00,1,0,xtarget,ytarget,ztarget);
+                        psr->f_init_cos((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,-x0+xlength/2-dx*x0_sr[i],sscos,b_sign,-x0,phase,-y00,-z00,1,0,xtarget,ytarget,ztarget);
+                        psr->f_init_cos((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,x0+xlength/2-dx*x0_sr[i],sscos,b_sign,x0,phase,-y00,-z00,1,0,xtarget,ytarget,ztarget);
+                    }
                 }
             }
-            else if (lp_reflection2=="yz") {
-                psr->f_init_cos((1-2*(f_reflection2=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,-x0+xlength/2-dx*x0_sr[i],sscos,b_sign,-x0,phase,y00,z00,1,0,xtarget,ytarget,ztarget);
-                psr->f_init_cos((1-2*(f_reflection2=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,-x0+xlength/2-dx*x0_sr[i],sscos,b_sign,-x0,phase,y00,-z00,1,0,xtarget,ytarget,ztarget);
-                if (lp_reflection3=="xz") {
-                    psr->f_init_cos((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,-x0+xlength/2-dx*x0_sr[i],sscos,b_sign,-x0,phase,-y00,z00,1,0,xtarget,ytarget,ztarget);
-                    psr->f_init_cos((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,x0+xlength/2-dx*x0_sr[i],sscos,b_sign,x0,phase,-y00,z00,1,0,xtarget,ytarget,ztarget);
-                    psr->f_init_cos((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,-x0+xlength/2-dx*x0_sr[i],sscos,b_sign,-x0,phase,-y00,-z00,1,0,xtarget,ytarget,ztarget);
-                    psr->f_init_cos((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,x0+xlength/2-dx*x0_sr[i],sscos,b_sign,x0,phase,-y00,-z00,1,0,xtarget,ytarget,ztarget);
+            else if (lp_reflection1=="xz") {
+                psr->f_init_cos((1-2*(f_reflection1=="y"))*a0y,(1-2*(f_reflection1=="z"))*a0z,xsigma,ysigma,zsigma,xlength/2+x0-dx*x0_sr[i],sscos,b_sign,x0,phase,-y00,z00,1,0,xtarget,ytarget,ztarget);
+                if (lp_reflection2=="yz") {
+                    psr->f_init_cos((1-2*(f_reflection2=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,-x0+xlength/2-dx*x0_sr[i],sscos,b_sign,-x0,phase,-y00,z00,1,0,xtarget,ytarget,ztarget);
+                    psr->f_init_cos((1-2*(f_reflection2=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,-x0+xlength/2-dx*x0_sr[i],sscos,b_sign,-x0,phase,y00,z00,1,0,xtarget,ytarget,ztarget);
                 }
             }
-        }
-        else if (lp_reflection1=="xz") {
-            psr->f_init_cos((1-2*(f_reflection1=="y"))*a0y,(1-2*(f_reflection1=="z"))*a0z,xsigma,ysigma,zsigma,xlength/2+x0-dx*x0_sr[i],sscos,b_sign,x0,phase,-y00,z00,1,0,xtarget,ytarget,ztarget);
-            if (lp_reflection2=="yz") {
-                psr->f_init_cos((1-2*(f_reflection2=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,-x0+xlength/2-dx*x0_sr[i],sscos,b_sign,-x0,phase,-y00,z00,1,0,xtarget,ytarget,ztarget);
-                psr->f_init_cos((1-2*(f_reflection2=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,-x0+xlength/2-dx*x0_sr[i],sscos,b_sign,-x0,phase,y00,z00,1,0,xtarget,ytarget,ztarget);
+            else if (lp_reflection1=="yz") {
+                psr->f_init_cos((1-2*(f_reflection1=="y"))*a0y,(1-2*(f_reflection1=="z"))*a0z,xsigma,ysigma,zsigma,-x0+xlength/2-dx*x0_sr[i],sscos,b_sign,-x0,phase,y00,z00,1,0,xtarget,ytarget,ztarget);
             }
-        }
-        else if (lp_reflection1=="yz") {
-            psr->f_init_cos((1-2*(f_reflection1=="y"))*a0y,(1-2*(f_reflection1=="z"))*a0z,xsigma,ysigma,zsigma,-x0+xlength/2-dx*x0_sr[i],sscos,b_sign,-x0,phase,y00,z00,1,0,xtarget,ytarget,ztarget);
         }
     }
 }
@@ -2410,6 +2415,9 @@ int init()
     current = find("phi",first);
     if (current->units=="pi") current->value = current->value*PI;
     phi = current->value;
+    current = find("phi_rotate",first);
+    if (current->units=="pi") current->value = current->value*PI;
+    phi_rotate = current->value;
     current = find("y0",first);
     if (current->units=="um")
     {
@@ -3206,6 +3214,7 @@ int init()
         fout_log<<"lp_reflection\n"<<lp_reflection<<"\n";
         fout_log<<"f_reflection\n"<<f_reflection<<"\n";
         fout_log<<"phi\n"<<phi<<"\n";
+        fout_log<<"phi_rotate\n"<<phi_rotate<<"\n";
         fout_log<<"shenergy\n"<<shenergy<<"\n";
         fout_log<<"shphase\n"<<shphase<<"\n";
         fout_log<<"beam\n"<<beam<<"\n";
