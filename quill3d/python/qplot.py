@@ -300,7 +300,7 @@ def particles(t=0, space=['x','y'], particles='geip', colors='bgmrcyk', r=3, alp
 
 
 def dist_fn(t=0, data_folder=None, particles='e', space='x', energy=False, nbins=200, filter=None, clf=False, global_limits=True,
-            log_scale=None, save2=None, every=1, include_deleted=False, **kwargs):
+            log_scale=None, save2=None, every=1, include_deleted=False, dt=0.1, nt=1, normed=True, **kwargs):
     """
     Plots N and energy distribution functions over the specified space.
 
@@ -341,7 +341,9 @@ def dist_fn(t=0, data_folder=None, particles='e', space='x', energy=False, nbins
 
     if particles == 'i' and len(resread.icmr) == 0:
         raise ValueError('Ions data are missing')
-    file_suffixes = {'e': '', 'p': '_p', 'g': '_ph', 'i': '_' + str(resread.icmr[0]) + '_'}
+    file_suffixes = {'e': '', 'p': '_p', 'g': '_ph'}
+    if len(resread.icmr) > 0:
+        file_suffixes['i'] = '_' + str(resread.icmr[0]) + '_'
     caption_suffixes = {'e' : '_e', 'p': '_p', 'g': '_{ph}', 'i': '_i'}
     c_suffix = caption_suffixes[particles[0]]
     filter_expr = expression_parser.to_polish(filter)
@@ -351,7 +353,15 @@ def dist_fn(t=0, data_folder=None, particles='e', space='x', energy=False, nbins
     if energy:
         space.append('g')
     space += expression_parser.get_vars(filter_expr)
+
     phspace = resread.particles('phasespace' + file_suffixes[particles[0]], space, every=every)
+    if nt > 1:
+        for t1 in np.arange(t + dt, t + (nt-1)*dt + 0.001, dt):
+            resread.t = '%g' % t1
+            print('Reading for ' + resread.t)
+            phspace_add = resread.particles('phasespace' + file_suffixes[particles[0]], space, every=every)
+            phspace = np.append(phspace, phspace_add, axis=1)
+        resread.t = '%g' % t
     if (resread.catching or (resread.dump_photons and particles[0] == 'g')) and include_deleted:
         for t1 in np.arange(0, t+0.001, resread.output_period):
             resread.t = '%g' % t1
@@ -374,19 +384,23 @@ def dist_fn(t=0, data_folder=None, particles='e', space='x', energy=False, nbins
             hist_range = limits_per_space[space[0]] if space[0] in limits_per_space else None
     else:
         hist_range = None
-
+    
     if is_2d:
         weight = np.abs(phspace[2,:]) * (phspace[3,:] - (1.0 if particles in 'ep' else 0.0) if energy else 1.0)
-        hist, xedges, yedges = np.histogram2d(phspace[0,:], phspace[1,:], range=hist_range, bins=nbins, weights=weight, normed=True)
+        hist, xedges, yedges = np.histogram2d(phspace[0,:], phspace[1,:], range=hist_range, bins=nbins, weights=weight, normed=normed)
+        log_caption = ''
+        if not log_scale is None and 'z' in log_scale:
+            log_caption = '\log\,'
+            hist = np.log(hist)
         plt.imshow(hist.T, origin='lower', aspect='auto', extent=(xedges[1], xedges[-1], yedges[1], yedges[-1]), **kwargs)
         plt.colorbar()
         plt.ylabel(tex_format(space[1]))
-        plt.title(tex_format(r'\varepsilon'+c_suffix if energy else 'N'+c_suffix) + '(' + tex_format(space[0]) + ', ' + tex_format(space[1]) + ')')
+        plt.title(tex_format(log_caption+r'\varepsilon'+c_suffix if energy else log_caption+'N'+c_suffix) + '(' + tex_format(space[0]) + ', ' + tex_format(space[1]) + ')')
     else:
         weight = np.abs(phspace[1,:]) * (phspace[2,:] if energy else 1.0)
-        #hist, bin_edges = np.histogram(phspace[0,:], range=hist_range, bins=nbins, weights=weight, density=True)
-        #plt.plot(bin_edges[1:], hist)
-        plt.hist(phspace[0,:], range=hist_range, bins=nbins, weights=weight, normed=True, **kwargs)
+        hist, bin_edges = np.histogram(phspace[0,:], range=hist_range, bins=nbins, weights=weight, density=normed)
+        plt.plot(bin_edges[1:], hist, **kwargs)
+        #plt.hist(phspace[0,:], range=hist_range, bins=nbins, weights=weight, normed=True, histtype='step', **kwargs)
         plt.ylabel(tex_format(r'\varepsilon'+c_suffix if energy else 'N'+c_suffix) + '(' + tex_format(space[0]) + ')')
     plt.xlabel(tex_format(space[0]))
     if not log_scale is None and 'x' in log_scale:
@@ -398,7 +412,7 @@ def dist_fn(t=0, data_folder=None, particles='e', space='x', energy=False, nbins
 
 
 def tracks(space=['x','y'], particles='geip', t0=0, t1=0, colors='bgmrcyk', cmaps=['jet'], clims2all=1, axis=[], save2=None,
-            r=2, data_folder=None, clf=False, every=1, **kwargs):
+            r=2, data_folder=None, clf=False, xlim=None, ylim=None, every=1, every_t=1, filter=None, gamma=0, cb=True, **kwargs):
     'Plots particle tracks as lines in 2D or dots in 3D (phase)*space*\n\
     at [tr_start+*t0*,tr_start+*t1*]\n\
     Examples:\n\
@@ -418,22 +432,42 @@ def tracks(space=['x','y'], particles='geip', t0=0, t1=0, colors='bgmrcyk', cmap
             track_names.append(filename)
     tracks = []
     cmr = []
-    for trackname in track_names:
+
+    filter_expr = expression_parser.to_polish(filter)
+    space_before = space
+    space = space_to_list(space, filter_expr)
+    space += expression_parser.get_vars(filter_expr)
+
+    cmaps = list(map(lambda cmap : tcmap.get(cmap, gamma=gamma), cmaps))
+
+    print('Found {0} tracks'.format(len(track_names)))
+    if every > 1:
+        print('After every, {0} tracks remained'.format(len(track_names[::every])))
+
+    n_plotted_tracks = 0
+    for trackname in track_names[::every]:
         resread.t = ''
-        tmp = resread.particles(trackname, space, every=every)
-        if t1!=0 and int(np.floor(t1/resread.dt)) < len(tmp[0,:]):
-            tracks.append(tmp[:,int(np.floor(t0/resread.dt)):int(np.floor(t1/resread.dt))])
-        else:
-            tracks.append(tmp[:,int(np.floor(t0/resread.dt)):])
-        cmr.append(float( trackname[ trackname.find('_')+1 : trackname.find('_',trackname.find('_')+1) ] ))
+        tmp = resread.particles(trackname, space, every=every_t)
+        tmp = filter_phspace(tmp, filter_expr, space)
+        #TODO track every_t
+        if tmp.any():
+            if t1!=0 and int(np.floor(t1/resread.dt)) < len(tmp[0,:]):
+                tracks.append(tmp[:,int(np.floor(t0/resread.dt)):int(np.floor(t1/resread.dt))])
+            else:
+                tracks.append(tmp[:,int(np.floor(t0/resread.dt)):])
+            cmr.append(float( trackname[ trackname.find('_')+1 : trackname.find('_',trackname.find('_')+1) ] ))
+            n_plotted_tracks += 1
+    if not filter_expr is None:
+        print('After filter, {0} tracks remained'.format(n_plotted_tracks))
+
     def cmr2int(a):
         'Converts cmr *a* to the int index of *colors* or *cmaps*'
-        if len(space)==2:
+        if len(space_before)==2:
             if colors=='':
                 return 0
             else:
                 maxv = len(colors)
-        elif len(space)==3:
+        elif len(space_before)==3:
             maxv = len(cmaps)
         if particles.find('i')!=-1:
             s = particles[:particles.find('i')] + (len(resread.icmr)-1)*'i' + particles[particles.find('i'):]
@@ -455,9 +489,14 @@ def tracks(space=['x','y'], particles='geip', t0=0, t1=0, colors='bgmrcyk', cmap
 
     if clf:
         plt.clf()
-    if len(space)==2:
+    if not xlim is None:
+        plt.xlim(xlim)
+    if not ylim is None:
+        plt.ylim(ylim)
+
+    if len(space_before)==2:
         if colors!='':
-            for i in np.arange(len(track_names)):
+            for i in np.arange(n_plotted_tracks):
                 if cmr[i]==-1 and particles.find('e')!=-1:
                     plt.plot(tracks[i][0,:],tracks[i][1,:],color=colors[cmr2int(cmr[i])])
                 elif cmr[i]==1 and particles.find('p')!=-1:
@@ -469,7 +508,7 @@ def tracks(space=['x','y'], particles='geip', t0=0, t1=0, colors='bgmrcyk', cmap
                         if cmr[i]==resread.icmr[j]:
                             plt.plot(tracks[i][0,:],tracks[i][1,:],color=colors[cmr2int(cmr[i])])
         else:
-            for i in np.arange(len(track_names)):
+            for i in np.arange(n_plotted_tracks):
                 if cmr[i]==-1 and particles.find('e')!=-1:
                     plt.plot(tracks[i][0,:],tracks[i][1,:])
                 elif cmr[i]==1 and particles.find('p')!=-1:
@@ -480,8 +519,8 @@ def tracks(space=['x','y'], particles='geip', t0=0, t1=0, colors='bgmrcyk', cmap
                     for j in np.arange(len(resread.icmr)):
                         if cmr[i]==resread.icmr[j]:
                             plt.plot(tracks[i][0,:],tracks[i][1,:])
-    elif len(space)==3:
-        plt.title(tex_format(space[2]))
+    elif len(space_before)==3:
+        plt.title(tex_format(space_before[2]))
         if clims2all==1:
             def pname(a):
                 if a==-1:
@@ -497,15 +536,17 @@ def tracks(space=['x','y'], particles='geip', t0=0, t1=0, colors='bgmrcyk', cmap
                     tmp0 = []
                     tmp1 = []
                     tmp2 = []
-                    for i in np.arange(len(track_names)):
+                    for i in np.arange(n_plotted_tracks):
                         if cmr[i]==m:
                             for j in np.arange(len(tracks[i][0,:])):
                                 tmp0.append(tracks[i][0,j])
                                 tmp1.append(tracks[i][1,j])
                                 tmp2.append(tracks[i][2,j])
                     plt.scatter(tmp0,tmp1,c=tmp2,cmap=cmaps[cmr2int(m)],s=r*r,edgecolors='none')
+                    if cb:
+                        colorb = plt.colorbar()
         else:
-            for i in np.arange(len(track_names)):
+            for i in np.arange(n_plotted_tracks):
                 tmp0 = []
                 tmp1 = []
                 tmp2 = []
@@ -527,13 +568,13 @@ def tracks(space=['x','y'], particles='geip', t0=0, t1=0, colors='bgmrcyk', cmap
         print('qplot.tracks: warning: ambiguous value for *space*')
     if axis!=[]:
         plt.axis(axis)
-    plt.xlabel(tex_format(space[0]))
-    plt.ylabel(tex_format(space[1]))
+    plt.xlabel(tex_format(space_before[0]))
+    plt.ylabel(tex_format(space_before[1]))
     if save2 is not None:
         plt.savefig(save2)
 
 
-def rpattern(t=None, particles='geip', colors='bgmrcyk', dphi=0.1, save2=None, data_folder=None, catching=True, polar=True, clf=False, **kwargs):
+def rpattern(t=None, particles='geip', colors='bgmrcyk', dphi=0.1, save2=None, data_folder=None, catching=True, polar=True, clf=False, include_deleted=True, **kwargs):
     'Plots radiation pattern of the emitted energy\n\
     Examples:\n\
     rpattern() # plots radiation patterns for all particles\n\
@@ -561,6 +602,8 @@ def rpattern(t=None, particles='geip', colors='bgmrcyk', dphi=0.1, save2=None, d
                 suffix_mapping[s[-1]] = 'i'
     c = list(colors)
     ci = 0
+    if clf:
+        plt.clf()
     if polar:
         plt.subplot(111, polar=True)
     for suffix in s:
@@ -619,8 +662,7 @@ def rpattern(t=None, particles='geip', colors='bgmrcyk', dphi=0.1, save2=None, d
         plt.savefig(save2)
 
 
-def spectrum(t=None, particles='geip', colors='bgmrcyk', sptype='simple', axis=[], save2=None, data_folder=None, smooth=False, xlim=None, ylim=None,
-        smooth_start=20, smooth_max=1000, smooth_width=50, window_type='triangular', multi_mev_threshold=None, clf=False, **kwargs):
+def spectrum(t=None, particles='geip', colors='bgmrcyk', sptype='simple', axis=[], save2=None, data_folder=None, smooth=False, xlim=None, ylim=None, smooth_start=20, smooth_max=1000, smooth_width=50, window_type='triangular', multi_mev_threshold=None, clf=False, include_deleted=False, **kwargs):
     'spectrum() # plots spectrum for all particles\n\
     at t_end\n\
     Examples:\n\
@@ -706,10 +748,11 @@ def spectrum(t=None, particles='geip', colors='bgmrcyk', sptype='simple', axis=[
                 ci.append(i%len(colors))
     ret_val = {}
     for i in np.arange(len(s)):
+        print('Calling t_data with deps = {0}'.format(deps[i]))
         sp = resread.t_data('spectrum'+s[i]+resread.t,deps[i])
         if (resread.catching or (resread.dump_photons and s[i] == '_ph')) and include_deleted:
             for t1 in np.arange(0, float(resread.t)+0.001, resread.output_period):
-                sp += resread.t_data('spectrum_deleted{0}{1:g}'.format(s[i], t1), deps[i])
+                sp[:,1] += resread.t_data('spectrum_deleted{0}{1:g}'.format(s[i], t1), deps[i])[:,1]
         if multi_mev_threshold is not None:
             ret_val[s[i]] = {}
             multi_mev = 0.0
@@ -731,7 +774,7 @@ def spectrum(t=None, particles='geip', colors='bgmrcyk', sptype='simple', axis=[
         if sptype=='energy' or sptype=='loglog':
             for j in np.arange(len(sp[:,0])):
                 sp[j,1] = sp[j,0]*sp[j,1]
-        if sptype=='loglog':
+        if sptype=='loglog' or sptype=='loglogn':
             plt.xscale('log')
         plt.plot(sp[:,0],sp[:,1],colors[ci[i]])
 
