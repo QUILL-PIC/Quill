@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import os
 import sys
 import re
 
@@ -24,6 +25,10 @@ eval_regex = r'eval\{(.+)\}'
 exec_regex = r'exec\{(.+)\}'
 
 conf = prefix + sys.argv[1]
+
+if not os.path.isfile(conf):
+    raise Exception('Config file [%s] not found' % conf)
+
 with open(conf, "r") as f:
     buf = ''
     for l in f:

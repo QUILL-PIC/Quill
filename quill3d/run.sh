@@ -3,6 +3,11 @@
 # we do not want the script to continue if anything fails
 set -e
 
+if [ ! -f ../quill3d-conf/quill.conf"$1" ]; then
+    echo "Config file ../quill3d-conf/quill.conf$1 not found! Create it or copy from ../quill3d-conf/example"
+    exit 1
+fi
+
 # Create data folder if not exist; copy config file into it
 folder=`./parse.py "$1" | grep -A2 data_folder | tail -n1`
 echo "Data folder: $folder"

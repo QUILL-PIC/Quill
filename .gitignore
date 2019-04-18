@@ -13,3 +13,5 @@ quill3d/job.sh.*
 quill3d/nohup*.out
 *.so
 quill3d/.d
+quill3d-conf/quill.conf*
+*.ipynb
