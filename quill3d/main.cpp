@@ -39,7 +39,7 @@ moving_window mwindow;
 double mwtolerance; // the relative level of E^2 + B^2 causing the window to move in the AUTO mode
 double crpc;
 double* ppd;
-double phase,phi;
+double phase,phi,phi_rotate;
 double shenergy, shphase; // second harmonic relative energy and phase
 ddi* p_last_ddi; // ddi включает t_end, output_period и f - счётчик для вывода данных в файлы
 ddi* p_current_ddi;
@@ -1127,42 +1127,47 @@ void init_fields()
                 f_reflection3 += tmpf[jj];
             }
         }
-        psr->f_init_cos(a0y,a0z,xsigma,ysigma,zsigma,xlength/2+x0-dx*x0_sr[i],sscos,b_sign,x0,phase,y00,z00,true,0,xtarget,ytarget,ztarget);
-        if (phi!=0) {
-            psr->f_init_cos(a0y,a0z,xsigma,ysigma,zsigma,xlength/2-x0-dx*x0_sr[i],sscos,b_sign,-x0,phase,-y00,-z00,1,phi,xtarget,ytarget,ztarget);
-        }
-        else if (lp_reflection1=="xy") {
-            psr->f_init_cos((1-2*(f_reflection1=="y"))*a0y,(1-2*(f_reflection1=="z"))*a0z,xsigma,ysigma,zsigma,xlength/2+x0-dx*x0_sr[i],sscos,b_sign,x0,phase,y00,-z00,1,0,xtarget,ytarget,ztarget);
-            if (lp_reflection2=="xz") {
-                psr->f_init_cos((1-2*(f_reflection2=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,xlength/2+x0-dx*x0_sr[i],sscos,b_sign,x0,phase,-y00,z00,1,0,xtarget,ytarget,ztarget);
-                psr->f_init_cos((1-2*(f_reflection2=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,xlength/2+x0-dx*x0_sr[i],sscos,b_sign,x0,phase,-y00,-z00,1,0,xtarget,ytarget,ztarget);
-                if (lp_reflection3=="yz") {
-                    psr->f_init_cos((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,-x0+xlength/2-dx*x0_sr[i],sscos,b_sign,-x0,phase,y00,z00,1,0,xtarget,ytarget,ztarget);
-                    psr->f_init_cos((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,-x0+xlength/2-dx*x0_sr[i],sscos,b_sign,-x0,phase,y00,-z00,1,0,xtarget,ytarget,ztarget);
-                    psr->f_init_cos((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,-x0+xlength/2-dx*x0_sr[i],sscos,b_sign,-x0,phase,-y00,z00,1,0,xtarget,ytarget,ztarget);
-                    psr->f_init_cos((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,-x0+xlength/2-dx*x0_sr[i],sscos,b_sign,-x0,phase,-y00,-z00,1,0,xtarget,ytarget,ztarget);
+
+        if (phi_rotate != 0) {
+            psr->f_init_cos(a0y,a0z,xsigma,ysigma,zsigma,xlength/2+x0-dx*x0_sr[i],sscos,b_sign,x0,phase,y00,z00,1,phi_rotate,xtarget,ytarget,ztarget);
+        } else {
+            psr->f_init_cos(a0y,a0z,xsigma,ysigma,zsigma,xlength/2+x0-dx*x0_sr[i],sscos,b_sign,x0,phase,y00,z00,true,0,xtarget,ytarget,ztarget);
+            if (phi!=0) {
+                psr->f_init_cos(a0y,a0z,xsigma,ysigma,zsigma,xlength/2-x0-dx*x0_sr[i],sscos,b_sign,-x0,phase,-y00,-z00,1,phi,xtarget,ytarget,ztarget);
+            }
+            else if (lp_reflection1=="xy") {
+                psr->f_init_cos((1-2*(f_reflection1=="y"))*a0y,(1-2*(f_reflection1=="z"))*a0z,xsigma,ysigma,zsigma,xlength/2+x0-dx*x0_sr[i],sscos,b_sign,x0,phase,y00,-z00,1,0,xtarget,ytarget,ztarget);
+                if (lp_reflection2=="xz") {
+                    psr->f_init_cos((1-2*(f_reflection2=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,xlength/2+x0-dx*x0_sr[i],sscos,b_sign,x0,phase,-y00,z00,1,0,xtarget,ytarget,ztarget);
+                    psr->f_init_cos((1-2*(f_reflection2=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,xlength/2+x0-dx*x0_sr[i],sscos,b_sign,x0,phase,-y00,-z00,1,0,xtarget,ytarget,ztarget);
+                    if (lp_reflection3=="yz") {
+                        psr->f_init_cos((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,-x0+xlength/2-dx*x0_sr[i],sscos,b_sign,-x0,phase,y00,z00,1,0,xtarget,ytarget,ztarget);
+                        psr->f_init_cos((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,-x0+xlength/2-dx*x0_sr[i],sscos,b_sign,-x0,phase,y00,-z00,1,0,xtarget,ytarget,ztarget);
+                        psr->f_init_cos((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,-x0+xlength/2-dx*x0_sr[i],sscos,b_sign,-x0,phase,-y00,z00,1,0,xtarget,ytarget,ztarget);
+                        psr->f_init_cos((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,-x0+xlength/2-dx*x0_sr[i],sscos,b_sign,-x0,phase,-y00,-z00,1,0,xtarget,ytarget,ztarget);
+                    }
+                }
+                else if (lp_reflection2=="yz") {
+                    psr->f_init_cos((1-2*(f_reflection2=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,-x0+xlength/2-dx*x0_sr[i],sscos,b_sign,-x0,phase,y00,z00,1,0,xtarget,ytarget,ztarget);
+                    psr->f_init_cos((1-2*(f_reflection2=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,-x0+xlength/2-dx*x0_sr[i],sscos,b_sign,-x0,phase,y00,-z00,1,0,xtarget,ytarget,ztarget);
+                    if (lp_reflection3=="xz") {
+                        psr->f_init_cos((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,-x0+xlength/2-dx*x0_sr[i],sscos,b_sign,-x0,phase,-y00,z00,1,0,xtarget,ytarget,ztarget);
+                        psr->f_init_cos((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,x0+xlength/2-dx*x0_sr[i],sscos,b_sign,x0,phase,-y00,z00,1,0,xtarget,ytarget,ztarget);
+                        psr->f_init_cos((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,-x0+xlength/2-dx*x0_sr[i],sscos,b_sign,-x0,phase,-y00,-z00,1,0,xtarget,ytarget,ztarget);
+                        psr->f_init_cos((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,x0+xlength/2-dx*x0_sr[i],sscos,b_sign,x0,phase,-y00,-z00,1,0,xtarget,ytarget,ztarget);
+                    }
                 }
             }
-            else if (lp_reflection2=="yz") {
-                psr->f_init_cos((1-2*(f_reflection2=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,-x0+xlength/2-dx*x0_sr[i],sscos,b_sign,-x0,phase,y00,z00,1,0,xtarget,ytarget,ztarget);
-                psr->f_init_cos((1-2*(f_reflection2=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,-x0+xlength/2-dx*x0_sr[i],sscos,b_sign,-x0,phase,y00,-z00,1,0,xtarget,ytarget,ztarget);
-                if (lp_reflection3=="xz") {
-                    psr->f_init_cos((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,-x0+xlength/2-dx*x0_sr[i],sscos,b_sign,-x0,phase,-y00,z00,1,0,xtarget,ytarget,ztarget);
-                    psr->f_init_cos((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,x0+xlength/2-dx*x0_sr[i],sscos,b_sign,x0,phase,-y00,z00,1,0,xtarget,ytarget,ztarget);
-                    psr->f_init_cos((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,-x0+xlength/2-dx*x0_sr[i],sscos,b_sign,-x0,phase,-y00,-z00,1,0,xtarget,ytarget,ztarget);
-                    psr->f_init_cos((1-2*(f_reflection3=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,x0+xlength/2-dx*x0_sr[i],sscos,b_sign,x0,phase,-y00,-z00,1,0,xtarget,ytarget,ztarget);
+            else if (lp_reflection1=="xz") {
+                psr->f_init_cos((1-2*(f_reflection1=="y"))*a0y,(1-2*(f_reflection1=="z"))*a0z,xsigma,ysigma,zsigma,xlength/2+x0-dx*x0_sr[i],sscos,b_sign,x0,phase,-y00,z00,1,0,xtarget,ytarget,ztarget);
+                if (lp_reflection2=="yz") {
+                    psr->f_init_cos((1-2*(f_reflection2=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,-x0+xlength/2-dx*x0_sr[i],sscos,b_sign,-x0,phase,-y00,z00,1,0,xtarget,ytarget,ztarget);
+                    psr->f_init_cos((1-2*(f_reflection2=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,-x0+xlength/2-dx*x0_sr[i],sscos,b_sign,-x0,phase,y00,z00,1,0,xtarget,ytarget,ztarget);
                 }
             }
-        }
-        else if (lp_reflection1=="xz") {
-            psr->f_init_cos((1-2*(f_reflection1=="y"))*a0y,(1-2*(f_reflection1=="z"))*a0z,xsigma,ysigma,zsigma,xlength/2+x0-dx*x0_sr[i],sscos,b_sign,x0,phase,-y00,z00,1,0,xtarget,ytarget,ztarget);
-            if (lp_reflection2=="yz") {
-                psr->f_init_cos((1-2*(f_reflection2=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,-x0+xlength/2-dx*x0_sr[i],sscos,b_sign,-x0,phase,-y00,z00,1,0,xtarget,ytarget,ztarget);
-                psr->f_init_cos((1-2*(f_reflection2=="y"))*a0y,(1-2*(f_reflection2=="z"))*a0z,xsigma,ysigma,zsigma,-x0+xlength/2-dx*x0_sr[i],sscos,b_sign,-x0,phase,y00,z00,1,0,xtarget,ytarget,ztarget);
+            else if (lp_reflection1=="yz") {
+                psr->f_init_cos((1-2*(f_reflection1=="y"))*a0y,(1-2*(f_reflection1=="z"))*a0z,xsigma,ysigma,zsigma,-x0+xlength/2-dx*x0_sr[i],sscos,b_sign,-x0,phase,y00,z00,1,0,xtarget,ytarget,ztarget);
             }
-        }
-        else if (lp_reflection1=="yz") {
-            psr->f_init_cos((1-2*(f_reflection1=="y"))*a0y,(1-2*(f_reflection1=="z"))*a0z,xsigma,ysigma,zsigma,-x0+xlength/2-dx*x0_sr[i],sscos,b_sign,-x0,phase,y00,z00,1,0,xtarget,ytarget,ztarget);
         }
     }
 }
@@ -1198,13 +1203,27 @@ void init_films()
             tmp_p_film->ne_y1 = tmp_p_film->ne;
         }
 
-        psr->film(tmp_p_film->x0-dx*x0_sr[mpi_rank], tmp_p_film->x0+tmp_p_film->filmwidth-dx*x0_sr[mpi_rank],
-            tmp_p_film->ne_y0/(1.11485e+13/lambda/lambda), tmp_p_film->ne_y1/(1.11485e+13/lambda/lambda),
-            (ions == "on" || ions == "positrons") ? (ions == "on" ? 1 : 2) : 0, // defining ion type            
+        psr->film(
+            tmp_p_film->x0-dx*x0_sr[mpi_rank], 
+            tmp_p_film->x0+tmp_p_film->filmwidth-dx*x0_sr[mpi_rank],
+            tmp_p_film->ne_y0/(1.11485e+13/lambda/lambda),
+            tmp_p_film->ne_y1/(1.11485e+13/lambda/lambda),
+            ions == "on",
             1/(proton_mass*tmp_p_film->mcr),
-            tmp_p_film->gradwidth, tmp_p_film->y0, tmp_p_film->y1, tmp_p_film->z0, tmp_p_film->z1,
-            tmp_p_film->T, tmp_p_film->vx, nelflow != 0 || nerflow != 0,
-            tmp_p_film->xnpic_film, tmp_p_film->ynpic_film, tmp_p_film->znpic_film, false);
+            tmp_p_film->gradwidth,
+            tmp_p_film->y0,
+            tmp_p_film->y1,
+            tmp_p_film->z0,
+            tmp_p_film->z1,
+            tmp_p_film->T,
+            tmp_p_film->vx,
+            nelflow != 0 || nerflow != 0,
+            tmp_p_film->xnpic_film,
+            tmp_p_film->ynpic_film,
+            tmp_p_film->znpic_film,
+            false,
+            tmp_p_film->gradwidth_y
+        );
         tmp_p_film = tmp_p_film->prev;
     }
 }
@@ -1669,7 +1688,7 @@ void add_moving_window_particles()
                 1/(proton_mass*tmp_p_film->mcr),
                 tmp_p_film->gradwidth, tmp_p_film->y0, tmp_p_film->y1, tmp_p_film->z0, tmp_p_film->z1,
                 tmp_p_film->T, tmp_p_film->vx, nelflow != 0 || nerflow != 0,
-                tmp_p_film->xnpic_film, tmp_p_film->ynpic_film, tmp_p_film->znpic_film, true);
+                tmp_p_film->xnpic_film, tmp_p_film->ynpic_film, tmp_p_film->znpic_film, true, tmp_p_film->gradwidth_y);
             tmp_p_film = tmp_p_film->prev;
         }
     }
@@ -2446,6 +2465,9 @@ int init()
     current = find("phi",first);
     if (current->units=="pi") current->value = current->value*PI;
     phi = current->value;
+    current = find("phi_rotate",first);
+    if (current->units=="pi") current->value = current->value*PI;
+    phi_rotate = current->value;
     current = find("y0",first);
     if (current->units=="um")
     {
@@ -2711,6 +2733,18 @@ int init()
             current->units="lambda";
         }
         p_last_film->gradwidth = current->value*2*PI;
+        current = find("gradwidth_y",tmp);
+        if (current->units=="um")
+        {
+            current->value = current->value*1e-4/lambda;
+            current->units="lambda";
+        }
+        if (current->units=="fs")
+        {
+            current->value = current->value*1e-15*2.99792458e10/lambda;
+            current->units="lambda";
+        }
+        p_last_film->gradwidth_y = current->value*2*PI;
         current = find("y0film",tmp);
         if (current->units=="um")
         {
@@ -3242,6 +3276,7 @@ int init()
         fout_log<<"lp_reflection\n"<<lp_reflection<<"\n";
         fout_log<<"f_reflection\n"<<f_reflection<<"\n";
         fout_log<<"phi\n"<<phi<<"\n";
+        fout_log<<"phi_rotate\n"<<phi_rotate<<"\n";
         fout_log<<"shenergy\n"<<shenergy<<"\n";
         fout_log<<"shphase\n"<<shphase<<"\n";
         fout_log<<"beam\n"<<beam<<"\n";
@@ -3270,6 +3305,7 @@ int init()
             fout_log<<"x0film\n"<<tmp_p_film->x0/2/PI<<"\n";
             fout_log<<"filmwidth\n"<<tmp_p_film->filmwidth/2/PI<<"\n";
             fout_log<<"gradwidth\n"<<tmp_p_film->gradwidth/2/PI<<"\n";
+            fout_log<<"gradwidth_y\n"<<tmp_p_film->gradwidth_y/2/PI<<"\n";
             fout_log<<"y0film\n"<<tmp_p_film->y0/2/PI<<"\n";
             fout_log<<"y1film\n"<<tmp_p_film->y1/2/PI<<"\n";
             fout_log<<"z0film\n"<<tmp_p_film->z0/2/PI<<"\n";

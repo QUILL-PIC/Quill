@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import os
 import sys
 import re
 
@@ -18,15 +19,31 @@ dimension_regex = '({0}([/*]{0})*|%)'.format(simple_dimension_regex)
 value_dimension_regex = value_regex + '\s+' + dimension_regex
 # text only values can contain word symbols, digits, dots, slashes, ampersands and hyphens
 text_only_regex = r'([\w\d&-./]+)'
+# Python expressions that are to be evaluated during preprocessing
+eval_regex = r'eval\{(.+)\}'
+# Python statements that are to be executed during preprocessing
+exec_regex = r'exec\{(.+)\}'
 
 conf = prefix + sys.argv[1]
+
+if not os.path.isfile(conf):
+    raise Exception('Config file [%s] not found' % conf)
+
 with open(conf, "r") as f:
+    buf = ''
     for l in f:
         if '#' in l:
             l = l[:l.find('#')]
         l = l.strip()
         if l == '':
             continue
+        l = re.sub(eval_regex, lambda m: str(eval(m.group(1))), l)
+        if re.match('^' + exec_regex + '$', l):
+            command = re.findall(exec_regex, l)[0]
+            exec(command)
+        else:
+            buf += l + '\n'
+    for l in buf.splitlines():
         key_value = l.split('=')
         if len(key_value) != 2:
             raise Exception('Line [%s] is invalid' % l)
