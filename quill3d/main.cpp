@@ -2207,7 +2207,7 @@ int init()
     if (dx==0)
     {
         // dx = dt/( 1 - 1/(k0*k0)*dt*dt/4.04 );
-        dx = (1+1e-2)*dt/( 1 - 1/(k0*k0)*dt*dt/4.04 );
+        dx = (1+1e-4)*dt/( 1 - 1/(k0*k0)*dt*dt/4.04 );
         if (dx < 0) {
             cout << TERM_RED << "Cannot calculate stable dx, reduce dt. Aborting..." << TERM_NO_COLOR << endl;
             return 1;
