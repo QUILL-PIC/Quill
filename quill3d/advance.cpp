@@ -188,7 +188,7 @@ void spatial_region::padvance(double external_bz)
                             u_prev.z = born->uz;
                             g_prev = born->g;
                             chi_prev = born->chi;
-                            advance_momentum(*born, e, b, dt); // p_n -> p_{n+1}
+                            advance_momentum(*born, e.x, e.y, e.z, b.x, b.y, b.z, dt); // p_n -> p_{n+1}
                             u_interim.x = 0.5*(born->ux+u_prev.x);
                             u_interim.y = 0.5*(born->uy+u_prev.y);
                             u_interim.z = 0.5*(born->uz+u_prev.z);
@@ -213,7 +213,7 @@ void spatial_region::padvance(double external_bz)
                             u_prev.z = born->uz;
                             g_prev = born->g;
                             chi_prev = born->chi;
-                            advance_momentum(*born, e, b, dt); // p_n -> p_{n+1}
+                            advance_momentum(*born, e.x, e.y, e.z, b.x, b.y, b.z, dt); // p_n -> p_{n+1}
                             u_interim.x = 0.5*(born->ux+u_prev.x);
                             u_interim.y = 0.5*(born->uy+u_prev.y);
                             u_interim.z = 0.5*(born->uz+u_prev.z);
@@ -245,7 +245,7 @@ void spatial_region::padvance(double external_bz)
                             u_prev.z = current->uz;
                             g_prev = current->g;
                             chi_prev = current->chi;
-                            advance_momentum(*current, e, b, dt); // p_n -> p_{n+1}
+                            advance_momentum(*current, e.x, e.y, e.z, b.x, b.y, b.z, dt); // p_n -> p_{n+1}
                             u_interim.x = 0.5 * (current->ux + u_prev.x);
                             u_interim.y = 0.5 * (current->uy + u_prev.y);
                             u_interim.z = 0.5 * (current->uz + u_prev.z);
@@ -255,7 +255,7 @@ void spatial_region::padvance(double external_bz)
                             r = get_rand();
                             calc_qed = !(get_rand()>=w(g_prev,r,a)*g_prev*dt);
                         } else {
-                            advance_momentum(*current, e, b, dt); // p_n -> p_{n+1}
+                            advance_momentum(*current, e.x, e.y, e.z, b.x, b.y, b.z, dt); // p_n -> p_{n+1}
                             calc_qed = false;
                         }
 
@@ -315,7 +315,7 @@ void spatial_region::padvance(double external_bz)
                                 e = e_to_particle(current->x,current->y,current->z);
                                 b = b_to_particle(current->x,current->y,current->z);
                                 b.z += external_bz;
-                                advance_momentum(*current, e, b, dt); // p_n -> p_{n+1}
+                                advance_momentum(*current, e.x, e.y, e.z, b.x, b.y, b.z, dt); // p_n -> p_{n+1}
                                 displ = current->get_displacement(dt);
                                 displ.x=displ.x/dx;
                                 displ.y=displ.y/dy;
@@ -340,7 +340,7 @@ void spatial_region::padvance(double external_bz)
                     }
                     else
                     { // *current - ион
-                        advance_momentum(*current, e, b, dt); // p_n -> p_{n+1}
+                        advance_momentum(*current, e.x, e.y, e.z, b.x, b.y, b.z, dt); // p_n -> p_{n+1}
                     displ = current->get_displacement(dt);
                     displ.x=displ.x/dx;
                     displ.y=displ.y/dy;

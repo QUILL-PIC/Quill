@@ -63,21 +63,10 @@ void field3d<T>::free_memory() {
     free(pv);
 }
 
-particle::particle()
+particle::particle() : thinparticle()
 {
-    x=0;
-    y=0;
-    z=0;
-    ux=0;
-    uy=0;
-    uz=0;
-    g=1;
-    q=0;
-    cmr=-1;
     next=0;
     previous=0;
-    chi = 0;
-    trn = 0;
 }
 
 vector3d particle::get_displacement(double dt)

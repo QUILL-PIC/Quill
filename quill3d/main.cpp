@@ -1798,8 +1798,8 @@ void register_mpi_particle() {
     int blocklengths[items] = {10, 1};
     MPI_Datatype types[items] = {MPI_DOUBLE, MPI_INT};
     MPI_Aint offsets[items];
-    offsets[0] = offsetof(particle, x);
-    offsets[1] = offsetof(particle, trn);
+    offsets[0] = offsetof(thinparticle, x);
+    offsets[1] = offsetof(thinparticle, trn);
     MPI_Datatype tmp_particle_type;
     MPI_Type_create_struct(items, blocklengths, offsets, types, &tmp_particle_type);
     MPI_Type_create_resized(tmp_particle_type, 0, sizeof(particle), &MPI_PARTICLE);

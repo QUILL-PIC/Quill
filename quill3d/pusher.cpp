@@ -1,12 +1,12 @@
 #include <cmath>
 #include "pusher.h"
-#include "containers.h"
 
-void push_vay(particle & p, vector3d& e_field, vector3d& b_field, double dt)
+void push_vay(thinparticle &p,
+              double ex, double ey, double ez,
+              double bx, double by, double bz,
+              double dt)
 {
     // See PoP, J.-L. Vay, 2008
-    vector3d e;
-    vector3d b;
     double tmp;
     double wx,wy,wz;
     double bw;
@@ -16,36 +16,37 @@ void push_vay(particle & p, vector3d& e_field, vector3d& b_field, double dt)
     double & uz = p.uz;
     double & g = p.g;
     tmp = dt*cmr;
-    e.x = e_field.x*tmp;
-    e.y = e_field.y*tmp;
-    e.z = e_field.z*tmp;
+    double ex1 = ex*tmp;
+    double ey1 = ey*tmp;
+    double ez1 = ez*tmp;
     //
     tmp = 0.5*tmp;
-    b.x = b_field.x*tmp;
-    b.y = b_field.y*tmp;
-    b.z = b_field.z*tmp;
+    double bx1 = bx*tmp;
+    double by1 = by*tmp;
+    double bz1 = bz*tmp;
     //
-    wx = ux + e.x + (uy*b.z-uz*b.y)/g;
-    wy = uy + e.y + (uz*b.x-ux*b.z)/g;
-    wz = uz + e.z + (ux*b.y-uy*b.x)/g;
+    wx = ux + ex1 + (uy*bz1-uz*by1)/g;
+    wy = uy + ey1 + (uz*bx1-ux*bz1)/g;
+    wz = uz + ez1 + (ux*by1-uy*bx1)/g;
     //
-    tmp = b.x*b.x + b.y*b.y + b.z*b.z;
-    bw = b.x*wx+b.y*wy+b.z*wz;
+    tmp = bx1*bx1 + by1*by1 + bz1*bz1;
+    bw = bx1*wx+by1*wy+bz1*wz;
     g = 1 + wx*wx + wy*wy + wz*wz - tmp;
     g = sqrt( 0.5*(g+sqrt(g*g+4*(tmp+bw*bw))) );
     //
     tmp = 1/(1+tmp/(g*g));
     bw = bw/(g*g);
-    ux = (wx+(wy*b.z-wz*b.y)/g+b.x*bw)*tmp;
-    uy = (wy+(wz*b.x-wx*b.z)/g+b.y*bw)*tmp;
-    uz = (wz+(wx*b.y-wy*b.x)/g+b.z*bw)*tmp;
+    ux = (wx+(wy*bz1-wz*by1)/g+bx1*bw)*tmp;
+    uy = (wy+(wz*bx1-wx*bz1)/g+by1*bw)*tmp;
+    uz = (wz+(wx*by1-wy*bx1)/g+bz1*bw)*tmp;
 }
 
-void push_boris(particle & p, vector3d& e_field, vector3d& b_field, double dt)
+void push_boris(thinparticle &p,
+                double ex, double ey, double ez,
+                double bx, double by, double bz,
+                double dt)
 {
     // See Birdsall, Langdon, "Plasma Physics via Computer Simulation"
-    vector3d e;
-    vector3d b;
     double tmp;
     double u1x, u1y, u1z;
     double wx,wy,wz;
@@ -57,41 +58,40 @@ void push_boris(particle & p, vector3d& e_field, vector3d& b_field, double dt)
     tmp = 0.5 * dt * cmr;
 
     //e = dt qE/2m
-    e.x = e_field.x*tmp;
-    e.y = e_field.y*tmp;
-    e.z = e_field.z*tmp;
-    //
+    double ex1 = ex*tmp;
+    double ey1 = ey*tmp;
+    double ez1 = ez*tmp;
 
     // u- = u0 + e
-    u1x = ux + e.x;
-    u1y = uy + e.y;
-    u1z = uz + e.z;
+    u1x = ux + ex1;
+    u1y = uy + ey1;
+    u1z = uz + ez1;
 
     // gamma^2 = 1 + (u-)^2
     g = sqrt(1 + u1x * u1x + u1y * u1y + u1z * u1z);
 
     tmp /= g;
     // b = dt qB/2mc
-    b.x = b_field.x*tmp;
-    b.y = b_field.y*tmp;
-    b.z = b_field.z*tmp;
+    double bx1 = bx*tmp;
+    double by1 = by*tmp;
+    double bz1 = bz*tmp;
 
     // u' = u- + [u-, b]
-    wx = u1x + (u1y * b.z - u1z * b.y);
-    wy = u1y + (u1z * b.x - u1x * b.z);
-    wz = u1z + (u1x * b.y - u1y * b.x);
+    wx = u1x + (u1y * bz1 - u1z * by1);
+    wy = u1y + (u1z * bx1 - u1x * bz1);
+    wz = u1z + (u1x * by1 - u1y * bx1);
 
-    tmp = 2 / (1 + b.x * b.x + b.y * b.y + b.z * b.z);
+    tmp = 2 / (1 + bx1 * bx1 + by1 * by1 + bz1 * bz1);
 
     // u+ = u- + 2 * [u, b] / (1 + b^2)
-    u1x += (wy * b.z - wz * b.y) * tmp;
-    u1y += (wz * b.x - wx * b.z) * tmp;
-    u1z += (wx * b.y - wy * b.x) * tmp;
+    u1x += (wy * bz1 - wz * by1) * tmp;
+    u1y += (wz * bx1 - wx * bz1) * tmp;
+    u1z += (wx * by1 - wy * bx1) * tmp;
 
     // u1 = u+ + e
-    ux = u1x + e.x;
-    uy = u1y + e.y;
-    uz = u1z + e.z;
+    ux = u1x + ex1;
+    uy = u1y + ey1;
+    uz = u1z + ez1;
 
     g = sqrt(1 + ux * ux + uy * uy + uz * uz);
 }

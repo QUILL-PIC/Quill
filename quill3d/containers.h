@@ -1,6 +1,8 @@
 #ifndef CONTAINERS_H_
 #define CONTAINERS_H_
 
+#include "thinparticle.h"
+
 struct vector3d
 {
     double x,y,z;
@@ -54,10 +56,8 @@ private:
     void free_memory();
 };
 
-struct particle
+struct particle : thinparticle
 {
-    double x,y,z,ux,uy,uz,g,q,cmr,chi; // cmr - charge to mass ratio,
-    int trn; // track name
     particle* next;
     particle* previous;
     particle();

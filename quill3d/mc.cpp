@@ -164,9 +164,9 @@ void spatial_region::birth_from_vacuum(double q)
                     /* начальное направление движения безразлично при
                      * g = 1 */
                     p1 = bear_particle(-1,position,direction,1,0,-q);
-                    advance_momentum(*p1, e, b, a);
+                    advance_momentum(*p1, e.x, e.y, e.z, b.x, b.y, b.z, a);
                     p2 = bear_particle(1,position,direction,1,0,q);
-                    advance_momentum(*p2, e, b, a);
+                    advance_momentum(*p2, e.x, e.y, e.z, b.x, b.y, b.z, a);
                     p1->next = p2;
                     p2->previous = p1;
                     if (cp[i][j][k].pl.head==0)

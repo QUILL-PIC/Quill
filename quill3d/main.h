@@ -4,6 +4,7 @@
 #include <functional>
 #include "containers.h"
 #include "maxwell.h"
+#include "thinparticle.h"
 
 using namespace std;
 
@@ -38,7 +39,7 @@ class spatial_region
     int pointer_size;
     //
     unique_ptr<maxwell_solver> solver;
-    function<void(particle&, vector3d&, vector3d&, double&)> advance_momentum;
+    function<void(thinparticle&, double&, double&, double&, double&, double&, double&, double&)> advance_momentum;
 
     public:
     double N_e,N_p,N_ph;

@@ -1,9 +1,9 @@
 #ifndef PUSHER_H_
 #define PUSHER_H_
 
-#include "containers.h"
+#include "thinparticle.h"
 
-void push_boris(particle & p, vector3d& e_field, vector3d& b_field, double dt);
-void push_vay(particle & p, vector3d& e_field, vector3d& b_field, double dt);
+void push_boris(thinparticle &p, double ex, double ey, double ez, double bx, double by, double bz, double dt);
+void push_vay(thinparticle &p, double ex, double ey, double ez, double bx, double by, double bz, double dt);
 
 #endif /* PUSHER_H_ */
