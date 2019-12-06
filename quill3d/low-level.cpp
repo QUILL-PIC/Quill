@@ -6,7 +6,7 @@
 #include "main.h"
 #include "maxwell.h"
 #include "containers.h"
-#include "pusher.h"
+#include "pusher-lib/pusher.h"
 
 extern bool catching_enabled;
 extern double lambda;

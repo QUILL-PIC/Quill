@@ -4,7 +4,7 @@
 #include <functional>
 #include "containers.h"
 #include "maxwell.h"
-#include "thinparticle.h"
+#include "pusher-lib/thinparticle.h"
 
 using namespace std;
 

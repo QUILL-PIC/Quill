@@ -1,7 +1,7 @@
 #ifndef CONTAINERS_H_
 #define CONTAINERS_H_
 
-#include "thinparticle.h"
+#include "pusher-lib/thinparticle.h"
 
 struct vector3d
 {
