@@ -136,7 +136,7 @@ def density(name='rho',plane='xy', log=None):
     'Returns 2d data for plane *plane* from file\n\
     data_folder+*name*+t.'
     filename = os.path.join(data_folder, name + t)
-    if output_mode == 1 and name != 'w':
+    if output_mode == 1 and name != 'w' and name != 'inv':
         sys.path.append(os.path.join('..', 'chameleon'))
         try:
             import chameleon
