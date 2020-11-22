@@ -4,6 +4,7 @@
 #include <functional>
 #include "containers.h"
 #include "maxwell.h"
+#include "openpmd_output.h"
 
 using namespace std;
 
@@ -85,20 +86,34 @@ class spatial_region
     void init(int,double,double,double,double,double,int,int,int,int,double*,string,maxwell_solver_enum,pusher_enum);
     void create_arrays(int,int,int,int);
     ~spatial_region();
-    void fout_ex(ofstream*,int,int, ios_base::openmode);
-    void fout_ex_yzplane(ofstream*,int, ios_base::openmode);
-    void fout_ey(ofstream*,int,int, ios_base::openmode);
-    void fout_ey_yzplane(ofstream*,int, ios_base::openmode);
-    void fout_ez(ofstream*,int,int, ios_base::openmode);
-    void fout_ez_yzplane(ofstream*,int, ios_base::openmode);
-    void fout_bx(ofstream*,int,int, ios_base::openmode);
-    void fout_bx_yzplane(ofstream*,int, ios_base::openmode);
-    void fout_by(ofstream*,int,int, ios_base::openmode);
-    void fout_by_yzplane(ofstream*,int, ios_base::openmode);
-    void fout_bz(ofstream*,int,int, ios_base::openmode);
-    void fout_bz_yzplane(ofstream*,int, ios_base::openmode);
-    void fout_w(ofstream*,int,int,bool);
-    void fout_w_yzplane(ofstream*,int);
+    void fout_ex_xy_xz(H5::DataSet & xy_dataset, H5::DataSet & xz_dataset, int n0, int n, int dataset_shift);
+    void fout_ey_xy_xz(H5::DataSet & xy_dataset, H5::DataSet & xz_dataset, int n0, int n, int dataset_shift);
+    void fout_ez_xy_xz(H5::DataSet & xy_dataset, H5::DataSet & xz_dataset, int n0, int n, int dataset_shift);
+    void fout_bx_xy_xz(H5::DataSet & xy_dataset, H5::DataSet & xz_dataset, int n0, int n, int dataset_shift);
+    void fout_by_xy_xz(H5::DataSet & xy_dataset, H5::DataSet & xz_dataset, int n0, int n, int dataset_shift);
+    void fout_bz_xy_xz(H5::DataSet & xy_dataset, H5::DataSet & xz_dataset, int n0, int n, int dataset_shift);
+    void fout_jx_xy_xz(H5::DataSet & xy_dataset, H5::DataSet & xz_dataset, int n0, int n, int dataset_shift);
+    void fout_jy_xy_xz(H5::DataSet & xy_dataset, H5::DataSet & xz_dataset, int n0, int n, int dataset_shift);
+    void fout_jz_xy_xz(H5::DataSet & xy_dataset, H5::DataSet & xz_dataset, int n0, int n, int dataset_shift);
+    void fout_irho_xy_xz(int ion_type, H5::DataSet & xy_dataset, H5::DataSet & xz_dataset, int n0, int n, int dataset_shift);
+    void fout_w_xy_xz(H5::DataSet & xy_dataset, H5::DataSet & xz_dataset, int n0, int n, int dataset_shift, bool is_last_sr);
+    void fout_inv_xy_xz(H5::DataSet & xy_dataset, H5::DataSet & xz_dataset, int n0, int n, int dataset_shift, bool is_last_sr);
+    void fout_field_function(H5::DataSet & xy_dataset, H5::DataSet & xz_dataset, int left, int right, int dataset_shift, 
+                             bool is_last_sr, std::function<double(double, double, double, double, double, double)> func);
+    void fout_ex_yz(H5::DataSet & yz_dataset, int position);
+    void fout_ey_yz(H5::DataSet & yz_dataset, int position);
+    void fout_ez_yz(H5::DataSet & yz_dataset, int position);
+    void fout_bx_yz(H5::DataSet & yz_dataset, int position);
+    void fout_by_yz(H5::DataSet & yz_dataset, int position);
+    void fout_bz_yz(H5::DataSet & yz_dataset, int position);
+    void fout_jx_yz(H5::DataSet & yz_dataset, int position);
+    void fout_jy_yz(H5::DataSet & yz_dataset, int position);
+    void fout_jz_yz(H5::DataSet & yz_dataset, int position);
+    void fout_irho_yz(int ion_type, H5::DataSet & yz_dataset, int position);
+    void fout_w_yz(H5::DataSet & yz_dataset, int position);
+    void fout_inv_yz(H5::DataSet & yz_dataset, int position);
+    void fout_field_function_yz(H5::DataSet & yz_dataset, int position,
+                                std::function<double(double, double, double, double, double, double)> func);
     void fout_inv(ofstream*,int,int,bool);
     void fout_inv_yzplane(ofstream*,int);
     void fout_rho(ofstream*,ofstream*,ofstream*,int,int, ios_base::openmode);

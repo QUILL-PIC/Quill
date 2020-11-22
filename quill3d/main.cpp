@@ -9,6 +9,9 @@
 #include "main.h"
 #include "maxwell.h"
 #include "containers.h"
+#include <H5Cpp.h>
+#include "openpmd_output.h"
+#include <string>
 
 using namespace std;
 
@@ -76,7 +79,6 @@ bool catching_enabled;
 bool dump_photons;
 bool verbose_logging = true;
 bool qed_enabled = true;
-ios_base::openmode output_mode;
 int init();
 
 std::vector<double> ne_profile_x_coords;
@@ -345,115 +347,166 @@ void write_energy_deleted(ofstream& fout_energy_deleted)
     }
 }
 
-void write_density(bool write_x, bool write_y, bool write_z,
-        std::string x_folder, std::string y_folder, std::string z_folder,
-        bool write_ions = false, bool scale_j = false)
+double calculate_output_time(const ddi & a) {
+    double value = a.f * a.output_period;
+    if (a.prev != 0) {
+        value += (a.prev)->t_end;
+    }
+    return static_cast<int>(value / 2 / PI * file_name_accuracy) / file_name_accuracy;
+}
+
+std::string calculate_filename_suffix(const ddi & a) {
+    double value = calculate_output_time(a);
+
+    char str_buffer[100];
+    sprintf(str_buffer, "%g", value);
+    return std::string(str_buffer);
+}
+
+void write_j_array(bool write_x, bool write_y, bool write_z, std::string x_folder, std::string y_folder, std::string z_folder)
 {
-    char file_num_pchar[20];
-    ofstream* pof_x = 0;
-    ofstream* pof_y = 0;
-    ofstream* pof_z = 0;
+    auto filename_suffix = calculate_filename_suffix(*p_current_ddi);
+    auto fields_xy_filename = data_folder + "/" + std::string("Fields_xy_") + filename_suffix + ".h5";
+    auto fields_xz_filename = data_folder + "/" + std::string("Fields_xz_") + filename_suffix + ".h5";
+    auto fields_yz_filename = data_folder + "/" + std::string("Fields_yz_") + filename_suffix + ".h5";
 
-    sprintf(file_num_pchar,"%g",int([](ddi* a) {double b=a->f*a->output_period; if(a->prev!=0) b+=(a->prev)->t_end; return b;} (p_current_ddi)/2/PI*file_name_accuracy)/file_name_accuracy);
+    auto data_prefix = openpmd::iteration_group_string(l) + "/";
 
-    string file_name_x = data_folder + "/" + x_folder + file_num_pchar;
-    string file_name_y = data_folder + "/" + y_folder + file_num_pchar;
-    string file_name_z = data_folder + "/" + z_folder + file_num_pchar;
+    if (mpi_rank == 0) {
+        if (write_x) {
+            openpmd::initialize_2d_dataset(fields_xy_filename, data_prefix + x_folder, nx_global, ny_global);
+            openpmd::initialize_2d_dataset(fields_xz_filename, data_prefix + x_folder, nx_global, nz_global);
+            openpmd::initialize_2d_dataset(fields_yz_filename, data_prefix + x_folder, ny_global, nz_global);
+        }
+        if (write_y) {
+            openpmd::initialize_2d_dataset(fields_xy_filename, data_prefix + y_folder, nx_global, ny_global);
+            openpmd::initialize_2d_dataset(fields_xz_filename, data_prefix + y_folder, nx_global, nz_global);
+            openpmd::initialize_2d_dataset(fields_yz_filename, data_prefix + y_folder, ny_global, nz_global);
+        }
+        if (write_z) {
+            openpmd::initialize_2d_dataset(fields_xy_filename, data_prefix + z_folder, nx_global, ny_global);
+            openpmd::initialize_2d_dataset(fields_xz_filename, data_prefix + z_folder, nx_global, nz_global);
+            openpmd::initialize_2d_dataset(fields_yz_filename, data_prefix + z_folder, ny_global, nz_global);
+        }
+    }
 
-    int onx;
-    int onx0;
-    for(int i=0;i<n_sr;i++)
-    {
+    for(int i=0;i<n_sr;i++) {
         if (mpi_rank == i) {
-            if (write_x) {
-                pof_x = new ofstream(file_name_x.c_str(), output_mode);
-            }
+            int right_border = (i == n_sr-1 ? nx_sr[i] : nx_sr[i]-nx_ich/2);
+            int left_border = (i==0 ? 0 : nx_ich/2);
+            int output_dataset_shift = (mpi_rank > 0 ? x0_sr[i] + nx_ich/2 : x0_sr[i]);
+            
+            auto field_xy_file = H5::H5File(fields_xy_filename, H5F_ACC_RDWR);
+            auto field_xz_file = H5::H5File(fields_xz_filename, H5F_ACC_RDWR);
 
+            if (write_x) {
+                auto xy_dataset = openpmd::open_dataset(field_xy_file, data_prefix + x_folder);
+                auto xz_dataset = openpmd::open_dataset(field_xz_file, data_prefix + x_folder);
+                psr->fout_jx_xy_xz(xy_dataset, xz_dataset, left_border, right_border, output_dataset_shift);
+            }
             if (write_y) {
-                pof_y = new ofstream(file_name_y.c_str(), output_mode);
+                auto xy_dataset = openpmd::open_dataset(field_xy_file, data_prefix + y_folder);
+                auto xz_dataset = openpmd::open_dataset(field_xz_file, data_prefix + y_folder);
+                psr->fout_jy_xy_xz(xy_dataset, xz_dataset, left_border, right_border, output_dataset_shift);
             }
             if (write_z) {
-                pof_z = new ofstream(file_name_z.c_str(), output_mode);
+                auto xy_dataset = openpmd::open_dataset(field_xy_file, data_prefix + z_folder);
+                auto xz_dataset = openpmd::open_dataset(field_xz_file, data_prefix + z_folder);
+                psr->fout_jz_xy_xz(xy_dataset, xz_dataset, left_border, right_border, output_dataset_shift);
             }
-
-            if(i==n_sr-1)
-                onx = nx_sr[i];
-            else
-                onx = nx_sr[i]-nx_ich/2;
-            if(i==0)
-                onx0 = 0;
-            else
-                onx0 = nx_ich/2;
-            if (scale_j) {
-                psr->scale_j(dx / dt);
-            }
-            psr->fout_rho(pof_x,pof_y,pof_z,onx0,onx, output_mode);
-
-            if (pof_x) delete pof_x;
-            if (pof_y) delete pof_y;
-            if (pof_z) delete pof_z;
         }
         MPI_Barrier(MPI_COMM_WORLD);
     }
-
-    pof_x = 0;
-    pof_y = 0;
-    pof_z = 0;
     
-    int ii = get_sr_for_x(xlength-x0fout);
-    if (mpi_rank == ii) {
-        ios_base::openmode mode = output_mode | ios_base::app;
+    int yz_output_rank = get_sr_for_x(xlength-x0fout);
+    if (mpi_rank == yz_output_rank) {
+        auto field_yz_file = H5::H5File(fields_yz_filename, H5F_ACC_RDWR);
+        int output_plane_index = get_xindex_in_sr(xlength-x0fout, yz_output_rank);
+
         if (write_x) {
-            pof_x = new ofstream(file_name_x.c_str(), mode);
+            auto yz_dataset = openpmd::open_dataset(field_yz_file, data_prefix + x_folder);
+            psr->fout_jx_yz(yz_dataset, output_plane_index);
         }
         if (write_y) {
-            pof_y = new ofstream(file_name_y.c_str(), mode);
+            auto yz_dataset = openpmd::open_dataset(field_yz_file, data_prefix + y_folder);
+            psr->fout_jy_yz(yz_dataset, output_plane_index);
         }
         if (write_z) {
-            pof_z = new ofstream(file_name_z.c_str(), mode);
+            auto yz_dataset = openpmd::open_dataset(field_yz_file, data_prefix + z_folder);
+            psr->fout_jz_yz(yz_dataset, output_plane_index);
         }
-        psr->fout_rho_yzplane(pof_x,pof_y,pof_z,get_xindex_in_sr(xlength-x0fout, ii), mode);
-        if (pof_x) delete pof_x;
-        if (pof_y) delete pof_y;
-        if (pof_z) delete pof_z;
+    }
+    MPI_Barrier(MPI_COMM_WORLD);
+}
+
+void write_currents() {
+    if (write_jx || write_jy || write_jz) {
+        psr->scale_j(dx / dt);
+        write_j_array(write_jx, write_jy, write_jz, "j/x", "j/y", "j/z");
+    }
+}
+
+void write_rho() {
+    write_j_array(true, write_p, write_ph, "rho", "rho_p", "rho_ph");
+}
+
+void write_rho_ion() {
+    if (!(ions=="on" || ions=="positrons")) {
+        return;
     }
 
-    if (write_ions && (ions=="on" || ions=="positrons"))
-    {
-        char s_cmr[20];
-        for (int n=0;n<n_ion_populations;n++)
-        {
-            sprintf(s_cmr,"%g",icmr[n]);
-            string file_name = data_folder+"/irho_";
-            file_name += s_cmr;
-            file_name += "_";
-            file_name += file_num_pchar;
-            for(int i=0;i<n_sr;i++)
-            {
-                if (mpi_rank == i) {
-                    ofstream fout_irho(file_name.c_str(), output_mode);
-                    if(i==n_sr-1)
-                        onx = nx_sr[i];
-                    else
-                        onx = nx_sr[i]-nx_ich/2;
-                    if(i==0)
-                        onx0 = 0;
-                    else
-                        onx0 = nx_ich/2;
-                    psr->fout_irho(n,&fout_irho,onx0,onx, output_mode);
-                    fout_irho.close();
-                }
-                MPI_Barrier(MPI_COMM_WORLD);
-            }
-            ii = get_sr_for_x(xlength-x0fout);
-            if (mpi_rank == ii) {
-                ios_base::openmode mode = output_mode | ios_base::app;
-                ofstream fout_irho(file_name.c_str(), mode);
-                psr->fout_irho_yzplane(n,&fout_irho,get_xindex_in_sr(xlength-x0fout, ii), mode);
-                fout_irho.close();
-            }
+    auto filename_suffix = calculate_filename_suffix(*p_current_ddi);
+    auto fields_xy_filename = data_folder + "/" + std::string("Fields_xy_") + filename_suffix + ".h5";
+    auto fields_xz_filename = data_folder + "/" + std::string("Fields_xz_") + filename_suffix + ".h5";
+    auto fields_yz_filename = data_folder + "/" + std::string("Fields_yz_") + filename_suffix + ".h5";
+
+    auto data_prefix = openpmd::iteration_group_string(l) + "/";
+
+    std::vector<std::string> ion_labels(n_ion_populations);
+
+    for (int n = 0; n < n_ion_populations; n++) {
+        char s_cmr[100];
+        sprintf(s_cmr, "%g", icmr[n]);
+        ion_labels[n] = std::string("irho_") + std::string(s_cmr);
+    }
+
+    if (mpi_rank == 0) {
+        for (auto & label : ion_labels) {
+            openpmd::initialize_2d_dataset(fields_xy_filename, data_prefix + label, nx_global, ny_global);
+            openpmd::initialize_2d_dataset(fields_xz_filename, data_prefix + label, nx_global, nz_global);
+            openpmd::initialize_2d_dataset(fields_yz_filename, data_prefix + label, ny_global, nz_global);
         }
     }
+
+    for (int i=0; i<n_sr; i++) {
+        if (mpi_rank == i) {
+            int right_border = (i == n_sr-1 ? nx_sr[i] : nx_sr[i]-nx_ich/2);
+            int left_border = (i==0 ? 0 : nx_ich/2);
+            int output_dataset_shift = (mpi_rank > 0 ? x0_sr[i] + nx_ich/2 : x0_sr[i]);
+            
+            auto field_xy_file = H5::H5File(fields_xy_filename, H5F_ACC_RDWR);
+            auto field_xz_file = H5::H5File(fields_xz_filename, H5F_ACC_RDWR);
+
+            for (int n = 0; n < n_ion_populations; n++) {
+                auto xy_dataset = openpmd::open_dataset(field_xy_file, data_prefix + ion_labels[n]);
+                auto xz_dataset = openpmd::open_dataset(field_xz_file, data_prefix + ion_labels[n]);
+                psr->fout_irho_xy_xz(n, xy_dataset, xz_dataset, left_border, right_border, output_dataset_shift);
+            }
+        }
+        MPI_Barrier(MPI_COMM_WORLD);
+    }
+    
+    int yz_output_rank = get_sr_for_x(xlength-x0fout);
+    if (mpi_rank == yz_output_rank) {
+        auto field_yz_file = H5::H5File(fields_yz_filename, H5F_ACC_RDWR);
+        int output_plane_index = get_xindex_in_sr(xlength-x0fout, yz_output_rank);
+
+        for (int n = 0; n < n_ion_populations; n++) {
+            auto yz_dataset = openpmd::open_dataset(field_yz_file, data_prefix + ion_labels[n]);
+            psr->fout_irho_yz(n, yz_dataset, output_plane_index);
+        }
+    }
+    MPI_Barrier(MPI_COMM_WORLD);
 }
 
 void write_spectrum_phasespace(bool write_p, bool write_ph)
@@ -715,272 +768,160 @@ void write_spectrum_phasespace(bool write_p, bool write_ph)
     delete[] spectrum_i;
 }
 
+void initialize_output_files() { 
+    auto filename_suffix = calculate_filename_suffix(*p_current_ddi);
+    auto fields_xy_filename = data_folder + "/" + std::string("Fields_xy_") + filename_suffix + ".h5";
+    auto fields_xz_filename = data_folder + "/" + std::string("Fields_xz_") + filename_suffix + ".h5";
+    auto fields_yz_filename = data_folder + "/" + std::string("Fields_yz_") + filename_suffix + ".h5";
+
+    if (mpi_rank == 0) {
+        openpmd::initialize_file(fields_xy_filename);
+        openpmd::initialize_file(fields_xz_filename);
+        openpmd::initialize_file(fields_yz_filename);
+
+        openpmd::create_iteration_group(fields_xy_filename, l, dt, calculate_output_time(*p_current_ddi), 0.0);
+        openpmd::create_iteration_group(fields_xz_filename, l, dt, calculate_output_time(*p_current_ddi), 0.0);
+        openpmd::create_iteration_group(fields_yz_filename, l, dt, calculate_output_time(*p_current_ddi), 0.0);
+    }
+}
+
 void write_fields()
 {
-    std::string file_name;
-    char file_num_pchar[20];
-    int onx;
-    int onx0;
-    int ii;
-    bool is_last_sr; // 0 - not last, 1 - last
-    //
-    if (e_components_for_output=="x"||e_components_for_output=="xy"||e_components_for_output=="xz"||e_components_for_output=="xyz")
-    {
-        file_name = data_folder+"/ex";
-        sprintf(file_num_pchar,"%g",int([](ddi* a) {double b=a->f*a->output_period; if(a->prev!=0) b+=(a->prev)->t_end; return b;} (p_current_ddi)/2/PI*file_name_accuracy)/file_name_accuracy);
-        file_name = file_name + file_num_pchar;
-        for(int i=0;i<n_sr;i++)
-        {
-            if (mpi_rank == i) {
-                ofstream fout_ex(file_name.c_str(), output_mode);
-                if(i==n_sr-1)
-                    onx = nx_sr[i];
-                else
-                    onx = nx_sr[i]-nx_ich/2;
-                if(i==0)
-                    onx0 = 0;
-                else
-                    onx0 = nx_ich/2;
-                psr->fout_ex(&fout_ex,onx0,onx, output_mode);
-                fout_ex.close();
-            }
-            MPI_Barrier(MPI_COMM_WORLD);
-        }
-        ii = get_sr_for_x(xlength-x0fout);
-        if (mpi_rank == ii) {
-            ios_base::openmode mode = output_mode | ios_base::app;
-            ofstream fout_ex(file_name.c_str(), mode);
-            psr->fout_ex_yzplane(&fout_ex,get_xindex_in_sr(xlength-x0fout, ii), mode);
-            fout_ex.close();
-        }
+    auto filename_suffix = calculate_filename_suffix(*p_current_ddi);
+    auto fields_xy_filename = data_folder + "/" + std::string("Fields_xy_") + filename_suffix + ".h5";
+    auto fields_xz_filename = data_folder + "/" + std::string("Fields_xz_") + filename_suffix + ".h5";
+    auto fields_yz_filename = data_folder + "/" + std::string("Fields_yz_") + filename_suffix + ".h5";
 
-    }
-    //
-    if (e_components_for_output=="y"||e_components_for_output=="xy"||e_components_for_output=="yz"||e_components_for_output=="xyz")
-    {
-        file_name = data_folder+"/ey";
-        sprintf(file_num_pchar,"%g",int([](ddi* a) {double b=a->f*a->output_period; if(a->prev!=0) b+=(a->prev)->t_end; return b;} (p_current_ddi)/2/PI*file_name_accuracy)/file_name_accuracy);
-        file_name = file_name + file_num_pchar;
-        for(int i=0;i<n_sr;i++)
-        {
-            if (mpi_rank == i) {
-                ofstream fout_ey(file_name.c_str(), output_mode);
-                if(i==n_sr-1)
-                    onx = nx_sr[i];
-                else
-                    onx = nx_sr[i]-nx_ich/2;
-                if(i==0)
-                    onx0 = 0;
-                else
-                    onx0 = nx_ich/2;
-                psr->fout_ey(&fout_ey,onx0,onx, output_mode);
-                fout_ey.close();
-            }
-            MPI_Barrier(MPI_COMM_WORLD);
-        }
-        ii = get_sr_for_x(xlength-x0fout);
-        if (mpi_rank == ii) {
-            ios_base::openmode mode = output_mode | ios_base::app;
-            ofstream fout_ey(file_name.c_str(), mode);
-            psr->fout_ey_yzplane(&fout_ey,get_xindex_in_sr(xlength-x0fout, ii), mode);
-            fout_ey.close();
-        }
-
-    }
-    //
-    if (e_components_for_output=="z"||e_components_for_output=="xz"||e_components_for_output=="yz"||e_components_for_output=="xyz")
-    {
-        file_name = data_folder+"/ez";
-        sprintf(file_num_pchar,"%g",int([](ddi* a) {double b=a->f*a->output_period; if(a->prev!=0) b+=(a->prev)->t_end; return b;} (p_current_ddi)/2/PI*file_name_accuracy)/file_name_accuracy);
-        file_name = file_name + file_num_pchar;
-        for(int i=0;i<n_sr;i++)
-        {
-            if (mpi_rank == i) {
-                ofstream fout_ez(file_name.c_str(), output_mode);
-                if(i==n_sr-1)
-                    onx = nx_sr[i];
-                else
-                    onx = nx_sr[i]-nx_ich/2;
-                if(i==0)
-                    onx0 = 0;
-                else
-                    onx0 = nx_ich/2;
-                psr->fout_ez(&fout_ez,onx0,onx, output_mode);
-                fout_ez.close();
-            }
-            MPI_Barrier(MPI_COMM_WORLD);
-        }
-        ii = get_sr_for_x(xlength-x0fout);
-        if (mpi_rank == ii) {
-            ios_base::openmode mode = output_mode | ios_base::app;
-            ofstream fout_ez(file_name.c_str(), mode);
-            psr->fout_ez_yzplane(&fout_ez,get_xindex_in_sr(xlength-x0fout, ii), mode);
-            fout_ez.close();
-        }
-    }
-    //
-    if (b_components_for_output=="x"||b_components_for_output=="xy"||b_components_for_output=="xz"||b_components_for_output=="xyz")
-    {
-        file_name = data_folder+"/bx";
-        sprintf(file_num_pchar,"%g",int([](ddi* a) {double b=a->f*a->output_period; if(a->prev!=0) b+=(a->prev)->t_end; return b;} (p_current_ddi)/2/PI*file_name_accuracy)/file_name_accuracy);
-        file_name = file_name + file_num_pchar;
-        for(int i=0;i<n_sr;i++)
-        {
-            if (mpi_rank == i) {
-                ofstream fout_bx(file_name.c_str(), output_mode);
-                if(i==n_sr-1)
-                    onx = nx_sr[i];
-                else
-                    onx = nx_sr[i]-nx_ich/2;
-                if(i==0)
-                    onx0 = 0;
-                else
-                    onx0 = nx_ich/2;
-                psr->fout_bx(&fout_bx,onx0,onx, output_mode);
-                fout_bx.close();
-            }
-            MPI_Barrier(MPI_COMM_WORLD);
-        }
-        ii = get_sr_for_x(xlength-x0fout);
-        if (mpi_rank == ii) {
-            ios_base::openmode mode = output_mode | ios_base::app;
-            ofstream fout_bx(file_name.c_str(), mode);
-            psr->fout_bx_yzplane(&fout_bx,get_xindex_in_sr(xlength-x0fout, ii), mode);
-            fout_bx.close();
-        }
-    }
-    //
-    if (b_components_for_output=="y"||b_components_for_output=="xy"||b_components_for_output=="yz"||b_components_for_output=="xyz")
-    {
-        file_name = data_folder+"/by";
-        sprintf(file_num_pchar,"%g",int([](ddi* a) {double b=a->f*a->output_period; if(a->prev!=0) b+=(a->prev)->t_end; return b;} (p_current_ddi)/2/PI*file_name_accuracy)/file_name_accuracy);
-        file_name = file_name + file_num_pchar;
-        for(int i=0;i<n_sr;i++)
-        {
-            if (mpi_rank == i) {
-                ofstream fout_by(file_name.c_str(), output_mode);
-                if(i==n_sr-1)
-                    onx = nx_sr[i];
-                else
-                    onx = nx_sr[i]-nx_ich/2;
-                if(i==0)
-                    onx0 = 0;
-                else
-                    onx0 = nx_ich/2;
-                psr->fout_by(&fout_by,onx0,onx, output_mode);
-                fout_by.close();
-            }
-            MPI_Barrier(MPI_COMM_WORLD);
-        }
-        ii = get_sr_for_x(xlength-x0fout);
-        if (mpi_rank == ii) {
-            ios_base::openmode mode = output_mode | ios_base::app;
-            ofstream fout_by(file_name.c_str(), mode);
-            psr->fout_by_yzplane(&fout_by,get_xindex_in_sr(xlength-x0fout, ii), mode);
-            fout_by.close();
-        }
-    }
-    //
-    if (b_components_for_output=="z"||b_components_for_output=="xz"||b_components_for_output=="yz"||b_components_for_output=="xyz")
-    {
-        file_name = data_folder+"/bz";
-        sprintf(file_num_pchar,"%g",int([](ddi* a) {double b=a->f*a->output_period; if(a->prev!=0) b+=(a->prev)->t_end; return b;} (p_current_ddi)/2/PI*file_name_accuracy)/file_name_accuracy);
-        file_name = file_name + file_num_pchar;
-        for(int i=0;i<n_sr;i++)
-        {
-            if (mpi_rank == i) {
-                ofstream fout_bz(file_name.c_str(), output_mode);
-                if(i==n_sr-1)
-                    onx = nx_sr[i];
-                else
-                    onx = nx_sr[i]-nx_ich/2;
-                if(i==0)
-                    onx0 = 0;
-                else
-                    onx0 = nx_ich/2;
-                psr->fout_bz(&fout_bz,onx0,onx, output_mode);
-                fout_bz.close();
-            }
-            MPI_Barrier(MPI_COMM_WORLD);
-        }
-        ii = get_sr_for_x(xlength-x0fout);
-        if (mpi_rank == ii) {
-            ios_base::openmode mode = output_mode | ios_base::app;
-            ofstream fout_bz(file_name.c_str(), mode);
-            psr->fout_bz_yzplane(&fout_bz,get_xindex_in_sr(xlength-x0fout, ii), mode);
-            fout_bz.close();
-        }
-    }
-
-    ios_base::openmode non_binary_mode;
+    auto data_prefix = openpmd::iteration_group_string(l) + "/";
+    
     if (mpi_rank == 0) {
-        non_binary_mode = ios_base::out;
-    } else {
-        non_binary_mode = ios_base::out | ios_base::app;
-    }
-    //
-    file_name = data_folder+"/w";
-    sprintf(file_num_pchar,"%g",int([](ddi* a) {double b=a->f*a->output_period; if(a->prev!=0) b+=(a->prev)->t_end; return b;} (p_current_ddi)/2/PI*file_name_accuracy)/file_name_accuracy);
-    file_name = file_name + file_num_pchar;
-    for(int i=0;i<n_sr;i++)
-    {
-        if (mpi_rank == i) {
-            ofstream fout_w(file_name.c_str(), non_binary_mode);
-            if(i==n_sr-1)
-                onx = nx_sr[i];
-            else
-                onx = nx_sr[i]-nx_ich/2;
-            if(i==0)
-                onx0 = 0;
-            else
-                onx0 = nx_ich/2;
-            if (i==n_sr-1)
-                is_last_sr = 1;
-            else
-                is_last_sr = 0;
-            psr->fout_w(&fout_w,onx0,onx,is_last_sr);
-            fout_w.close();
+        if (e_components_for_output=="x"||e_components_for_output=="xy"||e_components_for_output=="xz"||e_components_for_output=="xyz") {
+            openpmd::initialize_2d_dataset(fields_xy_filename, data_prefix + "E/x", nx_global, ny_global);
+            openpmd::initialize_2d_dataset(fields_xz_filename, data_prefix + "E/x", nx_global, nz_global);
+            openpmd::initialize_2d_dataset(fields_yz_filename, data_prefix + "E/x", ny_global, nz_global);
         }
-        MPI_Barrier(MPI_COMM_WORLD);
-    }
-    ii = get_sr_for_x(xlength-x0fout);
-    if (mpi_rank == ii) {
-        ofstream fout_w(file_name.c_str(), non_binary_mode | ios_base::app);
-        psr->fout_w_yzplane(&fout_w,get_xindex_in_sr(xlength-x0fout, ii));
-        fout_w.close();
+        if (e_components_for_output=="y"||e_components_for_output=="xy"||e_components_for_output=="yz"||e_components_for_output=="xyz") {
+            openpmd::initialize_2d_dataset(fields_xy_filename, data_prefix + "E/y", nx_global, ny_global);
+            openpmd::initialize_2d_dataset(fields_xz_filename, data_prefix + "E/y", nx_global, nz_global);
+            openpmd::initialize_2d_dataset(fields_yz_filename, data_prefix + "E/y", ny_global, nz_global);
+        }
+        if (e_components_for_output=="z"||e_components_for_output=="xz"||e_components_for_output=="yz"||e_components_for_output=="xyz") {
+            openpmd::initialize_2d_dataset(fields_xy_filename, data_prefix + "E/z", nx_global, ny_global);
+            openpmd::initialize_2d_dataset(fields_xz_filename, data_prefix + "E/z", nx_global, nz_global);
+            openpmd::initialize_2d_dataset(fields_yz_filename, data_prefix + "E/z", ny_global, nz_global);
+        }
+        if (b_components_for_output=="x"||b_components_for_output=="xy"||b_components_for_output=="xz"||b_components_for_output=="xyz") {
+            openpmd::initialize_2d_dataset(fields_xy_filename, data_prefix + "B/x", nx_global, ny_global);
+            openpmd::initialize_2d_dataset(fields_xz_filename, data_prefix + "B/x", nx_global, nz_global);
+            openpmd::initialize_2d_dataset(fields_yz_filename, data_prefix + "B/x", ny_global, nz_global);
+        }
+        if (b_components_for_output=="y"||b_components_for_output=="xy"||b_components_for_output=="yz"||b_components_for_output=="xyz") {
+            openpmd::initialize_2d_dataset(fields_xy_filename, data_prefix + "B/y", nx_global, ny_global);
+            openpmd::initialize_2d_dataset(fields_xz_filename, data_prefix + "B/y", nx_global, nz_global);
+            openpmd::initialize_2d_dataset(fields_yz_filename, data_prefix + "B/y", ny_global, nz_global);
+        }
+        if (b_components_for_output=="z"||b_components_for_output=="xz"||b_components_for_output=="yz"||b_components_for_output=="xyz") {
+            openpmd::initialize_2d_dataset(fields_xy_filename, data_prefix + "B/z", nx_global, ny_global);
+            openpmd::initialize_2d_dataset(fields_xz_filename, data_prefix + "B/z", nx_global, nz_global);
+            openpmd::initialize_2d_dataset(fields_yz_filename, data_prefix + "B/z", ny_global, nz_global);
+        }
+        openpmd::initialize_2d_dataset(fields_xy_filename, data_prefix + "w", nx_global, ny_global);
+        openpmd::initialize_2d_dataset(fields_xz_filename, data_prefix + "w", nx_global, nz_global);
+        openpmd::initialize_2d_dataset(fields_yz_filename, data_prefix + "w", ny_global, nz_global);
+
+        openpmd::initialize_2d_dataset(fields_xy_filename, data_prefix + "inv", nx_global, ny_global);
+        openpmd::initialize_2d_dataset(fields_xz_filename, data_prefix + "inv", nx_global, nz_global);
+        openpmd::initialize_2d_dataset(fields_yz_filename, data_prefix + "inv", ny_global, nz_global);
     }
 
-    //
-    file_name = data_folder+"/inv";
-    sprintf(file_num_pchar,"%g",int([](ddi* a) {double b=a->f*a->output_period; if(a->prev!=0) b+=(a->prev)->t_end; return b;} (p_current_ddi)/2/PI*file_name_accuracy)/file_name_accuracy);
-    file_name = file_name + file_num_pchar;
-    for(int i=0;i<n_sr;i++)
-    {
+    for(int i=0;i<n_sr;i++) {
         if (mpi_rank == i) {
-            ofstream fout_inv(file_name.c_str(), non_binary_mode);
-            if(i==n_sr-1)
-                onx = nx_sr[i];
-            else
-                onx = nx_sr[i]-nx_ich/2;
-            if(i==0)
-                onx0 = 0;
-            else
-                onx0 = nx_ich/2;
-            if (i==n_sr-1)
-                is_last_sr = 1;
-            else
-                is_last_sr = 0;
-            psr->fout_inv(&fout_inv,onx0,onx,is_last_sr);
-            fout_inv.close();
+            int right_border = (i == n_sr-1 ? nx_sr[i] : nx_sr[i]-nx_ich/2);
+            int left_border = (i==0 ? 0 : nx_ich/2);
+            int output_dataset_shift = (mpi_rank > 0 ? x0_sr[i] + nx_ich/2 : x0_sr[i]);
+            
+            auto field_xy_file = H5::H5File(fields_xy_filename, H5F_ACC_RDWR);
+            auto field_xz_file = H5::H5File(fields_xz_filename, H5F_ACC_RDWR);
+
+            if (e_components_for_output=="x"||e_components_for_output=="xy"||e_components_for_output=="xz"||e_components_for_output=="xyz") {
+                auto xy_dataset = openpmd::open_dataset(field_xy_file, data_prefix + "E/x");
+                auto xz_dataset = openpmd::open_dataset(field_xz_file, data_prefix + "E/x");
+                psr->fout_ex_xy_xz(xy_dataset, xz_dataset, left_border, right_border, output_dataset_shift);
+            }
+            if (e_components_for_output=="y"||e_components_for_output=="xy"||e_components_for_output=="yz"||e_components_for_output=="xyz") {
+                auto xy_dataset = openpmd::open_dataset(field_xy_file, data_prefix + "E/y");
+                auto xz_dataset = openpmd::open_dataset(field_xz_file, data_prefix + "E/y");
+                psr->fout_ey_xy_xz(xy_dataset, xz_dataset, left_border, right_border, output_dataset_shift);
+            }
+            if (e_components_for_output=="z"||e_components_for_output=="xz"||e_components_for_output=="yz"||e_components_for_output=="xyz") {
+                auto xy_dataset = openpmd::open_dataset(field_xy_file, data_prefix + "E/z");
+                auto xz_dataset = openpmd::open_dataset(field_xz_file, data_prefix + "E/z");
+                psr->fout_ez_xy_xz(xy_dataset, xz_dataset, left_border, right_border, output_dataset_shift);
+            }
+            if (b_components_for_output=="x"||b_components_for_output=="xy"||b_components_for_output=="xz"||b_components_for_output=="xyz") {
+                auto xy_dataset = openpmd::open_dataset(field_xy_file, data_prefix + "B/x");
+                auto xz_dataset = openpmd::open_dataset(field_xz_file, data_prefix + "B/x");
+                psr->fout_bx_xy_xz(xy_dataset, xz_dataset, left_border, right_border, output_dataset_shift);
+            }
+            if (b_components_for_output=="y"||b_components_for_output=="xy"||b_components_for_output=="yz"||b_components_for_output=="xyz") {
+                auto xy_dataset = openpmd::open_dataset(field_xy_file, data_prefix + "B/y");
+                auto xz_dataset = openpmd::open_dataset(field_xz_file, data_prefix + "B/y");
+                psr->fout_by_xy_xz(xy_dataset, xz_dataset, left_border, right_border, output_dataset_shift);
+            }
+            if (b_components_for_output=="z"||b_components_for_output=="xz"||b_components_for_output=="yz"||b_components_for_output=="xyz") {
+                auto xy_dataset = openpmd::open_dataset(field_xy_file, data_prefix + "B/z");
+                auto xz_dataset = openpmd::open_dataset(field_xz_file, data_prefix + "B/z");
+                psr->fout_bz_xy_xz(xy_dataset, xz_dataset, left_border, right_border, output_dataset_shift);
+            }
+
+            auto w_xy_dataset = openpmd::open_dataset(field_xy_file, data_prefix + "w");
+            auto w_xz_dataset = openpmd::open_dataset(field_xz_file, data_prefix + "w");
+            psr->fout_w_xy_xz(w_xy_dataset, w_xz_dataset, left_border, right_border, output_dataset_shift, i == n_sr-1);
+
+            auto inv_xy_dataset = openpmd::open_dataset(field_xy_file, data_prefix + "inv");
+            auto inv_xz_dataset = openpmd::open_dataset(field_xz_file, data_prefix + "inv");
+            psr->fout_inv_xy_xz(inv_xy_dataset, inv_xz_dataset, left_border, right_border, output_dataset_shift, i == n_sr-1);
         }
         MPI_Barrier(MPI_COMM_WORLD);
     }
-    ii = get_sr_for_x(xlength-x0fout);
-    if (mpi_rank == ii) {
-        ofstream fout_inv(file_name.c_str(), non_binary_mode | ios_base::app);
-        psr->fout_inv_yzplane(&fout_inv,get_xindex_in_sr(xlength-x0fout, ii));
-        fout_inv.close();
+    
+    int yz_output_rank = get_sr_for_x(xlength-x0fout);
+    if (mpi_rank == yz_output_rank) {
+        auto field_yz_file = H5::H5File(fields_yz_filename, H5F_ACC_RDWR);
+        int output_plane_index = get_xindex_in_sr(xlength-x0fout, yz_output_rank);
+
+        if (e_components_for_output=="x"||e_components_for_output=="xy"||e_components_for_output=="xz"||e_components_for_output=="xyz") {
+            auto yz_dataset = openpmd::open_dataset(field_yz_file, data_prefix + "E/x");
+            psr->fout_ex_yz(yz_dataset, output_plane_index);
+        }
+        if (e_components_for_output=="y"||e_components_for_output=="xy"||e_components_for_output=="yz"||e_components_for_output=="xyz") {
+            auto yz_dataset = openpmd::open_dataset(field_yz_file, data_prefix + "E/y");
+            psr->fout_ey_yz(yz_dataset, output_plane_index);
+        }
+        if (e_components_for_output=="z"||e_components_for_output=="xz"||e_components_for_output=="yz"||e_components_for_output=="xyz") {
+            auto yz_dataset = openpmd::open_dataset(field_yz_file, data_prefix + "E/z");
+            psr->fout_ez_yz(yz_dataset, output_plane_index);
+        }
+        if (b_components_for_output=="x"||b_components_for_output=="xy"||b_components_for_output=="xz"||b_components_for_output=="xyz") {
+            auto yz_dataset = openpmd::open_dataset(field_yz_file, data_prefix + "B/x");
+            psr->fout_bx_yz(yz_dataset, output_plane_index);
+        }
+        if (b_components_for_output=="y"||b_components_for_output=="xy"||b_components_for_output=="yz"||b_components_for_output=="xyz") {
+            auto yz_dataset = openpmd::open_dataset(field_yz_file, data_prefix + "B/y");
+            psr->fout_by_yz(yz_dataset, output_plane_index);
+        }
+        if (b_components_for_output=="z"||b_components_for_output=="xz"||b_components_for_output=="yz"||b_components_for_output=="xyz") {
+            auto yz_dataset = openpmd::open_dataset(field_yz_file, data_prefix + "B/z");
+            psr->fout_bz_yz(yz_dataset, output_plane_index);
+        }
+
+        auto yz_dataset = openpmd::open_dataset(field_yz_file, data_prefix + "w");
+        psr->fout_w_yz(yz_dataset, output_plane_index);
+
+        yz_dataset = openpmd::open_dataset(field_yz_file, data_prefix + "inv");
+        psr->fout_inv_yz(yz_dataset, output_plane_index);
     }
+    MPI_Barrier(MPI_COMM_WORLD);
 }
 
 void init_fields()
@@ -1989,13 +1930,14 @@ int main(int argc, char * argv[])
 
         if(l*dt >= [](ddi* a) {double b=a->f*a->output_period; if(a->prev!=0) b+=(a->prev)->t_end; return b;} (p_current_ddi))
         {
-            if (write_jx || write_jy || write_jz) {
-                write_density(write_jx, write_jy, write_jz, "jx", "jy", "jz", false, true);
-            }
+            initialize_output_files();
+
+            write_currents();
             
             psr->compute_rho();
 
-            write_density(true, write_p, write_ph, "rho", "rho_p", "rho_ph", true);
+            write_rho();
+            write_rho_ion();
 
             write_spectrum_phasespace(write_p, write_ph);            
             
@@ -3158,16 +3100,6 @@ int init()
         dump_photons = true;
     }
 
-    current = find("output_mode", first);
-    if (current->units == "binary")
-        output_mode = ios_base::out | ios_base::binary;
-    else
-        output_mode = ios_base::out;
-    //
-    if (mpi_rank != 0) {
-        output_mode = output_mode | ios_base::app;
-    }
-
     current = find("pusher", first);
     string pusher_str = current->units;
 
@@ -3358,10 +3290,6 @@ int init()
         fout_log << "qed" << endl;
         fout_log << (qed_enabled ? "on" : "off") << endl;
 
-        if (output_mode == (ios_base::out | ios_base::binary))
-            fout_log << "output_mode\n" << 1 << '\n';
-        else if (output_mode == ios_base::out)
-            fout_log << "output_mode\n" << 0 << '\n';
         fout_log<<"#------------------------------\n";
         fout_log<<"polarization = "<<polarization<<"\n";
         fout_log<<"P = "<<(a0y*(a0y>a0z)+a0z*(a0z>=a0y))*(a0y*(a0y>a0z)+a0z*(a0z>=a0y))/8*ysigma*zsigma*8.75e9/1e12<<" TW\n";

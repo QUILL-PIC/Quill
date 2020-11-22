@@ -220,7 +220,3 @@ crpc = 17.0
 
 # имя папки для результатов; не забудьте создать её вручную!
 data_folder = results # default: results
-
-# режим вывода данных в файл (пока что только для плотности частиц и компонент
-# электромагнитных полей)
-output_mode = binary # default: text; possible: binary
