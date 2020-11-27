@@ -7,7 +7,7 @@ CXX := mpicxx
 CXXFLAGS := -O3 -march=native -ffast-math -std=c++0x -Wall -Wextra
 debug: CXXFLAGS := -g -std=c++0x
 CXXLIBS := 
-OBJECTS := advance.o deposition.o fout.o init.o low-level.o main.o mc.o plist.o pusher.o maxwell.o containers.o
+OBJECTS := advance.o deposition.o fout.o init.o low-level.o main.o mc.o plist.o pusher.o maxwell.o containers.o balancing.o
 DEPS := $(patsubst %,$(DEPDIR)/%.d,$(basename $(OBJECTS)))
 
 quill: $(OBJECTS) $(DEPS)

@@ -2,6 +2,7 @@
 #include <fstream>
 #include <cmath>
 #include <algorithm>
+#include <numeric>
 #include <sys/times.h>
 #include <unistd.h>
 #include <memory>
@@ -980,6 +981,61 @@ void write_fields()
         ofstream fout_inv(file_name.c_str(), non_binary_mode | ios_base::app);
         psr->fout_inv_yzplane(&fout_inv,get_xindex_in_sr(xlength-x0fout, ii));
         fout_inv.close();
+    }
+}
+
+vector<double> calculate_global_layer_weights() {
+    auto weights = psr->calculate_layer_weights(1.0);
+
+    vector<double> global_weights;
+
+    if (mpi_rank == 0) {
+        global_weights = vector<double>(nx_global);
+
+        int left = 0;
+        int right = ((n_sr > 0) ? nx_sr[0] - nx_ich / 2 : nx_sr[0]);
+
+        for (int i = left; i < right; i++) {
+            global_weights[i] = weights[i];
+        }
+
+        for (int n = 1; n < n_sr; n++) {
+            left = nx_ich / 2;
+            right = (n == n_sr-1 ? nx_sr[n] : nx_sr[n] - nx_ich / 2);
+            MPI_Recv(&(global_weights[x0_sr[n] + left]), right-left, MPI_DOUBLE, n, n, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        }
+
+        cout << "Global " << mpi_rank << endl;
+            for (const auto & v : global_weights) {
+                cout << v << " ";
+            }
+        cout << endl;
+    } else {
+        int left = nx_ich / 2;
+        int right = (mpi_rank == n_sr-1 ? nx_sr[mpi_rank] : nx_sr[mpi_rank] - nx_ich / 2);
+        MPI_Send(&(weights[left]), right - left, MPI_DOUBLE, 0, mpi_rank, MPI_COMM_WORLD);
+    }
+
+    return global_weights;
+}
+
+void write_layer_weights() {
+    auto weights = calculate_global_layer_weights();
+
+    if (mpi_rank == 0) {
+        string file_name;
+        char file_num_pchar[20];
+        
+        file_name = data_folder+"/weights";
+        sprintf(file_num_pchar,"%g",int([](ddi* a) {double b=a->f*a->output_period; if(a->prev!=0) b+=(a->prev)->t_end; return b;} (p_current_ddi)/2/PI*file_name_accuracy)/file_name_accuracy);
+        file_name = file_name + file_num_pchar;
+
+        ofstream fout_weights(file_name.c_str(), ios_base::out);
+
+        int length = weights.size();
+        for (int i = 0; i < length; i++) {
+            fout_weights << weights[i] << "\n";
+        }
     }
 }
 
@@ -2003,6 +2059,8 @@ int main(int argc, char * argv[])
             {
                 write_deleted_particles(write_p, write_ph);
             }
+
+            write_layer_weights();
         }
 
 
@@ -2068,7 +2126,6 @@ int main(int argc, char * argv[])
             }
             p_current_ddi->f++;
         }
-
 
         if (l*dt>=p_current_ddi->t_end)
         {

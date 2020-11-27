@@ -154,6 +154,8 @@ class spatial_region
     double get_max_w();
     double get_max_w(double left, double right);
 
+    vector<double> calculate_layer_weights(double particle_weight);
+
     private:
     void update_energy_deleted(particle*);
 };
