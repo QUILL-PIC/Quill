@@ -363,6 +363,14 @@ std::string calculate_filename_suffix(const ddi & a) {
     return std::string(str_buffer);
 }
 
+void initialize_2d_datasets(const string & fields_xy_filename, const string & fields_xz_filename, const string & fields_yz_filename, const string & dataset_name) {
+    auto data_prefix = openpmd::iteration_meshes_group_string(l) + "/";
+    
+    openpmd::initialize_2d_dataset(fields_xy_filename, data_prefix + dataset_name, nx_global, ny_global, openpmd::Space::XY, {dx, dy});
+    openpmd::initialize_2d_dataset(fields_xz_filename, data_prefix + dataset_name, nx_global, nz_global, openpmd::Space::XZ, {dx, dz});
+    openpmd::initialize_2d_dataset(fields_yz_filename, data_prefix + dataset_name, ny_global, nz_global, openpmd::Space::YZ, {dy, dz});
+}
+
 void write_j_array(bool write_x, bool write_y, bool write_z, std::string x_folder, std::string y_folder, std::string z_folder)
 {
     auto filename_suffix = calculate_filename_suffix(*p_current_ddi);
@@ -370,23 +378,17 @@ void write_j_array(bool write_x, bool write_y, bool write_z, std::string x_folde
     auto fields_xz_filename = data_folder + "/" + std::string("Fields_xz_") + filename_suffix + ".h5";
     auto fields_yz_filename = data_folder + "/" + std::string("Fields_yz_") + filename_suffix + ".h5";
 
-    auto data_prefix = openpmd::iteration_group_string(l) + "/";
+    auto data_prefix = openpmd::iteration_meshes_group_string(l) + "/";
 
     if (mpi_rank == 0) {
         if (write_x) {
-            openpmd::initialize_2d_dataset(fields_xy_filename, data_prefix + x_folder, nx_global, ny_global);
-            openpmd::initialize_2d_dataset(fields_xz_filename, data_prefix + x_folder, nx_global, nz_global);
-            openpmd::initialize_2d_dataset(fields_yz_filename, data_prefix + x_folder, ny_global, nz_global);
+            initialize_2d_datasets(fields_xy_filename, fields_xz_filename, fields_yz_filename, x_folder);
         }
         if (write_y) {
-            openpmd::initialize_2d_dataset(fields_xy_filename, data_prefix + y_folder, nx_global, ny_global);
-            openpmd::initialize_2d_dataset(fields_xz_filename, data_prefix + y_folder, nx_global, nz_global);
-            openpmd::initialize_2d_dataset(fields_yz_filename, data_prefix + y_folder, ny_global, nz_global);
+            initialize_2d_datasets(fields_xy_filename, fields_xz_filename, fields_yz_filename, y_folder);
         }
         if (write_z) {
-            openpmd::initialize_2d_dataset(fields_xy_filename, data_prefix + z_folder, nx_global, ny_global);
-            openpmd::initialize_2d_dataset(fields_xz_filename, data_prefix + z_folder, nx_global, nz_global);
-            openpmd::initialize_2d_dataset(fields_yz_filename, data_prefix + z_folder, ny_global, nz_global);
+            initialize_2d_datasets(fields_xy_filename, fields_xz_filename, fields_yz_filename, z_folder);
         }
     }
 
@@ -460,7 +462,7 @@ void write_rho_ion() {
     auto fields_xz_filename = data_folder + "/" + std::string("Fields_xz_") + filename_suffix + ".h5";
     auto fields_yz_filename = data_folder + "/" + std::string("Fields_yz_") + filename_suffix + ".h5";
 
-    auto data_prefix = openpmd::iteration_group_string(l) + "/";
+    auto data_prefix = openpmd::iteration_meshes_group_string(l) + "/";
 
     std::vector<std::string> ion_labels(n_ion_populations);
 
@@ -472,9 +474,7 @@ void write_rho_ion() {
 
     if (mpi_rank == 0) {
         for (auto & label : ion_labels) {
-            openpmd::initialize_2d_dataset(fields_xy_filename, data_prefix + label, nx_global, ny_global);
-            openpmd::initialize_2d_dataset(fields_xz_filename, data_prefix + label, nx_global, nz_global);
-            openpmd::initialize_2d_dataset(fields_yz_filename, data_prefix + label, ny_global, nz_global);
+            initialize_2d_datasets(fields_xy_filename, fields_xz_filename, fields_yz_filename, label);
         }
     }
 
@@ -792,46 +792,30 @@ void write_fields()
     auto fields_xz_filename = data_folder + "/" + std::string("Fields_xz_") + filename_suffix + ".h5";
     auto fields_yz_filename = data_folder + "/" + std::string("Fields_yz_") + filename_suffix + ".h5";
 
-    auto data_prefix = openpmd::iteration_group_string(l) + "/";
+    auto data_prefix = openpmd::iteration_meshes_group_string(l) + "/";
     
     if (mpi_rank == 0) {
         if (e_components_for_output=="x"||e_components_for_output=="xy"||e_components_for_output=="xz"||e_components_for_output=="xyz") {
-            openpmd::initialize_2d_dataset(fields_xy_filename, data_prefix + "E/x", nx_global, ny_global);
-            openpmd::initialize_2d_dataset(fields_xz_filename, data_prefix + "E/x", nx_global, nz_global);
-            openpmd::initialize_2d_dataset(fields_yz_filename, data_prefix + "E/x", ny_global, nz_global);
+            initialize_2d_datasets(fields_xy_filename, fields_xz_filename, fields_yz_filename, "E/x");
         }
         if (e_components_for_output=="y"||e_components_for_output=="xy"||e_components_for_output=="yz"||e_components_for_output=="xyz") {
-            openpmd::initialize_2d_dataset(fields_xy_filename, data_prefix + "E/y", nx_global, ny_global);
-            openpmd::initialize_2d_dataset(fields_xz_filename, data_prefix + "E/y", nx_global, nz_global);
-            openpmd::initialize_2d_dataset(fields_yz_filename, data_prefix + "E/y", ny_global, nz_global);
+            initialize_2d_datasets(fields_xy_filename, fields_xz_filename, fields_yz_filename, "E/y");
         }
         if (e_components_for_output=="z"||e_components_for_output=="xz"||e_components_for_output=="yz"||e_components_for_output=="xyz") {
-            openpmd::initialize_2d_dataset(fields_xy_filename, data_prefix + "E/z", nx_global, ny_global);
-            openpmd::initialize_2d_dataset(fields_xz_filename, data_prefix + "E/z", nx_global, nz_global);
-            openpmd::initialize_2d_dataset(fields_yz_filename, data_prefix + "E/z", ny_global, nz_global);
+            initialize_2d_datasets(fields_xy_filename, fields_xz_filename, fields_yz_filename, "E/z");
         }
         if (b_components_for_output=="x"||b_components_for_output=="xy"||b_components_for_output=="xz"||b_components_for_output=="xyz") {
-            openpmd::initialize_2d_dataset(fields_xy_filename, data_prefix + "B/x", nx_global, ny_global);
-            openpmd::initialize_2d_dataset(fields_xz_filename, data_prefix + "B/x", nx_global, nz_global);
-            openpmd::initialize_2d_dataset(fields_yz_filename, data_prefix + "B/x", ny_global, nz_global);
+            initialize_2d_datasets(fields_xy_filename, fields_xz_filename, fields_yz_filename, "B/x");
         }
         if (b_components_for_output=="y"||b_components_for_output=="xy"||b_components_for_output=="yz"||b_components_for_output=="xyz") {
-            openpmd::initialize_2d_dataset(fields_xy_filename, data_prefix + "B/y", nx_global, ny_global);
-            openpmd::initialize_2d_dataset(fields_xz_filename, data_prefix + "B/y", nx_global, nz_global);
-            openpmd::initialize_2d_dataset(fields_yz_filename, data_prefix + "B/y", ny_global, nz_global);
+            initialize_2d_datasets(fields_xy_filename, fields_xz_filename, fields_yz_filename, "B/y");
         }
         if (b_components_for_output=="z"||b_components_for_output=="xz"||b_components_for_output=="yz"||b_components_for_output=="xyz") {
-            openpmd::initialize_2d_dataset(fields_xy_filename, data_prefix + "B/z", nx_global, ny_global);
-            openpmd::initialize_2d_dataset(fields_xz_filename, data_prefix + "B/z", nx_global, nz_global);
-            openpmd::initialize_2d_dataset(fields_yz_filename, data_prefix + "B/z", ny_global, nz_global);
+            initialize_2d_datasets(fields_xy_filename, fields_xz_filename, fields_yz_filename, "B/z");
         }
-        openpmd::initialize_2d_dataset(fields_xy_filename, data_prefix + "w", nx_global, ny_global);
-        openpmd::initialize_2d_dataset(fields_xz_filename, data_prefix + "w", nx_global, nz_global);
-        openpmd::initialize_2d_dataset(fields_yz_filename, data_prefix + "w", ny_global, nz_global);
+        initialize_2d_datasets(fields_xy_filename, fields_xz_filename, fields_yz_filename, "w");
 
-        openpmd::initialize_2d_dataset(fields_xy_filename, data_prefix + "inv", nx_global, ny_global);
-        openpmd::initialize_2d_dataset(fields_xz_filename, data_prefix + "inv", nx_global, nz_global);
-        openpmd::initialize_2d_dataset(fields_yz_filename, data_prefix + "inv", ny_global, nz_global);
+        initialize_2d_datasets(fields_xy_filename, fields_xz_filename, fields_yz_filename, "inv");
     }
 
     for(int i=0;i<n_sr;i++) {
