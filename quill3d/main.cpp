@@ -10,6 +10,7 @@
 #include "main.h"
 #include "maxwell.h"
 #include "containers.h"
+#include "balancing.h"
 
 using namespace std;
 
@@ -1004,12 +1005,6 @@ vector<double> calculate_global_layer_weights() {
             right = (n == n_sr-1 ? nx_sr[n] : nx_sr[n] - nx_ich / 2);
             MPI_Recv(&(global_weights[x0_sr[n] + left]), right-left, MPI_DOUBLE, n, n, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
         }
-
-        cout << "Global " << mpi_rank << endl;
-            for (const auto & v : global_weights) {
-                cout << v << " ";
-            }
-        cout << endl;
     } else {
         int left = nx_ich / 2;
         int right = (mpi_rank == n_sr-1 ? nx_sr[mpi_rank] : nx_sr[mpi_rank] - nx_ich / 2);
@@ -1036,6 +1031,23 @@ void write_layer_weights() {
         for (int i = 0; i < length; i++) {
             fout_weights << weights[i] << "\n";
         }
+
+        auto optimal_partition = calculate_optimal_partition(weights, n_sr, nx_ich);
+        cout << "Optimal partition: ";
+        for (auto & v : optimal_partition) {
+            cout << v << " ";
+        }
+        cout << endl;
+
+        auto partition_weights = calculate_partition_weights(weights, optimal_partition, nx_ich);
+        cout << "Weights: ";
+        for (auto & v : partition_weights) {
+            cout << v << " ";
+        }
+        cout << endl;
+
+        double imbalance = calculate_partition_imbalance(partition_weights);
+        cout << "Imbalance: " << imbalance << endl;
     }
 }
 
@@ -1889,6 +1901,42 @@ bool check_moving_window(int moving_window_iteration, int current_iteration) {
     return false;
 }
 
+void load_balancing() {
+    auto global_weights = calculate_global_layer_weights();
+
+    if (mpi_rank == 0) {
+        auto initial_imbalance = calculate_partition_imbalance(global_weights, x0_sr, nx_ich);
+
+        cout << "Partition:";
+        for (auto & v : x0_sr) {
+            cout << " " << v;
+        }
+        cout << endl;
+
+        auto optimal_partition = calculate_optimal_partition(global_weights, n_sr, nx_ich);
+        auto optimal_imbalance = calculate_partition_imbalance(global_weights, optimal_partition, nx_ich);
+
+        cout << "Optimal partition:";
+        for (auto & v : optimal_partition) {
+            cout << " " << v;
+        }
+        cout << endl;
+        
+        cout << "Load balancing: imbalance " << initial_imbalance << ", optimal " << optimal_imbalance << endl;
+
+        auto normalized_partition = normalize_new_partition(x0_sr, optimal_partition, nx_ich);
+        auto normalized_imbalance = calculate_partition_imbalance(global_weights, normalized_partition, nx_ich);
+
+        cout << "Normalized partition:";
+        for (auto & v : normalized_partition) {
+            cout << " " << v;
+        }
+        cout << endl;
+
+        cout << "Normalized imbalance: " << normalized_imbalance << endl;
+    }
+}
+
 int main(int argc, char * argv[])
 {
     MPI_Init(&argc, &argv);
@@ -2039,6 +2087,10 @@ int main(int argc, char * argv[])
         }
 
         synchronize_regions(is_moving_window_iteration);
+
+        if (l % 20 == 0) {
+            load_balancing();
+        }
 
         /* вывод плотности, спектра и 'phasespace'-данных для фотонов,
            электронов и позитронов в файлы */
