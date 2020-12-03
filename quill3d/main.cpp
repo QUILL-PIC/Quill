@@ -6,6 +6,7 @@
 #include <sys/times.h>
 #include <unistd.h>
 #include <memory>
+#include <cassert>
 #include "mpi.h"
 #include "main.h"
 #include "maxwell.h"
@@ -1031,23 +1032,6 @@ void write_layer_weights() {
         for (int i = 0; i < length; i++) {
             fout_weights << weights[i] << "\n";
         }
-
-        auto optimal_partition = calculate_optimal_partition(weights, n_sr, nx_ich);
-        cout << "Optimal partition: ";
-        for (auto & v : optimal_partition) {
-            cout << v << " ";
-        }
-        cout << endl;
-
-        auto partition_weights = calculate_partition_weights(weights, optimal_partition, nx_ich);
-        cout << "Weights: ";
-        for (auto & v : partition_weights) {
-            cout << v << " ";
-        }
-        cout << endl;
-
-        double imbalance = calculate_partition_imbalance(partition_weights);
-        cout << "Imbalance: " << imbalance << endl;
     }
 }
 
@@ -1340,6 +1324,21 @@ void exchange_fields(int nm1, int nm2) {
     }
 }
 
+void pack_cell(cellp & p, vector<int> & particle_numbers, size_t & pn_index, vector<particle> & particles, size_t & p_index) {
+    particle* current = p.pl.head;
+    particle_numbers[pn_index] = 0;
+    while (current != 0) {
+        if (particles.size() <= p_index) {
+            particles.resize(3 * particles.size() / 2 + 1);
+        }
+        particles[p_index++] = *current;
+
+        current = current->next;
+        particle_numbers[pn_index]++;
+    }
+    pn_index++;
+}
+
 void pack_cell(int i, int j, int k, vector<int> & particle_numbers, size_t & pn_index, vector<particle> & particles, size_t & p_index) {
     particle* current = psr->cp[i][j][k].pl.head;
     particle_numbers[pn_index] = 0;
@@ -1376,6 +1375,21 @@ void unpack_cell(int i, int j, int k, vector<int> & particle_numbers, size_t & p
     pn_index++;
 }
 
+int pack_particle_slice(field3d<cellp> & cp, int left, int width, vector<int> & particle_numbers, vector<particle> & particles) {
+    size_t pn_index = 0;
+    size_t p_index = 0;
+
+    for (int i=left; i<left+width; i++) {
+        for (int j=0;j<ny_global;j++) {
+            for (int k=0;k<nz_global;k++) {
+                pack_cell(cp[i][j][k], particle_numbers, pn_index, particles, p_index);
+            }
+        }
+    }
+
+    return static_cast<int>(p_index);
+}
+
 int pack_particle_slice(int left, int width, vector<int> & particle_numbers, vector<particle> & particles) {
     size_t pn_index = 0;
     size_t p_index = 0;
@@ -1403,6 +1417,30 @@ void unpack_particle_slice(int left, int width, vector<int> & particle_numbers, 
             }
         }
     }
+}
+
+void send_particle_slice(field3d<cellp> & cp, int left, int width, int rank) {
+    vector<int> particle_numbers(width * ny_global * nz_global);
+    vector<particle> particles(100);
+    
+    int particles_to_send = pack_particle_slice(cp, left, width, particle_numbers, particles);
+
+    MPI_Send(&particles_to_send, 1, MPI_INT, rank, 0, MPI_COMM_WORLD);
+    MPI_Send(&(particle_numbers[0]), particle_numbers.size(), MPI_INT, rank, 1, MPI_COMM_WORLD);
+    MPI_Send(&(particles[0]), particles_to_send, MPI_PARTICLE, rank, 2, MPI_COMM_WORLD);
+}
+
+void receive_particle_slice(int left, int width, int rank, int x_diff) {
+    int particles_to_receive;
+    MPI_Recv(&particles_to_receive, 1, MPI_INT, rank, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+
+    vector<int> particle_numbers(width * ny_global * nz_global);
+    MPI_Recv(&(particle_numbers[0]), particle_numbers.size(), MPI_INT, rank, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+
+    vector<particle> particles(particles_to_receive);
+
+    MPI_Recv(&(particles[0]), particles_to_receive, MPI_PARTICLE, rank, 2, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    unpack_particle_slice(left, width, particle_numbers, particles, x_diff);
 }
 
 void exchange_particle_slices(int send_left, int send_width, int receive_left, int receive_width, int rank,
@@ -1901,40 +1939,199 @@ bool check_moving_window(int moving_window_iteration, int current_iteration) {
     return false;
 }
 
+template <class T>
+void resize_field(field3d<T> & field, const vector<int> & partition, const vector<int> & nx_sr_new) {
+    field3d<T> previous;
+    previous = move(field);
+    field = field3d<T>(nx_sr_new[mpi_rank], ny_global, nz_global);
+
+    // copying inside the same 
+    int lower = max(x0_sr[mpi_rank], partition[mpi_rank]);
+    int upper = min(x0_sr[mpi_rank] + nx_sr[mpi_rank], partition[mpi_rank] + nx_sr_new[mpi_rank]);
+
+    for (int i = lower; i < upper; i++) {
+        int new_index = i - partition[mpi_rank];
+        int old_index = i - x0_sr[mpi_rank];
+        
+        for (int j = 0; j < ny_global; j++) {
+            for (int k = 0; k < nz_global; k++) {
+                field[new_index][j][k] = previous[old_index][j][k];
+            }
+        }
+    }
+
+    // sending to a different process
+    for (int mod = 0; mod < 2; mod++) {
+        if (mpi_rank % 2 == mod) {
+            if (mpi_rank != 0) {
+                int lower = max(x0_sr[mpi_rank] + nx_ich, partition[mpi_rank-1]);
+                int upper = min(x0_sr[mpi_rank] + nx_sr[mpi_rank], partition[mpi_rank-1] + nx_sr_new[mpi_rank-1]);
+                if (lower < upper) {
+                    const int left = lower - x0_sr[mpi_rank];
+                    const int size = 3 * (upper - lower) * ny_global * nz_global;
+                    MPI_Send(previous[left][0], size, MPI_DOUBLE, mpi_rank-1, 0, MPI_COMM_WORLD);
+                }
+            }
+            if (mpi_rank != n_sr-1) {
+                int lower = max(x0_sr[mpi_rank], partition[mpi_rank+1]);
+                int upper = min(x0_sr[mpi_rank] + nx_sr[mpi_rank] - nx_ich, partition[mpi_rank+1] + nx_sr_new[mpi_rank+1]);
+                if (lower < upper) {
+                    const int left = lower - x0_sr[mpi_rank];
+                    const int size = 3 * (upper - lower) * ny_global * nz_global;
+                    MPI_Send(previous[left][0], size, MPI_DOUBLE, mpi_rank+1, 0, MPI_COMM_WORLD);
+                }
+            }
+        } else {
+            if (mpi_rank != 0) {
+                int lower = max(x0_sr[mpi_rank-1], partition[mpi_rank]);
+                int upper = min(x0_sr[mpi_rank-1] + nx_sr[mpi_rank-1] - nx_ich, partition[mpi_rank] + nx_sr_new[mpi_rank]);
+                if (lower < upper) {
+                    const int left = lower - partition[mpi_rank];
+                    const int size = 3 * (upper - lower) * ny_global * nz_global;
+                    MPI_Recv(field[left][0], size, MPI_DOUBLE, mpi_rank-1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                }
+            }
+            if (mpi_rank != n_sr-1) {
+                int lower = max(x0_sr[mpi_rank+1] + nx_ich, partition[mpi_rank]);
+                int upper = min(x0_sr[mpi_rank+1] + nx_sr[mpi_rank+1], partition[mpi_rank] + nx_sr_new[mpi_rank]);
+                if (lower < upper) {
+                    const int left = lower - partition[mpi_rank];
+                    const int size = 3 * (upper - lower) * ny_global * nz_global;
+                    MPI_Recv(field[left][0], size, MPI_DOUBLE, mpi_rank+1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                }
+            }
+        }
+    }
+}
+
+void resize_particles(const vector<int> & partition, const vector<int> & nx_sr_new) {
+    field3d<cellp> particles_previous;
+    particles_previous = move(psr->cp);
+    psr->cp = field3d<cellp>(nx_sr_new[mpi_rank], ny_global, nz_global);
+
+    // sending to a different process
+    for (int mod = 0; mod < 2; mod++) {
+        if (mpi_rank % 2 == mod) {
+            if (mpi_rank != 0) {
+                int lower = max(x0_sr[mpi_rank] + nx_ich, partition[mpi_rank-1]);
+                int upper = min(x0_sr[mpi_rank] + nx_sr[mpi_rank], partition[mpi_rank-1] + nx_sr_new[mpi_rank-1]);
+                if (lower < upper) {
+                    const int left = lower - x0_sr[mpi_rank];
+                    send_particle_slice(particles_previous, left, upper - lower, mpi_rank - 1);
+                }
+            }
+            if (mpi_rank != n_sr-1) {
+                int lower = max(x0_sr[mpi_rank], partition[mpi_rank+1]);
+                int upper = min(x0_sr[mpi_rank] + nx_sr[mpi_rank] - nx_ich, partition[mpi_rank+1] + nx_sr_new[mpi_rank+1]);
+                if (lower < upper) {
+                    const int left = lower - x0_sr[mpi_rank];
+                    send_particle_slice(particles_previous, left, upper - lower, mpi_rank + 1);
+                }
+            }
+        } else {
+            if (mpi_rank != 0) {
+                int lower = max(x0_sr[mpi_rank-1], partition[mpi_rank]);
+                int upper = min(x0_sr[mpi_rank-1] + nx_sr[mpi_rank-1] - nx_ich, partition[mpi_rank] + nx_sr_new[mpi_rank]);
+                if (lower < upper) {
+                    const int left = lower - partition[mpi_rank];
+                    receive_particle_slice(left, upper - lower, mpi_rank - 1, x0_sr[mpi_rank - 1] - partition[mpi_rank]);
+                }
+            }
+            if (mpi_rank != n_sr-1) {
+                int lower = max(x0_sr[mpi_rank+1] + nx_ich, partition[mpi_rank]);
+                int upper = min(x0_sr[mpi_rank+1] + nx_sr[mpi_rank+1], partition[mpi_rank] + nx_sr_new[mpi_rank]);
+                if (lower < upper) {
+                    const int left = lower - partition[mpi_rank];
+                    receive_particle_slice(left, upper - lower, mpi_rank + 1, x0_sr[mpi_rank + 1] - partition[mpi_rank]);
+                }
+            }
+        }
+    }
+
+    // copying inside the same 
+    int lower = max(x0_sr[mpi_rank], partition[mpi_rank]);
+    int upper = min(x0_sr[mpi_rank] + nx_sr[mpi_rank], partition[mpi_rank] + nx_sr_new[mpi_rank]);
+
+        for (int i = lower; i < upper; i++) {
+        int new_index = i - partition[mpi_rank];
+        int old_index = i - x0_sr[mpi_rank];
+        
+        for (int j = 0; j < ny_global; j++) {
+            for (int k = 0; k < nz_global; k++) {
+                psr->cp[new_index][j][k] = particles_previous[old_index][j][k];
+                psr->cp[new_index][j][k].pl.xplus(new_index - old_index);
+            }
+        }
+    }
+
+    // cleaning unused particles
+
+    lower -= x0_sr[mpi_rank];
+    upper -= x0_sr[mpi_rank];
+
+    for (int i = 0; i < lower; i++) {
+        for (int j = 0; j < ny_global; j++) {
+            for (int k = 0; k < nz_global; k++) {
+                psr->erase(particles_previous[i][j][k].pl);
+            }
+        }
+    }
+    for (int i = upper; i < nx_sr[mpi_rank]; i++) {
+        for (int j = 0; j < ny_global; j++) {
+            for (int k = 0; k < nz_global; k++) {
+                psr->erase(particles_previous[i][j][k].pl);
+            }
+        }
+    }
+}
+
+void resize_regions(const vector<int> & partition) {
+    assert(partition.size() == x0_sr.size());
+
+    size_t size = partition.size();
+
+    std::vector<int> nx_sr_new(size);
+
+    for (size_t i = 0; i < size - 1; i++) {
+        nx_sr_new[i] = partition[i+1] + nx_ich - partition[i];
+    }
+    nx_sr_new[size-1] = nx_global - partition[size-1];
+
+    if ((nx_sr_new[mpi_rank] != nx_sr[mpi_rank]) || (x0_sr[mpi_rank] != partition[mpi_rank])) {
+        resize_field(psr->ce, partition, nx_sr_new);
+        resize_field(psr->cb, partition, nx_sr_new);
+        resize_field(psr->cbe, partition, nx_sr_new);
+        resize_particles(partition, nx_sr_new);
+        psr->cj = field3d<cellj>(nx_sr_new[mpi_rank], ny_global, nz_global);
+        for (int n = 0; n < n_ion_populations; n++) {
+            psr->irho[n] = field3d<double>(nx_sr_new[mpi_rank], ny_global, nz_global);
+        }    
+
+        psr->set_nx(nx_sr_new[mpi_rank]);
+    }
+
+    x0_sr = partition;
+    nx_sr = nx_sr_new;
+}
+
 void load_balancing() {
     auto global_weights = calculate_global_layer_weights();
+
+    std::vector<int> new_partition(n_sr);
 
     if (mpi_rank == 0) {
         auto initial_imbalance = calculate_partition_imbalance(global_weights, x0_sr, nx_ich);
 
-        cout << "Partition:";
-        for (auto & v : x0_sr) {
-            cout << " " << v;
-        }
-        cout << endl;
-
         auto optimal_partition = calculate_optimal_partition(global_weights, n_sr, nx_ich);
-        auto optimal_imbalance = calculate_partition_imbalance(global_weights, optimal_partition, nx_ich);
+        new_partition = normalize_new_partition(x0_sr, optimal_partition, nx_ich);
+        auto normalized_imbalance = calculate_partition_imbalance(global_weights, new_partition, nx_ich);
 
-        cout << "Optimal partition:";
-        for (auto & v : optimal_partition) {
-            cout << " " << v;
-        }
-        cout << endl;
-        
-        cout << "Load balancing: imbalance " << initial_imbalance << ", optimal " << optimal_imbalance << endl;
-
-        auto normalized_partition = normalize_new_partition(x0_sr, optimal_partition, nx_ich);
-        auto normalized_imbalance = calculate_partition_imbalance(global_weights, normalized_partition, nx_ich);
-
-        cout << "Normalized partition:";
-        for (auto & v : normalized_partition) {
-            cout << " " << v;
-        }
-        cout << endl;
-
-        cout << "Normalized imbalance: " << normalized_imbalance << endl;
+        cout << "Load balancing: imbalance " << initial_imbalance << ", after balancing " << normalized_imbalance << endl;
     }
+
+    MPI_Bcast(new_partition.data(), new_partition.size(), MPI_INT, 0, MPI_COMM_WORLD);
+
+    resize_regions(new_partition);
 }
 
 int main(int argc, char * argv[])
@@ -2088,10 +2285,6 @@ int main(int argc, char * argv[])
 
         synchronize_regions(is_moving_window_iteration);
 
-        if (l % 20 == 0) {
-            load_balancing();
-        }
-
         /* вывод плотности, спектра и 'phasespace'-данных для фотонов,
            электронов и позитронов в файлы */
 
@@ -2113,6 +2306,10 @@ int main(int argc, char * argv[])
             }
 
             write_layer_weights();
+        }
+
+        if (l % 20 == 0) {
+            load_balancing();
         }
 
 

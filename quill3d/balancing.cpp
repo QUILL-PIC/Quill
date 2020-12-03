@@ -52,6 +52,10 @@ std::vector<int> retrieve_partition(const array2d<int> & last_border, int k, int
 }
 
 std::vector<int> calculate_optimal_partition(const std::vector<double> & weights, int regions_number, int overlap) {
+    if (regions_number == 1) {
+        return std::vector<int>{0};
+    }
+    
     int size = weights.size();
 
     array2d<double> max_weight(regions_number, size);
@@ -137,7 +141,10 @@ std::vector<int> normalize_new_partition(const std::vector<int> & old_partition,
     assert(new_partition[0] == 0);
     assert(old_partition.size() == new_partition.size());
 
-    size_t size = old_partition.size();
+    int size = old_partition.size();
+    if (size == 1) {
+        return new_partition;
+    }
 
     std::vector<int> normalized_partition(size);
     normalized_partition[0] = new_partition[0];
