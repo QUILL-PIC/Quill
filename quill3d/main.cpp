@@ -90,6 +90,11 @@ std::vector<double> ne_profile_r_values;
 maxwell_solver_enum solver;
 pusher_enum pusher;
 
+bool balancing_enabled;
+int balancing_every;
+double balancing_threshold;
+double balancing_particle_weight;
+
 //------------------------------
 
 
@@ -987,7 +992,7 @@ void write_fields()
 }
 
 vector<double> calculate_global_layer_weights() {
-    auto weights = psr->calculate_layer_weights(1.0);
+    auto weights = psr->calculate_layer_weights(balancing_particle_weight);
 
     vector<double> global_weights;
 
@@ -2115,23 +2120,38 @@ void resize_regions(const vector<int> & partition) {
 }
 
 void load_balancing() {
+    bool need_to_balance = false;
+    
     auto global_weights = calculate_global_layer_weights();
-
-    std::vector<int> new_partition(n_sr);
-
+    
+    double initial_imbalance;
     if (mpi_rank == 0) {
-        auto initial_imbalance = calculate_partition_imbalance(global_weights, x0_sr, nx_ich);
+        initial_imbalance = calculate_partition_imbalance(global_weights, x0_sr, nx_ich);
 
-        auto optimal_partition = calculate_optimal_partition(global_weights, n_sr, nx_ich);
-        new_partition = normalize_new_partition(x0_sr, optimal_partition, nx_ich);
-        auto normalized_imbalance = calculate_partition_imbalance(global_weights, new_partition, nx_ich);
-
-        cout << "Load balancing: imbalance " << initial_imbalance << ", after balancing " << normalized_imbalance << endl;
+        need_to_balance = (initial_imbalance > balancing_threshold);
     }
 
-    MPI_Bcast(new_partition.data(), new_partition.size(), MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&need_to_balance, 1, MPI_CXX_BOOL, 0, MPI_COMM_WORLD);
 
-    resize_regions(new_partition);
+    if (need_to_balance) {
+        std::vector<int> new_partition(n_sr);
+
+        if (mpi_rank == 0) {
+            auto optimal_partition = calculate_optimal_partition(global_weights, n_sr, nx_ich);
+            new_partition = normalize_new_partition(x0_sr, optimal_partition, nx_ich);
+            auto normalized_imbalance = calculate_partition_imbalance(global_weights, new_partition, nx_ich);
+
+            cout << "Load balancing: imbalance " << initial_imbalance << ", after balancing " << normalized_imbalance << endl;
+        }
+
+        MPI_Bcast(new_partition.data(), new_partition.size(), MPI_INT, 0, MPI_COMM_WORLD);
+
+        resize_regions(new_partition);
+    } else {
+        if (mpi_rank == 0) {
+            cout << "Load balancing: imbalance " << initial_imbalance << " below threshold" << endl;
+        }
+    }
 }
 
 int main(int argc, char * argv[])
@@ -2308,7 +2328,7 @@ int main(int argc, char * argv[])
             write_layer_weights();
         }
 
-        if (l % 20 == 0) {
+        if (balancing_enabled && (l % balancing_every == 0)) {
             load_balancing();
         }
 
@@ -2457,7 +2477,38 @@ vector<double> find_array(var * element, string name, string desired_units, stri
     } else {
         return default_array;
     }
+}
 
+bool find_boolean(var * element, string name, bool default_value) {
+    var * current = find(name, element);
+    if (current->units == "on" || current->units == "true") {
+        return true;
+    } else if (current->units == "off" || current->units == "false") {
+        return false;
+    } else {
+        if (current->units != "") {
+            cout << TERM_RED << "Value [" << current->units << "] for [" << name << "] is incorrect, using the default value" << TERM_NO_COLOR << endl;
+        }
+        return default_value;
+    }
+}
+
+double find_double(var * element, string name, double default_value) {
+    var * current = find(name, element);
+    if (current->value == 0) {
+        return default_value;
+    } else {
+        return current->value;
+    }
+}
+
+int find_int(var * element, string name, int default_value) {
+    var * current = find(name, element);
+    if (current->value == 0) {
+        return default_value;
+    } else {
+        return current->value;
+    }
 }
 
 int init()
@@ -3508,6 +3559,11 @@ int init()
         return 1;
     }
 
+    balancing_enabled = find_boolean(first, "balancing", false);
+    balancing_every = find_int(first, "balancing_every", 20);
+    balancing_particle_weight = find_double(first, "balancing_particle_weight", 1.0);
+    balancing_threshold = find_double(first, "balancing_threshold", 0.1);
+
     current = first;
     while (current->next!=0)
     {
@@ -3663,6 +3719,13 @@ int init()
         fout_log << "dump_photons" << endl << (dump_photons ? "on" : "off") << endl;
         fout_log << "qed" << endl;
         fout_log << (qed_enabled ? "on" : "off") << endl;
+
+        fout_log << "balancing" << endl << (balancing_enabled ? "on" : "off") << endl;
+        if (balancing_enabled) {
+            fout_log << "balancing_every\n" << balancing_every << "\n";
+            fout_log << "balancing_threshold\n" << balancing_threshold << "\n";
+            fout_log << "balancing_particle_weight\n" << balancing_particle_weight << "\n";
+        }
 
         if (output_mode == (ios_base::out | ios_base::binary))
             fout_log << "output_mode\n" << 1 << '\n';
