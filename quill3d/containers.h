@@ -1,6 +1,8 @@
 #ifndef CONTAINERS_H_
 #define CONTAINERS_H_
 
+#include <memory>
+
 struct vector3d
 {
     double x,y,z;
@@ -16,32 +18,27 @@ struct int_vector3d
 struct celle
 {
     double ex,ey,ez;
-    celle();
 };
 struct cellj
 {
     double jx,jy,jz;
-    cellj();
 };
 struct cellb
 {
     double bx,by,bz;
-    cellb();
 };
 struct cellbe
 {
     double bex,bey,bez;
-    cellbe();
 };
 
 template <typename T>
 class field3d
 {
 public:
-    field3d() : nx(0), ny(0), nz(0), p(nullptr) {}
+    field3d() : nx(0), ny(0), nz(0), p(nullptr), p2(nullptr), p3(nullptr) {}
     field3d(field3d<T>&) = delete;
     field3d(int nx, int ny, int nz);
-    ~field3d();
     inline T** const & operator[](int i) const { return p[i]; }
     field3d<T> & operator=(field3d<T> &) = delete;
     field3d<T> & operator=(field3d<T> &&);
@@ -50,8 +47,9 @@ public:
     int get_nz() { return nz; }
 private:
     int nx, ny, nz;
-    T*** p;
-    void free_memory();
+    std::unique_ptr<T**[]> p;
+    std::unique_ptr<T*[]> p2;
+    std::unique_ptr<T[]> p3;
 };
 
 struct particle
@@ -77,7 +75,6 @@ class plist
 struct cellp
 {
     plist pl;
-    cellp();
 };
 
 enum class maxwell_solver_enum {
