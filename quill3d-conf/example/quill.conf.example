@@ -291,5 +291,17 @@ pusher = vay # default: vay; possible: boris
 # выбор метода моделирования ЭМ поля
 solver = ndfx # default: ndfx; possible: fdtd
 
+# блок динамической балансировки
+# включение и выключение балансировки
+balancing = on # default: off, possible: on, off
+# порог дисбаланса, при превышении которого производится балансировка
+# дисбаланс = max_weight / min_weight - 1
+balancing_threshold = 0.2 # default: 0.1
+# период проверки и проведения балансировки (в итерациях кода)
+# балансировка проводится, только если превышен порог
+balancing_every = 10 # default: 20
+# вес частицы (вес пустой ячейки равен 1)
+balancing_particle_weight = 2.5 # default: 3.0
+
 # имя папки для результатов
 data_folder = res_hb # default: results

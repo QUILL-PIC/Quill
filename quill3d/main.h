@@ -28,7 +28,6 @@ class spatial_region
     //
     int n_ion_populations;
     double* icmr; // ion charge to mass ratios (=1/proton_mass for proton)
-    vector<field3d<double> > irho; // ion densities
     //
     int n_ap; // number of allocated particles
     int n_f; // number of free places
@@ -73,6 +72,7 @@ class spatial_region
     field3d<cellj> cj;
     field3d<cellbe> cbe;
     field3d<cellp> cp;
+    vector<field3d<double> > irho; // ion densities
     class deleted_particle
     {
         public:
@@ -165,9 +165,12 @@ class spatial_region
     int get_nx() {return nx;}
     int get_ny() {return ny;}
     int get_nz() {return nz;}
+    void set_nx(int nx_new) { nx = nx_new; }
     
     double get_max_w();
     double get_max_w(double left, double right);
+
+    vector<double> calculate_layer_weights(double particle_weight);
 
     private:
     void update_energy_deleted(particle*);

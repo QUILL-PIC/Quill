@@ -7,7 +7,8 @@ CXX := mpicxx
 CXXFLAGS := -O3 -march=native -ffast-math -std=c++0x -Wall -Wextra
 debug: CXXFLAGS := -g -std=c++0x
 CXXLIBS := -lhdf5 -lhdf5_cpp
-OBJECTS := advance.o deposition.o fout.o init.o low-level.o main.o mc.o plist.o pusher.o maxwell.o containers.o openpmd_output.o
+OBJECTS := advance.o deposition.o fout.o init.o low-level.o main.o mc.o plist.o pusher.o maxwell.o containers.o balancing.o openpmd_output.o
+DEPS := $(patsubst %,$(DEPDIR)/%.d,$(basename $(OBJECTS)))
 DEPS := $(patsubst %,$(DEPDIR)/%.d,$(basename $(OBJECTS)))
 
 quill: $(OBJECTS) $(DEPS)
@@ -50,4 +51,8 @@ FILE := ""
 conf:
 	./parse.py $(FILE) > conf
 
-all: quill
+.PHONY : chameleon
+chameleon:
+	$(MAKE) -C chameleon
+
+all: quill chameleon
