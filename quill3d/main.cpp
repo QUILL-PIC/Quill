@@ -2147,10 +2147,6 @@ void load_balancing() {
         MPI_Bcast(new_partition.data(), new_partition.size(), MPI_INT, 0, MPI_COMM_WORLD);
 
         resize_regions(new_partition);
-    } else {
-        if (mpi_rank == 0) {
-            cout << "Load balancing: imbalance " << initial_imbalance << " below threshold" << endl;
-        }
     }
 }
 
