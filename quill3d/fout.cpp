@@ -1,7 +1,8 @@
-#include <iostream>
 #include <fstream>
 #include "main.h"
 #include "containers.h"
+#include "openpmd_output.h"
+#include <functional>
 
 void spatial_region::compute_rho()
 {
@@ -136,312 +137,141 @@ void spatial_region::compute_energy(int n1, int n2, double a, double b)
         ienergy[n] = ienergy[n]*b;
 }
 
-double getjx(field3d<cellj> & cj, int i, int j, int k) {
-    return cj[i][j][k].jx;
+double w_function(double ex, double ey, double ez, double bx, double by, double bz) {
+    return ex*ex + ey*ey + ez*ez + bx*bx + by*by + bz*bz;
+};
+
+double inv_function(double ex, double ey, double ez, double bx, double by, double bz) {
+    return ex*ex + ey*ey + ez*ez - bx*bx - by*by - bz*bz;
+};
+
+void write_4d_array(double * p_first_element, int vector_size, int component, int nx0, int ny0, int nz0, 
+    H5::DataSet & xy_dataset, H5::DataSet & xz_dataset, int left, int right, int output_dataset_shift) {
+    const hsize_t nx = static_cast<hsize_t>(nx0);
+    const hsize_t ny = static_cast<hsize_t>(ny0);
+    const hsize_t nz = static_cast<hsize_t>(nz0);
+
+    const hsize_t dims[4] {nx, ny, nz, static_cast<hsize_t>(vector_size)};
+
+    H5::DataSpace memory_dataspace(4, dims);
+
+    const hsize_t x_start = static_cast<hsize_t>(left);
+    const hsize_t x_count = static_cast<hsize_t>(right - left);
+    
+    const hsize_t count_xy[4] {x_count, ny, 1, 1};
+    const hsize_t start_xy[4] {x_start, 0, nz/2, static_cast<hsize_t>(component)};
+    memory_dataspace.selectHyperslab(H5S_SELECT_SET, count_xy, start_xy);
+
+    const hsize_t count_xy_out[2] {x_count, ny};
+    const hsize_t start_xy_out[2] {static_cast<hsize_t>(output_dataset_shift), 0};
+    auto write_xy_dataspace = xy_dataset.getSpace();
+    write_xy_dataspace.selectHyperslab(H5S_SELECT_SET, count_xy_out, start_xy_out);
+    
+    xy_dataset.write(p_first_element, H5::PredType::NATIVE_DOUBLE, memory_dataspace, write_xy_dataspace);
+
+    const hsize_t count_xz[4] {x_count, 1, nz, 1};
+    const hsize_t start_xz[4] {x_start, ny/2, 0, static_cast<hsize_t>(component)};
+    memory_dataspace.selectHyperslab(H5S_SELECT_SET, count_xz, start_xz);
+
+    const hsize_t count_xz_out[2] {x_count, nz};
+    const hsize_t start_xz_out[2] {static_cast<hsize_t>(output_dataset_shift), 0};
+    auto write_xz_dataspace = xz_dataset.getSpace();
+    write_xz_dataspace.selectHyperslab(H5S_SELECT_SET, count_xz_out, start_xz_out);
+
+    xz_dataset.write(p_first_element, H5::PredType::NATIVE_DOUBLE, memory_dataspace, write_xz_dataspace);
 }
 
-double getjy(field3d<cellj> & cj, int i, int j, int k) {
-    return cj[i][j][k].jy;
+void write_vector_field(double * p_first_element, int component, int nx0, int ny0, int nz0, 
+    H5::DataSet & xy_dataset, H5::DataSet & xz_dataset, int left, int right, int output_dataset_shift) {
+    write_4d_array(p_first_element, 3, component, nx0, ny0, nz0, xy_dataset, xz_dataset, left, right, output_dataset_shift);
 }
 
-double getjz(field3d<cellj> & cj, int i, int j, int k) {
-    return cj[i][j][k].jz;
+void write_scalar_field(double * p_first_element, int nx0, int ny0, int nz0, H5::DataSet & xy_dataset, 
+                        H5::DataSet & xz_dataset, int left, int right, int output_dataset_shift) {
+    write_4d_array(p_first_element, 1, 0, nx0, ny0, nz0, xy_dataset, xz_dataset, left, right, output_dataset_shift);
 }
 
-double getdouble(field3d<double> & a, int i, int j, int k) {
-    return a[i][j][k];
+void write_4d_array_yz(double * p_first_element, int vector_size, int component, int nx0, int ny0, int nz0, 
+                       H5::DataSet & yz_dataset, int position) {
+    const hsize_t nx = static_cast<hsize_t>(nx0);
+    const hsize_t ny = static_cast<hsize_t>(ny0);
+    const hsize_t nz = static_cast<hsize_t>(nz0);
+
+    const hsize_t dims[4] {nx, ny, nz, static_cast<hsize_t>(vector_size)};
+
+    H5::DataSpace memory_dataspace(4, dims);
+
+    const hsize_t count[4] {1, ny, nz, 1};
+    const hsize_t start[4] {static_cast<hsize_t>(position), 0, 0, static_cast<hsize_t>(component)};
+    memory_dataspace.selectHyperslab(H5S_SELECT_SET, count, start);
+
+    auto write_dataspace = yz_dataset.getSpace();
+    
+    yz_dataset.write(p_first_element, H5::PredType::NATIVE_DOUBLE, memory_dataspace, write_dataspace);
 }
 
-double getex(field3d<celle> & ce, int i, int j, int k) {
-    return ce[i][j][k].ex;
+void write_vector_field_yz(double * p_first_element, int component, int nx0, int ny0, int nz0, 
+                           H5::DataSet & yz_dataset, int position) {
+    write_4d_array_yz(p_first_element, 3, component, nx0, ny0, nz0, yz_dataset, position);
 }
 
-double getey(field3d<celle> & ce, int i, int j, int k) {
-    return ce[i][j][k].ey;
+void write_scalar_field_yz(double * p_first_element, int nx0, int ny0, int nz0, H5::DataSet & yz_dataset, int position) {
+    write_4d_array_yz(p_first_element, 1, 0, nx0, ny0, nz0, yz_dataset, position);
 }
 
-double getez(field3d<celle> & ce, int i, int j, int k) {
-    return ce[i][j][k].ez;
+void spatial_region::fout_ex_xy_xz(H5::DataSet & xy_dataset, H5::DataSet & xz_dataset, int left, int right, int dataset_shift) {
+    write_vector_field(&(ce[0][0][0].ex), 0, nx, ny, nz, xy_dataset, xz_dataset, left, right, dataset_shift);
 }
 
-double getbx(field3d<cellb> & cb, int i, int j, int k) {
-    return cb[i][j][k].bx;
+void spatial_region::fout_ey_xy_xz(H5::DataSet & xy_dataset, H5::DataSet & xz_dataset, int left, int right, int dataset_shift) {
+    write_vector_field(&(ce[0][0][0].ex), 1, nx, ny, nz, xy_dataset, xz_dataset, left, right, dataset_shift);
 }
 
-double getby(field3d<cellb> & cb, int i, int j, int k) {
-    return cb[i][j][k].by;
+void spatial_region::fout_ez_xy_xz(H5::DataSet & xy_dataset, H5::DataSet & xz_dataset, int left, int right, int dataset_shift) {
+    write_vector_field(&(ce[0][0][0].ex), 2, nx, ny, nz, xy_dataset, xz_dataset, left, right, dataset_shift);
 }
 
-double getbz(field3d<cellb> & cb, int i, int j, int k) {
-    return cb[i][j][k].bz;
+void spatial_region::fout_bx_xy_xz(H5::DataSet & xy_dataset, H5::DataSet & xz_dataset, int left, int right, int dataset_shift) {
+    write_vector_field(&(cb[0][0][0].bx), 0, nx, ny, nz, xy_dataset, xz_dataset, left, right, dataset_shift);
 }
 
-template<typename T> void write_binary(ofstream* f, field3d<T> & data, double get(field3d<T>&,
-            int, int, int), int n0, int n, int ny, int nz) {
-    double* a = new double[(n - n0) * (ny + nz)]; /* for values in xy and xz
-                                                     planes */
-    for (int i = n0; i < n; ++i) {
-        int k = nz / 2;
-        for (int j = 0; j < ny; ++j)
-            a[(i - n0) * (ny + nz) + j] = get(data, i, j, k);
-        int j = ny / 2;
-        for (int k = 0; k < nz; ++k)
-            a[(i - n0) * (ny + nz) + ny + k] = get(data, i, j, k);
-    }
-    f->write(reinterpret_cast<char*>(a), sizeof(double) * (n - n0) * (ny +
-                nz));
-    delete[] a;
+void spatial_region::fout_by_xy_xz(H5::DataSet & xy_dataset, H5::DataSet & xz_dataset, int left, int right, int dataset_shift) {
+    write_vector_field(&(cb[0][0][0].bx), 1, nx, ny, nz, xy_dataset, xz_dataset, left, right, dataset_shift);
 }
 
-template<typename T> void write_binary_yzplane(ofstream* f, field3d<T> & data, double
-        get(field3d<T>&, int, int, int), int i, int ny, int nz) {
-    double* a = new double[ny * nz];
-    for(int j=0;j<ny;j++)
-        for(int k=0;k<nz;k++)
-            a[j * nz + k] = get(data, i, j, k);
-    f->write(reinterpret_cast<char*>(a), sizeof(double) * (ny * nz));
-    delete[] a;
+void spatial_region::fout_bz_xy_xz(H5::DataSet & xy_dataset, H5::DataSet & xz_dataset, int left, int right, int dataset_shift) {
+    write_vector_field(&(cb[0][0][0].bx), 2, nx, ny, nz, xy_dataset, xz_dataset, left, right, dataset_shift);
 }
 
-bool is_mode_non_binary(ios_base::openmode mode) {
-    return (mode == ios_base::out) || (mode == (ios_base::out | ios_base::app));
+void spatial_region::fout_jx_xy_xz(H5::DataSet & xy_dataset, H5::DataSet & xz_dataset, int left, int right, int dataset_shift) {
+    write_vector_field(&(cj[0][0][0].jx), 0, nx, ny, nz, xy_dataset, xz_dataset, left, right, dataset_shift);
 }
 
-bool is_mode_binary(ios_base::openmode mode) {
-    return (mode == (ios_base::out | ios_base::binary)) || (mode == (ios_base::out | ios_base::app | ios_base::binary));
+void spatial_region::fout_jy_xy_xz(H5::DataSet & xy_dataset, H5::DataSet & xz_dataset, int left, int right, int dataset_shift) {
+    write_vector_field(&(cj[0][0][0].jx), 1, nx, ny, nz, xy_dataset, xz_dataset, left, right, dataset_shift);
 }
 
-void spatial_region::fout_ex(ofstream* pfout, int n0, int n, ios_base::openmode
-        mode)
+void spatial_region::fout_jz_xy_xz(H5::DataSet & xy_dataset, H5::DataSet & xz_dataset, int left, int right, int dataset_shift) {
+    write_vector_field(&(cj[0][0][0].jx), 2, nx, ny, nz, xy_dataset, xz_dataset, left, right, dataset_shift);
+}
+
+void spatial_region::fout_irho_xy_xz(int ion_type, H5::DataSet & xy_dataset, H5::DataSet & xz_dataset, int left,
+                                     int right, int dataset_shift) {
+    write_scalar_field(&(irho[ion_type][0][0][0]), nx, ny, nz, xy_dataset, xz_dataset, left, right, dataset_shift);
+}
+
+void spatial_region::fout_field_function(H5::DataSet & xy_dataset, H5::DataSet & xz_dataset, int left, int right, 
+                                         int dataset_shift, bool is_last_sr, std::function<double(double, double, double, double, double, double)> func)
 {
-    /* n-n0 - длина массива по x (для данного spatial_region'а) для
-     * вывода сечения плоскостью xy и плоскостью xz */
-    if (is_mode_non_binary(mode)) {
-        for(int i=n0;i<n;i++)
-        {
-            int k=nz/2;
-            for(int j=0;j<ny;j++)
-                (*pfout)<<ce[i][j][k].ex<<"\n";
-            int j=ny/2;
-            for(int k=0;k<nz;k++)
-                (*pfout)<<ce[i][j][k].ex<<"\n";
-        }
-    } else if (is_mode_binary(mode)) {
-        write_binary<celle>(pfout, ce, getex, n0, n, ny, nz);
-    } else {
-        cerr << "fout_ex: ERROR: wrong mode" << endl;
-    }
-}
+    const hsize_t x_count = static_cast<hsize_t>(right - left);
 
-void spatial_region::fout_ex_yzplane(ofstream* pfout, int i, ios_base::openmode
-        mode)
-{
-    if (is_mode_non_binary(mode)) {
-        for(int j=0;j<ny;j++) {
-            for(int k=0;k<nz;k++)
-                (*pfout)<<ce[i][j][k].ex<<"\n";
-        }
-    } else if (is_mode_binary(mode)) {
-        write_binary_yzplane<celle>(pfout, ce, getex, i, ny, nz);
-    } else {
-        cerr << "fout_ex_yzplane: ERROR: wrong mode" << endl;
-    }
-}
+    std::vector<double> result(x_count * ny);
 
-void spatial_region::fout_ey(ofstream* pfout, int n0, int n, ios_base::openmode
-        mode)
-{
-    /* n-n0 - длина массива по x (для данного spatial_region'а) для
-     * вывода сечения плоскостью xy и плоскостью xz */
-    if (is_mode_non_binary(mode)) {
-        for(int i=n0;i<n;i++)
-        {
-            int k=nz/2;
-            for(int j=0;j<ny;j++)
-                (*pfout)<<ce[i][j][k].ey<<"\n";
-            int j=ny/2;
-            for(int k=0;k<nz;k++)
-                (*pfout)<<ce[i][j][k].ey<<"\n";
-        }
-    } else if (is_mode_binary(mode)) {
-        write_binary<celle>(pfout, ce, getey, n0, n, ny, nz);
-    } else {
-        cerr << "fout_ey: ERROR: wrong mode" << endl;
-    }
-}
-
-void spatial_region::fout_ey_yzplane(ofstream* pfout, int i, ios_base::openmode
-        mode)
-{
-    if (is_mode_non_binary(mode)) {
-        for(int j=0;j<ny;j++) {
-            for(int k=0;k<nz;k++)
-                (*pfout)<<ce[i][j][k].ey<<"\n";
-        }
-    } else if (is_mode_binary(mode)) {
-        write_binary_yzplane<celle>(pfout, ce, getey, i, ny, nz);
-    } else {
-        cerr << "fout_ey_yzplane: ERROR: wrong mode" << endl;
-    }
-}
-
-void spatial_region::fout_ez(ofstream* pfout, int n0, int n, ios_base::openmode
-        mode)
-{
-    /* n-n0 - длина массива по x (для данного spatial_region'а) для
-     * вывода сечения плоскостью xy и плоскостью xz */
-    if (is_mode_non_binary(mode)) {
-        for(int i=n0;i<n;i++)
-        {
-            int k=nz/2;
-            for(int j=0;j<ny;j++)
-                (*pfout)<<ce[i][j][k].ez<<"\n";
-            int j=ny/2;
-            for(int k=0;k<nz;k++)
-                (*pfout)<<ce[i][j][k].ez<<"\n";
-        }
-    } else if (is_mode_binary(mode)) {
-        write_binary<celle>(pfout, ce, getez, n0, n, ny, nz);
-    } else {
-        cerr << "fout_ez: ERROR: wrong mode" << endl;
-    }
-}
-
-void spatial_region::fout_ez_yzplane(ofstream* pfout, int i, ios_base::openmode
-        mode)
-{
-    if (is_mode_non_binary(mode)) {
-        for(int j=0;j<ny;j++) {
-            for(int k=0;k<nz;k++)
-                (*pfout)<<ce[i][j][k].ez<<"\n";
-        }
-    } else if (is_mode_binary(mode)) {
-        write_binary_yzplane<celle>(pfout, ce, getez, i, ny, nz);
-    } else {
-        cerr << "fout_ez_yzplane: ERROR: wrong mode" << endl;
-    }
-}
-
-void spatial_region::fout_bx(ofstream* pfout, int n0, int n, ios_base::openmode
-        mode)
-{
-    /* n-n0 - длина массива по x (для данного spatial_region'а) для
-     * вывода сечения плоскостью xy и плоскостью xz */
-    if (is_mode_non_binary(mode)) {
-        for(int i=n0;i<n;i++)
-        {
-            int k=nz/2;
-            for(int j=0;j<ny;j++)
-                (*pfout)<<cb[i][j][k].bx<<"\n";
-            int j=ny/2;
-            for(int k=0;k<nz;k++)
-                (*pfout)<<cb[i][j][k].bx<<"\n";
-        }
-    } else if (is_mode_binary(mode)) {
-        write_binary<cellb>(pfout, cb, getbx, n0, n, ny, nz);
-    } else {
-        cerr << "fout_bx: ERROR: wrong mode" << endl;
-    }
-}
-
-void spatial_region::fout_bx_yzplane(ofstream* pfout, int i, ios_base::openmode
-        mode)
-{
-    if (is_mode_non_binary(mode)) {
-        for(int j=0;j<ny;j++) {
-            for(int k=0;k<nz;k++)
-                (*pfout)<<cb[i][j][k].bx<<"\n";
-        }
-    } else if (is_mode_binary(mode)) {
-        write_binary_yzplane<cellb>(pfout, cb, getbx, i, ny, nz);
-    } else {
-        cerr << "fout_bx_yzplane: ERROR: wrong mode" << endl;
-    }
-}
-
-void spatial_region::fout_by(ofstream* pfout, int n0, int n, ios_base::openmode
-        mode)
-{
-    /* n-n0 - длина массива по x (для данного spatial_region'а) для
-     * вывода сечения плоскостью xy и плоскостью xz */
-    if (is_mode_non_binary(mode)) {
-        for(int i=n0;i<n;i++)
-        {
-            int k=nz/2;
-            for(int j=0;j<ny;j++)
-                (*pfout)<<cb[i][j][k].by<<"\n";
-            int j=ny/2;
-            for(int k=0;k<nz;k++)
-                (*pfout)<<cb[i][j][k].by<<"\n";
-        }
-    } else if (is_mode_binary(mode)) {
-        write_binary<cellb>(pfout, cb, getby, n0, n, ny, nz);
-    } else {
-        cerr << "fout_by: ERROR: wrong mode" << endl;
-    }
-}
-
-void spatial_region::fout_by_yzplane(ofstream* pfout, int i, ios_base::openmode
-        mode)
-{
-    if (is_mode_non_binary(mode)) {
-        for(int j=0;j<ny;j++) {
-            for(int k=0;k<nz;k++)
-                (*pfout)<<cb[i][j][k].by<<"\n";
-        }
-    } else if (is_mode_binary(mode)) {
-        write_binary_yzplane<cellb>(pfout, cb, getby, i, ny, nz);
-    } else {
-        cerr << "fout_by_yzplane: ERROR: wrong mode" << endl;
-    }
-}
-
-void spatial_region::fout_bz(ofstream* pfout, int n0, int n, ios_base::openmode
-        mode)
-{
-    /* n-n0 - длина массива по x (для данного spatial_region'а) для
-     * вывода сечения плоскостью xy и плоскостью xz */
-    if (is_mode_non_binary(mode)) {
-        for(int i=n0;i<n;i++)
-        {
-            int k=nz/2;
-            for(int j=0;j<ny;j++)
-                (*pfout)<<cb[i][j][k].bz<<"\n";
-            int j=ny/2;
-            for(int k=0;k<nz;k++)
-                (*pfout)<<cb[i][j][k].bz<<"\n";
-        }
-    } else if (is_mode_binary(mode)) {
-        write_binary<cellb>(pfout, cb, getbz, n0, n, ny, nz);
-    } else {
-        cerr << "fout_bz: ERROR: wrong mode" << endl;
-    }
-}
-
-void spatial_region::fout_bz_yzplane(ofstream* pfout, int i, ios_base::openmode
-        mode)
-{
-    if (is_mode_non_binary(mode)) {
-        for(int j=0;j<ny;j++) {
-            for(int k=0;k<nz;k++)
-                (*pfout)<<cb[i][j][k].bz<<"\n";
-        }
-    } else if (is_mode_binary(mode)) {
-        write_binary_yzplane<cellb>(pfout, cb, getbz, i, ny, nz);
-    } else {
-        cerr << "fout_bz_yzplane: ERROR: wrong mode" << endl;
-    }
-}
-
-void spatial_region::fout_w(ofstream* pfout, int n0, int n, bool is_last_sr)
-{
-    double w;
-    /* n-n0 - длина массива по x (для данного spatial_region'а) для
-     * вывода сечения плоскостью xy и плоскостью xz */
     double x,y,z;
     vector3d e;
     vector3d b;
-    for(int i=n0;i<n;i++)
+    int index = 0;
+    for(int i=left; i<right; i++)
     {
         int k=nz/2;
         for(int j=0;j<ny;j++)
@@ -449,40 +279,115 @@ void spatial_region::fout_w(ofstream* pfout, int n0, int n, bool is_last_sr)
             x=i;
             y=j;
             z=k;
-            if (is_last_sr==1&&x==n-1) x = x - 1;
+            if (is_last_sr==1&&x==right-1) x = x - 1;
             if(y==ny-1) y = y-1;
             e = e_to_particle(x,y,z);
             b = b_to_particle(x,y,z);
-            w = e.x*e.x + e.y*e.y + e.z*e.z + b.x*b.x + b.y*b.y + b.z*b.z;
-            (*pfout)<<w<<"\n";
+            result[index] = func(e.x, e.y, e.z, b.x, b.y, b.z);
+            index++;
         }
+    }
+    const hsize_t dims_xy[1] {(result.size())};
+    H5::DataSpace memory_dataspace_xy(1, dims_xy);
+
+    const hsize_t count_xy_out[2] {x_count, static_cast<hsize_t>(ny)};
+    const hsize_t start_xy_out[2] {static_cast<hsize_t>(dataset_shift), 0};
+    auto write_dataspace_xy = xy_dataset.getSpace();
+    write_dataspace_xy.selectHyperslab(H5S_SELECT_SET, count_xy_out, start_xy_out);
+
+    xy_dataset.write(&(result[0]), H5::PredType::NATIVE_DOUBLE, memory_dataspace_xy, write_dataspace_xy);
+
+    result = std::vector<double>(x_count * nz);
+    index = 0;
+    for(int i=left; i<right; i++)
+    {
         int j=ny/2;
         for(int k=0;k<nz;k++)
         {
             x=i;
             y=j;
             z=k;
-            if (is_last_sr==1&&x==n-1) x = x - 1;
+            if (is_last_sr==1&&x==right-1) x = x - 1;
             if(z==nz-1) z = z - 1;
             e = e_to_particle(x,y,z);
             b = b_to_particle(x,y,z);
-            w = e.x*e.x + e.y*e.y + e.z*e.z + b.x*b.x + b.y*b.y + b.z*b.z;
-            (*pfout)<<w<<"\n";
+            result[index] = func(e.x, e.y, e.z, b.x, b.y, b.z);
+            index++;
         }
     }
+
+    const hsize_t dims_xz[1] {(result.size())};
+    H5::DataSpace memory_dataspace_xz(1, dims_xz);
+
+    const hsize_t count_xz_out[2] {x_count, static_cast<hsize_t>(nz)};
+    const hsize_t start_xz_out[2] {static_cast<hsize_t>(dataset_shift), 0};
+    auto write_dataspace_xz = xz_dataset.getSpace();
+    write_dataspace_xz.selectHyperslab(H5S_SELECT_SET, count_xz_out, start_xz_out);
+
+    xz_dataset.write(&(result[0]), H5::PredType::NATIVE_DOUBLE, memory_dataspace_xz, write_dataspace_xz);
 }
 
-void spatial_region::fout_w_yzplane(ofstream* pfout, int i)
+void spatial_region::fout_w_xy_xz(H5::DataSet & xy_dataset, H5::DataSet & xz_dataset, int left, int right, int dataset_shift, bool is_last_sr) {
+    fout_field_function(xy_dataset, xz_dataset, left, right, dataset_shift, is_last_sr, w_function);
+}
+
+void spatial_region::fout_inv_xy_xz(H5::DataSet & xy_dataset, H5::DataSet & xz_dataset, int left, int right, int dataset_shift, bool is_last_sr) {
+    fout_field_function(xy_dataset, xz_dataset, left, right, dataset_shift, is_last_sr, inv_function);
+}
+
+void spatial_region::fout_ex_yz(H5::DataSet & yz_dataset, int position) {
+    write_vector_field_yz(&(ce[0][0][0].ex), 0, nx, ny, nz, yz_dataset, position);
+}
+
+void spatial_region::fout_ey_yz(H5::DataSet & yz_dataset, int position) {
+    write_vector_field_yz(&(ce[0][0][0].ex), 1, nx, ny, nz, yz_dataset, position);
+}
+
+void spatial_region::fout_ez_yz(H5::DataSet & yz_dataset, int position) {
+    write_vector_field_yz(&(ce[0][0][0].ex), 2, nx, ny, nz, yz_dataset, position);
+}
+
+void spatial_region::fout_bx_yz(H5::DataSet & yz_dataset, int position) {
+    write_vector_field_yz(&(cb[0][0][0].bx), 0, nx, ny, nz, yz_dataset, position);
+}
+
+void spatial_region::fout_by_yz(H5::DataSet & yz_dataset, int position) {
+    write_vector_field_yz(&(cb[0][0][0].bx), 1, nx, ny, nz, yz_dataset, position);
+}
+
+void spatial_region::fout_bz_yz(H5::DataSet & yz_dataset, int position) {
+    write_vector_field_yz(&(cb[0][0][0].bx), 2, nx, ny, nz, yz_dataset, position);
+}
+
+void spatial_region::fout_jx_yz(H5::DataSet & yz_dataset, int position) {
+    write_vector_field_yz(&(cj[0][0][0].jx), 0, nx, ny, nz, yz_dataset, position);
+}
+
+void spatial_region::fout_jy_yz(H5::DataSet & yz_dataset, int position) {
+    write_vector_field_yz(&(cj[0][0][0].jx), 1, nx, ny, nz, yz_dataset, position);
+}
+
+void spatial_region::fout_jz_yz(H5::DataSet & yz_dataset, int position) {
+    write_vector_field_yz(&(cj[0][0][0].jx), 2, nx, ny, nz, yz_dataset, position);
+}
+
+void spatial_region::fout_irho_yz(int ion_type, H5::DataSet & yz_dataset, int position) {
+    write_scalar_field_yz(&(irho[ion_type][0][0][0]), nx, ny, nz, yz_dataset, position);
+}
+
+void spatial_region::fout_field_function_yz(H5::DataSet & yz_dataset, int position,
+                                            std::function<double(double, double, double, double, double, double)> func)
 {
-    double w;
+    std::vector<double> result(ny * nz);
     double x,y,z;
     vector3d e;
     vector3d b;
+    int index = 0;
     for(int j=0;j<ny;j++)
     {
         for(int k=0;k<nz;k++)
         {
-            x=i;
+            x=position;
             y=j;
             z=k;
             if(x==nx-1) x = x-1;
@@ -490,216 +395,27 @@ void spatial_region::fout_w_yzplane(ofstream* pfout, int i)
             if(z==nz-1) z = z-1;
             e = e_to_particle(x,y,z);
             b = b_to_particle(x,y,z);
-            w = e.x*e.x + e.y*e.y + e.z*e.z + b.x*b.x + b.y*b.y + b.z*b.z;
-            (*pfout)<<w<<"\n";
+            result[index] = func(e.x, e.y, e.z, b.x, b.y, b.z);
+            index++;
         }
     }
+
+    const hsize_t dims[1] {(result.size())};
+    H5::DataSpace memory_dataspace(1, dims);
+
+    auto write_dataspace = yz_dataset.getSpace();
+
+    yz_dataset.write(&(result[0]), H5::PredType::NATIVE_DOUBLE, memory_dataspace, write_dataspace);
 }
 
-void spatial_region::fout_inv(ofstream* pfout, int n0, int n, bool is_last_sr)
+void spatial_region::fout_w_yz(H5::DataSet & yz_dataset, int position)
 {
-    double inv;
-    /* n-n0 - длина массива по x (для данного spatial_region'а) для
-     * вывода сечения плоскостью xy и плоскостью xz */
-    double x,y,z;
-    vector3d e;
-    vector3d b;
-    for(int i=n0;i<n;i++)
-    {
-        int k=nz/2;
-        for(int j=0;j<ny;j++)
-        {
-            x=i;
-            y=j;
-            z=k;
-            if (is_last_sr==1&&x==n-1) x = x - 1;
-            if(y==ny-1) y = y - 1;
-            e = e_to_particle(x,y,z);
-            b = b_to_particle(x,y,z);
-            inv = e.x*e.x + e.y*e.y + e.z*e.z - b.x*b.x - b.y*b.y - b.z*b.z;
-            (*pfout)<<inv<<"\n";
-        }
-        int j=ny/2;
-        for(int k=0;k<nz;k++)
-        {
-            x=i;
-            y=j;
-            z=k;
-            if (is_last_sr==1&&x==n-1) x = x - 1;
-            if(z==nz-1) z = z - 1;
-            e = e_to_particle(x,y,z);
-            b = b_to_particle(x,y,z);
-            inv = e.x*e.x + e.y*e.y + e.z*e.z - b.x*b.x - b.y*b.y - b.z*b.z;
-            (*pfout)<<inv<<"\n";
-        }
-    }
+    fout_field_function_yz(yz_dataset, position, w_function);
 }
 
-void spatial_region::fout_inv_yzplane(ofstream* pfout, int i)
+void spatial_region::fout_inv_yz(H5::DataSet & yz_dataset, int position)
 {
-    double inv;
-    double x,y,z;
-    vector3d e;
-    vector3d b;
-    for(int j=0;j<ny;j++)
-    {
-        for(int k=0;k<nz;k++)
-        {
-            x=i;
-            y=j;
-            z=k;
-            if(x==nx-1) x = x - 1;
-            if(y==ny-1) y = y - 1;
-            if(z==nz-1) z = z - 1;
-            e = e_to_particle(x,y,z);
-            b = b_to_particle(x,y,z);
-            inv = e.x*e.x + e.y*e.y + e.z*e.z - b.x*b.x - b.y*b.y - b.z*b.z;
-            (*pfout)<<inv<<"\n";
-        }
-    }
-}
-
-void spatial_region::fout_rho(ofstream* pfout_x, ofstream* pfout_y,
-        ofstream* pfout_z, int n0, int n, ios_base::openmode mode)
-{
-    /* n-n0 - длина массива по x (для данного spatial_region'а) для
-     * вывода сечения плоскостью xy и плоскостью xz */
-    if (is_mode_non_binary(mode)) {
-        if (pfout_x != 0) {
-            for (int i = n0; i < n; i++) {
-                int k = nz / 2;
-                for (int j = 0; j < ny; j++) {
-                    (*pfout_x) << cj[i][j][k].jx << "\n";
-                }
-                int j = ny / 2;
-                for (int k = 0; k < nz; k++) {
-                    (*pfout_x) << cj[i][j][k].jx << "\n";
-                }
-            }
-        }
-        if (pfout_y!=0)
-        {
-            for(int i=n0;i<n;i++)
-            {
-                int k=nz/2;
-                for(int j=0;j<ny;j++)
-                {
-                    (*pfout_y)<<cj[i][j][k].jy<<"\n";
-                }
-                int j=ny/2;
-                for(int k=0;k<nz;k++)
-                {
-                    (*pfout_y)<<cj[i][j][k].jy<<"\n";
-                }
-            }
-        }
-        if (pfout_z!=0)
-        {
-            for(int i=n0;i<n;i++)
-            {
-                int k=nz/2;
-                for(int j=0;j<ny;j++)
-                {
-                    (*pfout_z)<<cj[i][j][k].jz<<"\n";
-                }
-                int j=ny/2;
-                for(int k=0;k<nz;k++)
-                {
-                    (*pfout_z)<<cj[i][j][k].jz<<"\n";
-                }
-            }
-        }
-    } else if (is_mode_binary(mode)) {
-        if (pfout_x != 0)
-            write_binary<cellj>(pfout_x, cj, getjx, n0, n, ny, nz);
-        if (pfout_y != 0)
-            write_binary<cellj>(pfout_y, cj, getjy, n0, n, ny, nz);
-        if (pfout_z != 0)
-            write_binary<cellj>(pfout_z, cj, getjz, n0, n, ny, nz);
-    } else {
-        cerr << "fout_rho: ERROR: wrong mode" << endl;
-    }
-}
-
-void spatial_region::fout_rho_yzplane(ofstream* pfout_x, ofstream* pfout_y,
-        ofstream* pfout_z, int i, ios_base::openmode mode)
-{
-    if (is_mode_non_binary(mode)) {
-        if (pfout_x != 0) {
-            for (int j = 0; j < ny; j++) {
-                for (int k = 0; k < nz; k++) {
-                    (*pfout_x) << cj[i][j][k].jx << "\n";
-                }
-            }
-        }
-        if (pfout_y != 0) {
-            for (int j = 0; j < ny; j++) {
-                for (int k = 0; k < nz; k++) {
-                    (*pfout_y) << cj[i][j][k].jy << "\n";
-                }
-            }
-        }
-        if (pfout_z != 0) {
-            for (int j = 0; j < ny; j++) {
-                for (int k = 0; k < nz; k++) {
-                    (*pfout_z) << cj[i][j][k].jz << "\n";
-                }
-            }
-        }
-    } else if (is_mode_binary(mode)) {
-        if (pfout_x != 0)
-            write_binary_yzplane<cellj>(pfout_x, cj, getjx, i, ny, nz);
-        if (pfout_y != 0)
-            write_binary_yzplane<cellj>(pfout_y, cj, getjy, i, ny, nz);
-        if (pfout_z != 0)
-            write_binary_yzplane<cellj>(pfout_z, cj, getjz, i, ny, nz);
-    } else {
-        cerr << "fout_rho_yzplane: ERROR: wrong mode" << endl;
-    }
-}
-
-void spatial_region::fout_irho(int ion_type, ofstream* pfout, int n0, int n,
-        ios_base::openmode mode)
-{
-    /* n-n0 - длина массива по x (для данного spatial_region'а) для
-     * вывода сечения плоскостью xy и плоскостью xz */
-    // ion_type - index for icmr array
-    if (is_mode_non_binary(mode)) {
-        for(int i=n0;i<n;i++)
-        {
-            int k=nz/2;
-            for(int j=0;j<ny;j++)
-            {
-                (*pfout)<<irho[ion_type][i][j][k]<<"\n";
-            }
-            int j=ny/2;
-            for(int k=0;k<nz;k++)
-            {
-                (*pfout)<<irho[ion_type][i][j][k]<<"\n";
-            }
-        }
-    } else if (is_mode_binary(mode)) {
-        write_binary<double>(pfout, irho[ion_type], getdouble, n0, n, ny, nz);
-    } else {
-        cerr << "fout_irho: ERROR: wrong mode" << endl;
-    }
-}
-
-void spatial_region::fout_irho_yzplane(int ion_type, ofstream* pfout, int i,
-        ios_base::openmode mode)
-{
-    if (is_mode_non_binary(mode)) {
-        for(int j=0;j<ny;j++) {
-            for(int k=0;k<nz;k++) {
-                (*pfout)<<irho[ion_type][i][j][k]<<"\n";
-            }
-        }
-    } else if (is_mode_binary(mode)) {
-        write_binary_yzplane<double>(pfout, irho[ion_type], getdouble, i, ny,
-                nz);
-    } else {
-        cerr << "fout_irho_yzplane: ERROR: wrong mode" << endl;
-    }
+    fout_field_function_yz(yz_dataset, position, inv_function);
 }
 
 void spatial_region::fout_tracks(double a, int nm) {

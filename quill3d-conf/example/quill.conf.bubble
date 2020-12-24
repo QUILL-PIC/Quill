@@ -156,7 +156,3 @@ ztr2 = 11 # default: lambda; possible: um
 
 # имя папки для результатов; не забудьте создать её вручную!
 data_folder = results # default: results
-
-# режим вывода данных в файл (пока что только для плотности частиц и компонент
-# электромагнитных полей)
-output_mode = text # default: text; possible: binary

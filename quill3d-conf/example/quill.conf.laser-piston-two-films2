@@ -213,7 +213,3 @@ crpc = 2.0
 
 # имя папки для результатов
 data_folder = res_laser-piston-two-films2 # default: results
-
-# режим вывода данных в файл (пока что только для плотности частиц и компонент
-# электромагнитных полей)
-output_mode = text # default: text; possible: binary
