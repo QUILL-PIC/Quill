@@ -3557,7 +3557,7 @@ int init()
 
     balancing_enabled = find_boolean(first, "balancing", false);
     balancing_every = find_int(first, "balancing_every", 20);
-    balancing_particle_weight = find_double(first, "balancing_particle_weight", 1.0);
+    balancing_particle_weight = find_double(first, "balancing_particle_weight", 3.0);
     balancing_threshold = find_double(first, "balancing_threshold", 0.1);
 
     current = first;
