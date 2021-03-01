@@ -40,6 +40,7 @@ double file_name_accuracy;
 bool mwseed;
 moving_window mwindow;
 double mwtolerance; // the relative level of E^2 + B^2 causing the window to move in the AUTO mode
+double mw_mcr;
 double crpc;
 double* ppd;
 double phase,phi,phi_rotate;
@@ -1783,9 +1784,11 @@ void add_moving_window_particles()
                     if (modifier != 0.0)
                     {
                         psr->fill_cell_by_particles(-1,cell_pos,v_npic,n*modifier);
+                        if (mw_mcr != 0) {
+                            psr->fill_cell_by_particles( 1 / (proton_mass * mw_mcr)
+                                                       , cell_pos, v_npic, n * modifier);
+                        }
                     }
-                    //if (ions=="on")
-                    // psr[n_sr-1].fill_cell_by_particles(-1,cell_pos,v_npic,n); // bug??! this adds electrons, not ions; qwe
                 }
             }
         }
@@ -2934,6 +2937,8 @@ int init()
     current = find("mwseed",first);
     mwseed = 1;
     if (current->units=="off") mwseed = 0;
+    current = find("mw_mcr", first);
+    mw_mcr = current->value;
     current = find("e_components_for_output", first);
     e_components_for_output = current->units;
     current = find("b_components_for_output", first);
@@ -3030,7 +3035,12 @@ int init()
     phib = current->value;
     current = find("ions",first);
     ions = current->units;
-    if (ions=="") ions = "off";
+    if (ions=="") {
+        if (mw_mcr == 0 || mwseed == 0)
+            ions = "off";
+        else
+            ions = "on";
+    }
     p_last_film = 0;
     film* tmp_p_film;
     std::string tmp_s;
@@ -3241,6 +3251,9 @@ int init()
             n++;
         if (nerflow!=0)
             n++;
+        if (mwindow == moving_window::ON && mwseed == 1 && mw_mcr != 0) {
+            n++;
+        }
         double* mcr = new double[n];
         int m;
         bool b;
@@ -3280,6 +3293,16 @@ int init()
             }
             if (b==1) {
                 mcr[m] = mcrrflow;
+                m++;
+            }
+        }
+        if (mwseed == 1 && mw_mcr != 0) {
+            bool b = 1;
+            for (int i = 0; i < m; i++) {
+                b = b && (mcr[i] != mw_mcr);
+            }
+            if (b) {
+                mcr[m] = mw_mcr;
                 m++;
             }
         }
@@ -3612,6 +3635,7 @@ int init()
             fout_log<<"mwseed\n"<<"off"<<"\n";
         else
             fout_log<<"mwseed\n"<<"on"<<"\n";
+        fout_log << "mw_mcr\n" << mw_mcr << '\n';
         fout_log<<"e_components_for_output\n"<<e_components_for_output<<"\n";
         fout_log<<"b_components_for_output\n"<<b_components_for_output<<"\n";
         if (sscos==0) {
