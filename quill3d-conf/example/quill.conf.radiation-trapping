@@ -1,0 +1,123 @@
+# This configuration demonstrates radiation trapping of electrons in a bubble-like structure, see
+# L.L. Ji, A.Pukhov et al, PRL 112, 145003 (2014) for a similar phenomenon.
+
+# число вычислительных потоков
+n_sr = 8 # default: 8
+
+# шаги численной сетки; если задан dt, но не задан dx, то dx
+# вычисляется автоматически так, чтобы алгоритм NDFX давал наименьшую
+# дисперсию, но был устойчив; если dt не задан, то он вычисляется как
+# половина критического для данной плотности шага по времени, после dx
+# вычисляется автоматически по dt и ne, как написано выше
+dt = 0.01 # lambda
+# dx = 0.1 # lambda
+dy = 0.14 # lambda
+dz = 0.14 # lambda
+
+# длина волны лазерного импульса
+lambda = 1 um # default: cm; possible: um; lambda_p
+
+# концентрация электронов; используется при добавлении частиц при
+# включенном движущемся окне, а также при расчёте шага по x, если он
+# не задан явно
+ne = 100 ncr # default: cm^{-3}; possible: ncr
+
+# размеры области моделирования
+xlength = 20 # default: lambda; possible: um, fs
+ylength = 12 # default: lambda; possible: um
+zlength = 12 # default: lambda; possible: um
+
+# время моделирования
+t_end = 50 # default: lambda; possible: um, mm, cm
+# период вывода данных в файл
+output_period = 1 # default: lambda; possible: um, mm, cm, t_end
+
+# тип огибающей лазерного импульса
+f_envelope = cos # default: cos, possible: focused, sscos, focussedSSC, pearl, tophat
+# по умолчанию лазерные импульсы распространяются к центру области
+# моделирования (если не заданы ytarget, ztarget); b_sign = -1 меняет направление 
+# магнитного поля импульсов и, следовательно, их направление распространения на
+# противоположное
+b_sign = -1 # default: 1, possible: -1
+# размеры лазерного импульса (в перетяжке)
+xsigma = 3 # default: lambda; possible: um, fs
+ysigma = 2.7 # default: lambda; possible: um
+zsigma = 2.7 # default: lambda; possible: um
+# координаты центра лазерного импульса относительно центра области (или "цели", если заданы xtarget, ytarget, ztarget)
+x0 = 5 # default: lambda; possible: um, fs
+y0 = 0 # default: 0; default units: lambda; possible: um
+z0 = 0 # default: 0; default units: lambda; possible: um
+a0y = 2500
+
+# движущееся окно; выключается при наличии нейтральных потоков (flows)
+mwindow = on # default: on; possible: on, off, auto
+# включает или отключает добавление электронов на передней границе области при работе движущегося
+# окна; таким образом, при mwseed_ions = off ионы считаюстя неподвижными
+mwseed = on # default: on; possible: on, off
+# If turned on, ions are putted at the front (right) side of the simulation box while moving window
+# is working.
+mwseed_ions = on # default: off; possible: on, off
+# Mass-to-charge ratio of the ions (in that for the protons) which are added on the right boundary
+# of the simulation box while the box is moving.
+mw_mcr = 2 # default: 1
+
+
+# включение ионов (только для плёнок)
+ions = on # default: off; possible: on (uses mcr), positrons (mcr is ignored, ions are initiated as positrons)
+
+# компоненты полей для вывода в файл
+e_components_for_output = xyz # default: none; possible: x, y, z, xy, xz, yz, xyz
+b_components_for_output = xyz # default: none; possible: x, y, z, xy, xz, yz, xyz
+# компоненты тока для вывода в файл
+j_components_for_output = none # default: none; possible: x, y, z, xy, xz, yz, xyz
+# расстояние от правой границы области до плоскости yz, данные в
+# которой выводятся в файл;
+x0fout = 5 # default value: xlength/2; default units: lambda; possible: um, fs
+
+# число рядов частиц в ячейке по координатам
+xnpic = 1
+ynpic = 1
+znpic = 1
+
+# сорта частиц, данные о которых следует выводить в файл
+particles_for_output = epph # default: e; possible: e, ep, eph, epph
+
+# шаг по энергии в спектре, число точек в спектре и отношение общего
+# числа частиц к числу частиц, все характеристики которых выводятся в
+# файл, для разных сортов частиц
+deps = 4 MeV # default: MeV; possible: mc^2
+neps = 700
+enthp = 200
+#deps_p = 0.5 MeV # default value = deps; default units: MeV; possible: mc^2
+#neps_p = 140 # default = neps
+#enthp_p = 1 # default = enthp
+#deps_ph = 0.5 MeV # default value = deps; default units: MeV; possible: mc^2
+#neps_ph = 800 # default = neps
+#enthp_ph = 10 # default = enthp
+# шаг по энергии в ионном спектре в MeV на нуклон
+deps_i = 2
+neps_i = 1200 # default = neps
+#enthp_i = 10 # default = enthp
+
+# алгоритм слияния квазичастиц; nl - nonlinear(q), ti -
+# type-independently
+pmerging = ti # default: off; possible: nl, ti
+# критическое отношение числа квазичастиц одного сорта к числу ячеек
+crpc = 2.0
+
+# включение и выключение КЭД-эффектов
+qed = on # default: on; possible: off
+
+# выбор пушера частиц
+pusher = vay # default: vay; possible: boris
+
+# выбор метода моделирования ЭМ поля
+solver = ndfx # default: ndfx; possible: fdtd
+
+# имя папки для результатов
+data_folder = results_radiation_trapping_ne_100_a0_2500 # default: results
+
+# режим вывода данных в файл (пока что только для плотности частиц и компонент
+# электромагнитных полей)
+output_mode = binary # default: text; possible: binary
+

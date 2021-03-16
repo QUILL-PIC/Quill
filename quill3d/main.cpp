@@ -40,6 +40,8 @@ double file_name_accuracy;
 bool mwseed;
 moving_window mwindow;
 double mwtolerance; // the relative level of E^2 + B^2 causing the window to move in the AUTO mode
+std::string mwseed_ions;
+double mw_mcr;
 double crpc;
 double* ppd;
 double phase,phi,phi_rotate;
@@ -1784,8 +1786,39 @@ void add_moving_window_particles()
                     {
                         psr->fill_cell_by_particles(-1,cell_pos,v_npic,n*modifier);
                     }
-                    //if (ions=="on")
-                    // psr[n_sr-1].fill_cell_by_particles(-1,cell_pos,v_npic,n); // bug??! this adds electrons, not ions; qwe
+                }
+            }
+        }
+        if (mwseed_ions == "on") {
+            double n;
+            n=1/(k0*k0);
+            n *= lin_interpolation((nmw-1)*dx, ne_profile_x_coords, ne_profile_x_values);
+
+            int_vector3d cell_pos;
+            cell_pos.i = nx_sr[n_sr-1] - 3;
+            int_vector3d v_npic;
+            v_npic.i = xnpic;
+            v_npic.j = ynpic;
+            v_npic.k = znpic;
+            for(int j=0;j<int(ylength/dy);j++)
+            {
+                for(int k=0;k<int(zlength/dz);k++)
+                {
+                    cell_pos.j=j;
+                    cell_pos.k=k;
+                    double zcell = k * dz;
+                    double ycell = j * dy;
+                    double ycenter = ylength / 2.0;
+                    double zcenter = zlength / 2.0;
+                    double zrel = zcell - zcenter;
+                    double yrel = ycell - ycenter;
+                    double r = sqrt(zrel * zrel + yrel * yrel);
+                    double modifier = lin_interpolation(r, ne_profile_r_coords, ne_profile_r_values);
+                    if (modifier != 0.0)
+                    {
+                        psr->fill_cell_by_particles( 1 / (proton_mass * mw_mcr)
+                                                   , cell_pos, v_npic, n * modifier);
+                    }
                 }
             }
         }
@@ -2934,6 +2967,14 @@ int init()
     current = find("mwseed",first);
     mwseed = 1;
     if (current->units=="off") mwseed = 0;
+    current = find("mwseed_ions", first);
+    mwseed_ions = current->units;
+    if (mwseed_ions == "")
+        mwseed_ions = "off"; // default
+    current = find("mw_mcr", first);
+    mw_mcr = current->value;
+    if (mw_mcr == 0)
+        mw_mcr = 1; // default
     current = find("e_components_for_output", first);
     e_components_for_output = current->units;
     current = find("b_components_for_output", first);
@@ -3030,7 +3071,6 @@ int init()
     phib = current->value;
     current = find("ions",first);
     ions = current->units;
-    if (ions=="") ions = "off";
     p_last_film = 0;
     film* tmp_p_film;
     std::string tmp_s;
@@ -3241,6 +3281,9 @@ int init()
             n++;
         if (nerflow!=0)
             n++;
+        if (mwindow == moving_window::ON && mwseed_ions == "on") {
+            n++;
+        }
         double* mcr = new double[n];
         int m;
         bool b;
@@ -3280,6 +3323,16 @@ int init()
             }
             if (b==1) {
                 mcr[m] = mcrrflow;
+                m++;
+            }
+        }
+        if (mwseed_ions == "on") {
+            bool b = 1;
+            for (int i = 0; i < m; i++) {
+                b = b && (mcr[i] != mw_mcr);
+            }
+            if (b) {
+                mcr[m] = mw_mcr;
                 m++;
             }
         }
@@ -3608,10 +3661,15 @@ int init()
         } else if (mwindow==moving_window::AUTO) {
             fout_log<<"mwindow\n"<<"auto"<<"\n";
         }
-        if (mwseed==0)
-            fout_log<<"mwseed\n"<<"off"<<"\n";
-        else
-            fout_log<<"mwseed\n"<<"on"<<"\n";
+        if (mwindow != moving_window::OFF) {
+            if (mwseed==0)
+                fout_log<<"mwseed\n"<<"off"<<"\n";
+            else
+                fout_log<<"mwseed\n"<<"on"<<"\n";
+            fout_log << "mwseed_ions\n" << mwseed_ions << '\n';
+            if (mwseed_ions == "on")
+                fout_log << "mw_mcr\n" << mw_mcr << '\n';
+        }
         fout_log<<"e_components_for_output\n"<<e_components_for_output<<"\n";
         fout_log<<"b_components_for_output\n"<<b_components_for_output<<"\n";
         if (sscos==0) {

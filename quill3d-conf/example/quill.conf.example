@@ -131,9 +131,15 @@ mwindow = off # default: on; possible: on, off, auto
 #mwtolerance = 1e-6 # default: 1e-6
 # moving window velocity
 #mwspeed = 0.4 # default: 1, игнорируется при mwindow = auto
-# включает или отключает добавление частиц на передней границе области
-# при работе движущегося окна
+# включает или отключает добавление электронов на передней границе области при работе движущегося
+# окна; таким образом, при mwseed_ions = off ионы считаюстя неподвижными
 #mwseed = on # default: on; possible: on, off
+# If turned on, ions are putted at the front (right) side of the simulation box while moving window
+# is working.
+#mwseed_ions = on # default: off; possible: on, off
+# Mass-to-charge ratio of the ions (in that for the protons) which are added on the right boundary
+# of the simulation box while the box is moving.
+#mw_mcr = 2 # default: 1
 
 # компоненты полей для вывода в файл
 e_components_for_output = xyz # default: none; possible: x, y, z, xy, xz, yz, xyz
