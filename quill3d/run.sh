@@ -10,6 +10,10 @@ fi
 
 # Create data folder if not exist; copy config file into it
 folder=`./parse.py "$1" | grep -A2 data_folder | tail -n1`
+if [[ -z "$folder" ]]
+then
+    folder="results"
+fi
 echo "Data folder: $folder"
 sleep 1.5  # so the user has time to see the data folder
 
