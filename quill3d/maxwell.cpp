@@ -1,7 +1,6 @@
 #include "maxwell.h"
 #include <cmath>
 
-
 maxwell_solver::maxwell_solver(field3d<celle> & ce0, field3d<cellb> & cb0, field3d<cellj> & cj0, double dt, double dx,
         double dy, double dz) :
         ce(ce0), cb(cb0), cj(cj0), dx(dx), dy(dy), dz(dz), dtdx(dt / dx), dtdy(dt / dy), dtdz(dt / dz) { }
@@ -23,9 +22,9 @@ void maxwell_solver::advance() {
 fp_solver::fp_solver(field3d<celle> & ce0, field3d<cellb> & cb0, field3d<cellj> & cj0, double dt, double dx,
         double dy, double dz) :
         maxwell_solver(ce0, cb0, cj0, dt, dx, dy, dz),
-        ax(0.25 * (1 - dx / dt * sin(0.5 * PI * min(1.0, dt / dx)))),
-        ay(0.25 * (1 - dy / dt * sin(0.5 * PI * min(1.0, dt / dy)))),
-        az(0.25 * (1 - dz / dt * sin(0.5 * PI * min(1.0, dt / dz)))) {
+        ax(0.25 * (1 - dx / dt * sin(0.5 * 3.141592653589793 * std::min(1.0, dt / dx)))),
+        ay(0.25 * (1 - dy / dt * sin(0.5 * 3.141592653589793 * std::min(1.0, dt / dy)))),
+        az(0.25 * (1 - dz / dt * sin(0.5 * 3.141592653589793 * std::min(1.0, dt / dz)))) {
     bx = 1 - 2 * ax;
     by = 1 - 2 * ay;
     bz = 1 - 2 * az;
