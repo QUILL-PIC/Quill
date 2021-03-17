@@ -88,6 +88,9 @@ void spatial_region::init(int sr_id0, double dx0, double dy0, double dz0, double
     case maxwell_solver_enum::FDTD:
         solver = unique_ptr<maxwell_solver>(new fdtd_solver(ce, cb, cj, dt, dx, dy, dz));
         break;
+    case maxwell_solver_enum::FP:
+        solver = unique_ptr<maxwell_solver>(new fp_solver(ce, cb, cj, dt, dx, dy, dz));
+        break;
     default:
         solver = nullptr;
     }

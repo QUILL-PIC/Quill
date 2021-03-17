@@ -289,7 +289,7 @@ qed = on # default: on; possible: off
 pusher = vay # default: vay; possible: boris
 
 # выбор метода моделирования ЭМ поля
-solver = ndfx # default: ndfx; possible: fdtd
+solver = ndfx # default: ndfx; possible: fdtd, fp
 
 # блок динамической балансировки
 # включение и выключение балансировки
