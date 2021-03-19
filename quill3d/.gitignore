@@ -1,0 +1,17 @@
+/*/
+/*
+!.gitignore
+!*.cpp
+!*.h
+!parse.sh
+!parse.py
+!test_parse.py
+!generate_brush.py
+!run.sh
+!run_slurm_example.py
+!run_slurm_example.sh
+!makefile
+!asy
+!python
+!doc
+!chameleon

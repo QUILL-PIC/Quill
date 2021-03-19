@@ -279,7 +279,7 @@ def read_track(track_name):
              'q' : raw_track[0],
              'g' : raw_track[7],
              'chi' : raw_track[8],
-             't' : np.linspace(0, dt * track_size, track_size)}
+             't' : np.linspace(0, dt * (track_size - 1), track_size)}
     track['vx'] = track['ux'] / track['g']
     track['vy'] = track['uy'] / track['g']
     track['vz'] = track['uz'] / track['g']
