@@ -114,12 +114,6 @@ class spatial_region
     void fout_inv_yz(H5::DataSet & yz_dataset, int position);
     void fout_field_function_yz(H5::DataSet & yz_dataset, int position,
                                 std::function<double(double, double, double, double, double, double)> func);
-    void fout_inv(ofstream*,int,int,bool);
-    void fout_inv_yzplane(ofstream*,int);
-    void fout_rho(ofstream*,ofstream*,ofstream*,int,int, ios_base::openmode);
-    void fout_rho_yzplane(ofstream*,ofstream*,ofstream*,int, ios_base::openmode);
-    void fout_irho(int,ofstream*,int,int, ios_base::openmode);
-    void fout_irho_yzplane(int,ofstream*,int, ios_base::openmode);
     void fout_tracks(double,int);
     void f_init_cos(double,double,double,double,double,double,int,bool,double,double,double,double,bool,double,double,double,double);
     void f_init_focused(double,double,double,double,double,double,bool,double,double,double,bool,double,int,double,double,double,double);
