@@ -149,6 +149,8 @@ j_components_for_output = xyz # default: none; possible: x, y, z, xy, xz, yz, xy
 # расстояние от правой границы области до плоскости yz, данные в
 # которой выводятся в файл;
 #x0fout = 9 # default value: xlength/2; default units: lambda; possible: um, fs
+# вывод трехмерных распределений полей
+# output_3d = on # default: off; possible: on
 
 # пучок частиц
 beam = on # default: off; possible: on, off

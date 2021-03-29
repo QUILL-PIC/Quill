@@ -2,6 +2,7 @@
 #include <iostream>
 #include <vector>
 #include <cstring>
+#include <exception>
 
 const std::string MESHES_GROUP = "meshes";
 
@@ -174,8 +175,20 @@ std::vector<std::string> get_axes_labels(openpmd::Space space) {
         return {"y", "z"};
     } else if (space == openpmd::Space::XZ) {
         return {"x", "z"};
+    } else if (space == openpmd::Space::XYZ) {
+        return {"x", "y", "z"};
     } else {
-        return {};
+        throw std::invalid_argument("Space has incorrect value");
+    }
+}
+
+int get_space_size(openpmd::Space space) {
+    if (space == openpmd::Space::XY || space == openpmd::Space::XZ || space == openpmd::Space::YZ) {
+        return 2;
+    } else if (space == openpmd::Space::XYZ) {
+        return 3;
+    } else {
+        throw std::invalid_argument("Space has incorrect value");
     }
 }
 
@@ -184,7 +197,7 @@ void initialize_mesh_attrs(H5::H5Object & obj, openpmd::Space space, const std::
     create_attribute(obj, "dataOrder", "C");
     create_attribute(obj, "gridUnitSI", 1.0);
     create_attribute(obj, "gridSpacing", grid_spacing);
-    create_attribute(obj, "gridGlobalOffset", std::vector<double>{0.0, 0.0});
+    create_attribute(obj, "gridGlobalOffset", std::vector<double>(get_space_size(space), 0.0));
     create_attribute(obj, "unitDimension", std::vector<double>(7, 0.0));
     create_attribute(obj, "timeOffset", 0.0);
     create_attribute(obj, "axisLabels", get_axes_labels(space));
@@ -216,6 +229,33 @@ void openpmd::initialize_2d_dataset(const std::string & filepath, const std::str
     create_attribute(dataset, "unitSI", 1.0);
     // TODO proper position of the grid
     create_attribute(dataset, "position", std::vector<double>{0.0, 0.0});
+}
+
+void openpmd::initialize_3d_dataset(const std::string & filepath, const std::string & name, std::array<hsize_t, 3> size, std::array<double, 3> grid_spacing) {
+    auto file = H5::H5File(filepath, H5F_ACC_RDWR);
+
+    H5::DataSpace dataspace(3, size.data());
+
+    auto group_name = get_parent(name);
+    auto group = open_group(file, group_name);
+
+    auto dataset_name = get_name(name);
+    H5::DataSet dataset = create_dataset(group, dataset_name, dataspace);
+
+    std::vector<double> grid_spacing_v{grid_spacing.begin(), grid_spacing.end()};
+
+    if (dataset_name == "x" || dataset_name == "y" || dataset_name == "z") {
+        if (!group.attrExists("geometry")) {
+            initialize_mesh_attrs(group, openpmd::Space::XYZ, grid_spacing_v);
+        }
+    } else {
+        initialize_mesh_attrs(dataset, openpmd::Space::XYZ, grid_spacing_v);
+    }
+
+    // TODO proper SI units
+    create_attribute(dataset, "unitSI", 1.0);
+    // TODO proper position of the grid
+    create_attribute(dataset, "position", std::vector<double>{0.0, 0.0});    
 }
 
 void openpmd::create_iteration_group(const std::string & filepath, int iteration, double dt, double time, double time_units_SI) {

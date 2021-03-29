@@ -114,6 +114,20 @@ class spatial_region
     void fout_inv_yz(H5::DataSet & yz_dataset, int position);
     void fout_field_function_yz(H5::DataSet & yz_dataset, int position,
                                 std::function<double(double, double, double, double, double, double)> func);
+    void fout_ex_3d(H5::DataSet & dataset, int n0, int n, int dataset_shift);
+    void fout_ey_3d(H5::DataSet & dataset, int n0, int n, int dataset_shift);
+    void fout_ez_3d(H5::DataSet & dataset, int n0, int n, int dataset_shift);
+    void fout_bx_3d(H5::DataSet & dataset, int n0, int n, int dataset_shift);
+    void fout_by_3d(H5::DataSet & dataset, int n0, int n, int dataset_shift);
+    void fout_bz_3d(H5::DataSet & dataset, int n0, int n, int dataset_shift);
+    void fout_jx_3d(H5::DataSet & dataset, int n0, int n, int dataset_shift);
+    void fout_jy_3d(H5::DataSet & dataset, int n0, int n, int dataset_shift);
+    void fout_jz_3d(H5::DataSet & dataset, int n0, int n, int dataset_shift);
+    void fout_irho_3d(int ion_type, H5::DataSet & dataset, int n0, int n, int dataset_shift);
+    void fout_w_3d(H5::DataSet & dataset, int n0, int n, int dataset_shift, bool is_last_sr);
+    void fout_inv_3d(H5::DataSet & dataset, int n0, int n, int dataset_shift, bool is_last_sr);
+    void fout_field_function_3d(H5::DataSet & dataset, int left, int right, int dataset_shift, bool is_last_sr,
+                                std::function<double(double, double, double, double, double, double)> func);
     void fout_tracks(double,int);
     void f_init_cos(double,double,double,double,double,double,int,bool,double,double,double,double,bool,double,double,double,double);
     void f_init_focused(double,double,double,double,double,double,bool,double,double,double,bool,double,int,double,double,double,double);

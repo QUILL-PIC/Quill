@@ -75,6 +75,7 @@ std::string beam_particles;
 bool write_p;
 bool write_ph;
 bool write_jx = false, write_jy = false, write_jz = false;
+bool write_3d = false;
 std::string pmerging;
 bool pmerging_now;
 std::string lp_reflection,f_reflection;
@@ -381,12 +382,19 @@ void initialize_2d_datasets(const string & fields_xy_filename, const string & fi
     openpmd::initialize_2d_dataset(fields_yz_filename, data_prefix + dataset_name, ny_global, nz_global, openpmd::Space::YZ, {dy, dz});
 }
 
+void initialize_3d_dataset(const string & fields_3d_filename, const string & dataset_name) {
+    auto data_prefix = openpmd::iteration_meshes_group_string(l) + "/";
+
+    openpmd::initialize_3d_dataset(fields_3d_filename, data_prefix + dataset_name, {nx_global, ny_global, nz_global}, {dx, dy, dz});
+}
+
 void write_j_array(bool write_x, bool write_y, bool write_z, std::string x_folder, std::string y_folder, std::string z_folder)
 {
     auto filename_suffix = calculate_filename_suffix(*p_current_ddi);
     auto fields_xy_filename = data_folder + "/" + std::string("Fields_xy_") + filename_suffix + ".h5";
     auto fields_xz_filename = data_folder + "/" + std::string("Fields_xz_") + filename_suffix + ".h5";
     auto fields_yz_filename = data_folder + "/" + std::string("Fields_yz_") + filename_suffix + ".h5";
+    auto fields_3d_filename = data_folder + "/" + std::string("Fields_3d_") + filename_suffix + ".h5";
 
     auto data_prefix = openpmd::iteration_meshes_group_string(l) + "/";
 
@@ -399,6 +407,18 @@ void write_j_array(bool write_x, bool write_y, bool write_z, std::string x_folde
         }
         if (write_z) {
             initialize_2d_datasets(fields_xy_filename, fields_xz_filename, fields_yz_filename, z_folder);
+        }
+
+        if (write_3d) {
+            if (write_x) {
+                initialize_3d_dataset(fields_3d_filename, x_folder);
+            }
+            if (write_y) {
+                initialize_3d_dataset(fields_3d_filename, y_folder);
+            }
+            if (write_z) {
+                initialize_3d_dataset(fields_3d_filename, z_folder);
+            }
         }
     }
 
@@ -425,6 +445,23 @@ void write_j_array(bool write_x, bool write_y, bool write_z, std::string x_folde
                 auto xy_dataset = openpmd::open_dataset(field_xy_file, data_prefix + z_folder);
                 auto xz_dataset = openpmd::open_dataset(field_xz_file, data_prefix + z_folder);
                 psr->fout_jz_xy_xz(xy_dataset, xz_dataset, left_border, right_border, output_dataset_shift);
+            }
+
+            if (write_3d) {
+                auto field_3d_file = H5::H5File(fields_3d_filename, H5F_ACC_RDWR);
+
+                if (write_x) {
+                    auto dataset = openpmd::open_dataset(field_3d_file, data_prefix + x_folder);
+                    psr->fout_jx_3d(dataset, left_border, right_border, output_dataset_shift);
+                }
+                if (write_y) {
+                    auto dataset = openpmd::open_dataset(field_3d_file, data_prefix + y_folder);
+                    psr->fout_jy_3d(dataset, left_border, right_border, output_dataset_shift);
+                }
+                if (write_z) {
+                    auto dataset = openpmd::open_dataset(field_3d_file, data_prefix + z_folder);
+                    psr->fout_jz_3d(dataset, left_border, right_border, output_dataset_shift);
+                }
             }
         }
         MPI_Barrier(MPI_COMM_WORLD);
@@ -783,6 +820,7 @@ void initialize_output_files() {
     auto fields_xy_filename = data_folder + "/" + std::string("Fields_xy_") + filename_suffix + ".h5";
     auto fields_xz_filename = data_folder + "/" + std::string("Fields_xz_") + filename_suffix + ".h5";
     auto fields_yz_filename = data_folder + "/" + std::string("Fields_yz_") + filename_suffix + ".h5";
+    auto fields_3d_filename = data_folder + "/" + std::string("Fields_3d_") + filename_suffix + ".h5";
 
     if (mpi_rank == 0) {
         openpmd::initialize_file(fields_xy_filename);
@@ -792,6 +830,11 @@ void initialize_output_files() {
         openpmd::create_iteration_group(fields_xy_filename, l, dt, calculate_output_time(*p_current_ddi), 0.0);
         openpmd::create_iteration_group(fields_xz_filename, l, dt, calculate_output_time(*p_current_ddi), 0.0);
         openpmd::create_iteration_group(fields_yz_filename, l, dt, calculate_output_time(*p_current_ddi), 0.0);
+
+        if (write_3d) {
+            openpmd::initialize_file(fields_3d_filename);
+            openpmd::create_iteration_group(fields_3d_filename, l, dt, calculate_output_time(*p_current_ddi), 0.0);
+        }
     }
 }
 
@@ -801,6 +844,7 @@ void write_fields()
     auto fields_xy_filename = data_folder + "/" + std::string("Fields_xy_") + filename_suffix + ".h5";
     auto fields_xz_filename = data_folder + "/" + std::string("Fields_xz_") + filename_suffix + ".h5";
     auto fields_yz_filename = data_folder + "/" + std::string("Fields_yz_") + filename_suffix + ".h5";
+    auto fields_3d_filename = data_folder + "/" + std::string("Fields_3d_") + filename_suffix + ".h5";
 
     auto data_prefix = openpmd::iteration_meshes_group_string(l) + "/";
     
@@ -826,6 +870,30 @@ void write_fields()
         initialize_2d_datasets(fields_xy_filename, fields_xz_filename, fields_yz_filename, "w");
 
         initialize_2d_datasets(fields_xy_filename, fields_xz_filename, fields_yz_filename, "inv");
+
+        if (write_3d) {
+            if (e_components_for_output=="x"||e_components_for_output=="xy"||e_components_for_output=="xz"||e_components_for_output=="xyz") {
+                initialize_3d_dataset(fields_3d_filename, "E/x");
+            }
+            if (e_components_for_output=="y"||e_components_for_output=="xy"||e_components_for_output=="yz"||e_components_for_output=="xyz") {
+                initialize_3d_dataset(fields_3d_filename, "E/y");
+            }
+            if (e_components_for_output=="z"||e_components_for_output=="xz"||e_components_for_output=="yz"||e_components_for_output=="xyz") {
+                initialize_3d_dataset(fields_3d_filename, "E/z");
+            }
+            if (b_components_for_output=="x"||b_components_for_output=="xy"||b_components_for_output=="xz"||b_components_for_output=="xyz") {
+                initialize_3d_dataset(fields_3d_filename, "B/x");
+            }
+            if (b_components_for_output=="y"||b_components_for_output=="xy"||b_components_for_output=="yz"||b_components_for_output=="xyz") {
+                initialize_3d_dataset(fields_3d_filename, "B/y");
+            }
+            if (b_components_for_output=="z"||b_components_for_output=="xz"||b_components_for_output=="yz"||b_components_for_output=="xyz") {
+                initialize_3d_dataset(fields_3d_filename, "B/z");
+            }
+            initialize_3d_dataset(fields_3d_filename, "w");
+
+            initialize_3d_dataset(fields_3d_filename, "inv");
+        }
     }
 
     for(int i=0;i<n_sr;i++) {
@@ -875,6 +943,41 @@ void write_fields()
             auto inv_xy_dataset = openpmd::open_dataset(field_xy_file, data_prefix + "inv");
             auto inv_xz_dataset = openpmd::open_dataset(field_xz_file, data_prefix + "inv");
             psr->fout_inv_xy_xz(inv_xy_dataset, inv_xz_dataset, left_border, right_border, output_dataset_shift, i == n_sr-1);
+
+            if (write_3d) {
+                auto field_3d_file = H5::H5File(fields_3d_filename, H5F_ACC_RDWR);
+
+                if (e_components_for_output=="x"||e_components_for_output=="xy"||e_components_for_output=="xz"||e_components_for_output=="xyz") {
+                    auto dataset = openpmd::open_dataset(field_3d_file, data_prefix + "E/x");
+                    psr->fout_ex_3d(dataset, left_border, right_border, output_dataset_shift);
+                }
+                if (e_components_for_output=="y"||e_components_for_output=="xy"||e_components_for_output=="yz"||e_components_for_output=="xyz") {
+                    auto dataset = openpmd::open_dataset(field_3d_file, data_prefix + "E/y");
+                    psr->fout_ey_3d(dataset, left_border, right_border, output_dataset_shift);
+                }
+                if (e_components_for_output=="z"||e_components_for_output=="xz"||e_components_for_output=="yz"||e_components_for_output=="xyz") {
+                    auto dataset = openpmd::open_dataset(field_3d_file, data_prefix + "E/z");
+                    psr->fout_ez_3d(dataset, left_border, right_border, output_dataset_shift);
+                }
+                if (b_components_for_output=="x"||b_components_for_output=="xy"||b_components_for_output=="xz"||b_components_for_output=="xyz") {
+                    auto dataset = openpmd::open_dataset(field_3d_file, data_prefix + "B/x");
+                    psr->fout_bx_3d(dataset, left_border, right_border, output_dataset_shift);
+                }
+                if (b_components_for_output=="y"||b_components_for_output=="xy"||b_components_for_output=="yz"||b_components_for_output=="xyz") {
+                    auto dataset = openpmd::open_dataset(field_3d_file, data_prefix + "B/y");
+                    psr->fout_by_3d(dataset, left_border, right_border, output_dataset_shift);
+                }
+                if (b_components_for_output=="z"||b_components_for_output=="xz"||b_components_for_output=="yz"||b_components_for_output=="xyz") {
+                    auto dataset = openpmd::open_dataset(field_3d_file, data_prefix + "B/z");
+                    psr->fout_bz_3d(dataset, left_border, right_border, output_dataset_shift);
+                }
+
+                auto w_dataset = openpmd::open_dataset(field_3d_file, data_prefix + "w");
+                psr->fout_w_3d(w_dataset, left_border, right_border, output_dataset_shift, i == n_sr-1);
+
+                auto inv_dataset = openpmd::open_dataset(field_3d_file, data_prefix + "inv");
+                psr->fout_inv_3d(inv_dataset, left_border, right_border, output_dataset_shift, i == n_sr-1);
+            }
         }
         MPI_Barrier(MPI_COMM_WORLD);
     }
@@ -2929,6 +3032,8 @@ int init()
                 << "] is not a valid option, only x, y, z chars are possible"
                 << endl;
     }
+
+    write_3d = find_boolean(first, "output_3d", false);
 
     current = find("beam",first);
     beam = current->units;

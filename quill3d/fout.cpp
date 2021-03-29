@@ -181,14 +181,49 @@ void write_4d_array(double * p_first_element, int vector_size, int component, in
     xz_dataset.write(p_first_element, H5::PredType::NATIVE_DOUBLE, memory_dataspace, write_xz_dataspace);
 }
 
+void write_4d_array_3d(double * p_first_element, int vector_size, int component, int nx0, int ny0, int nz0, 
+    H5::DataSet & dataset, int left, int right, int output_dataset_shift) {
+    const hsize_t nx = static_cast<hsize_t>(nx0);
+    const hsize_t ny = static_cast<hsize_t>(ny0);
+    const hsize_t nz = static_cast<hsize_t>(nz0);
+
+    const hsize_t dims[4] {nx, ny, nz, static_cast<hsize_t>(vector_size)};
+
+    H5::DataSpace memory_dataspace(4, dims);
+
+    const hsize_t x_start = static_cast<hsize_t>(left);
+    const hsize_t x_count = static_cast<hsize_t>(right - left);
+    
+    const hsize_t count[4] {x_count, ny, nz, 1};
+    const hsize_t start[4] {x_start, 0, 0, static_cast<hsize_t>(component)};
+    memory_dataspace.selectHyperslab(H5S_SELECT_SET, count, start);
+
+    const hsize_t count_out[3] {x_count, ny, nz};
+    const hsize_t start_out[3] {static_cast<hsize_t>(output_dataset_shift), 0, 0};
+    auto write_dataspace = dataset.getSpace();
+    write_dataspace.selectHyperslab(H5S_SELECT_SET, count_out, start_out);
+    
+    dataset.write(p_first_element, H5::PredType::NATIVE_DOUBLE, memory_dataspace, write_dataspace);
+}
+
 void write_vector_field(double * p_first_element, int component, int nx0, int ny0, int nz0, 
     H5::DataSet & xy_dataset, H5::DataSet & xz_dataset, int left, int right, int output_dataset_shift) {
     write_4d_array(p_first_element, 3, component, nx0, ny0, nz0, xy_dataset, xz_dataset, left, right, output_dataset_shift);
 }
 
+void write_vector_field_3d(double * p_first_element, int component, int nx0, int ny0, int nz0, 
+    H5::DataSet & dataset, int left, int right, int output_dataset_shift) {
+    write_4d_array_3d(p_first_element, 3, component, nx0, ny0, nz0, dataset, left, right, output_dataset_shift);
+}
+
 void write_scalar_field(double * p_first_element, int nx0, int ny0, int nz0, H5::DataSet & xy_dataset, 
                         H5::DataSet & xz_dataset, int left, int right, int output_dataset_shift) {
     write_4d_array(p_first_element, 1, 0, nx0, ny0, nz0, xy_dataset, xz_dataset, left, right, output_dataset_shift);
+}
+
+void write_scalar_field_3d(double * p_first_element, int nx0, int ny0, int nz0, H5::DataSet & dataset, 
+                           int left, int right, int output_dataset_shift) {
+    write_4d_array_3d(p_first_element, 1, 0, nx0, ny0, nz0, dataset, left, right, output_dataset_shift);
 }
 
 void write_4d_array_yz(double * p_first_element, int vector_size, int component, int nx0, int ny0, int nz0, 
@@ -416,6 +451,92 @@ void spatial_region::fout_w_yz(H5::DataSet & yz_dataset, int position)
 void spatial_region::fout_inv_yz(H5::DataSet & yz_dataset, int position)
 {
     fout_field_function_yz(yz_dataset, position, inv_function);
+}
+
+void spatial_region::fout_ex_3d(H5::DataSet & dataset, int left, int right, int dataset_shift) {
+    write_vector_field_3d(&(ce[0][0][0].ex), 0, nx, ny, nz, dataset, left, right, dataset_shift);
+}
+
+void spatial_region::fout_ey_3d(H5::DataSet & dataset, int left, int right, int dataset_shift) {
+    write_vector_field_3d(&(ce[0][0][0].ex), 1, nx, ny, nz, dataset, left, right, dataset_shift);
+}
+
+void spatial_region::fout_ez_3d(H5::DataSet & dataset, int left, int right, int dataset_shift) {
+    write_vector_field_3d(&(ce[0][0][0].ex), 2, nx, ny, nz, dataset, left, right, dataset_shift);
+}
+
+void spatial_region::fout_bx_3d(H5::DataSet & dataset, int left, int right, int dataset_shift) {
+    write_vector_field_3d(&(cb[0][0][0].bx), 0, nx, ny, nz, dataset, left, right, dataset_shift);
+}
+
+void spatial_region::fout_by_3d(H5::DataSet & dataset, int left, int right, int dataset_shift) {
+    write_vector_field_3d(&(cb[0][0][0].bx), 1, nx, ny, nz, dataset, left, right, dataset_shift);
+}
+
+void spatial_region::fout_bz_3d(H5::DataSet & dataset, int left, int right, int dataset_shift) {
+    write_vector_field_3d(&(cb[0][0][0].bx), 2, nx, ny, nz, dataset, left, right, dataset_shift);
+}
+
+void spatial_region::fout_jx_3d(H5::DataSet & dataset, int left, int right, int dataset_shift) {
+    write_vector_field_3d(&(cj[0][0][0].jx), 0, nx, ny, nz, dataset, left, right, dataset_shift);
+}
+
+void spatial_region::fout_jy_3d(H5::DataSet & dataset, int left, int right, int dataset_shift) {
+    write_vector_field_3d(&(cj[0][0][0].jx), 1, nx, ny, nz, dataset, left, right, dataset_shift);
+}
+
+void spatial_region::fout_jz_3d(H5::DataSet & dataset, int left, int right, int dataset_shift) {
+    write_vector_field_3d(&(cj[0][0][0].jx), 2, nx, ny, nz, dataset, left, right, dataset_shift);
+}
+
+void spatial_region::fout_irho_3d(int ion_type, H5::DataSet & dataset, int left, int right, int dataset_shift) {
+    write_scalar_field_3d(&(irho[ion_type][0][0][0]), nx, ny, nz, dataset, left, right, dataset_shift);
+}
+
+void spatial_region::fout_field_function_3d(H5::DataSet & dataset, int left, int right, int dataset_shift,
+                     bool is_last_sr, std::function<double(double, double, double, double, double, double)> func)
+{
+    const hsize_t x_count = static_cast<hsize_t>(right - left);
+
+    std::vector<double> result(x_count * ny * nz);
+
+    double x,y,z;
+    vector3d e;
+    vector3d b;
+    int index = 0;
+    for(int i = left; i < right; i++) {
+        for (int j = 0; j < ny; j++) {
+            for (int k = 0; k < nz; k++) {
+                x=i;
+                y=j;
+                z=k;
+                if (is_last_sr==1&&x==right-1) x = x - 1;
+                if(y==ny-1) y = y-1;
+                if(z==nz-1) z = z-1;
+                e = e_to_particle(x,y,z);
+                b = b_to_particle(x,y,z);
+                result[index] = func(e.x, e.y, e.z, b.x, b.y, b.z);
+                index++;
+            }
+        }
+    }
+    const hsize_t dims[1] {(result.size())};
+    H5::DataSpace memory_dataspace(1, dims);
+
+    const hsize_t count_out[3] {x_count, static_cast<hsize_t>(ny), static_cast<hsize_t>(nz)};
+    const hsize_t start_out[3] {static_cast<hsize_t>(dataset_shift), 0, 0};
+    auto write_dataspace = dataset.getSpace();
+    write_dataspace.selectHyperslab(H5S_SELECT_SET, count_out, start_out);
+
+    dataset.write(&(result[0]), H5::PredType::NATIVE_DOUBLE, memory_dataspace, write_dataspace);
+}
+
+void spatial_region::fout_w_3d(H5::DataSet & dataset, int left, int right, int dataset_shift, bool is_last_sr) {
+    fout_field_function_3d(dataset, left, right, dataset_shift, is_last_sr, w_function);
+}
+
+void spatial_region::fout_inv_3d(H5::DataSet & dataset, int left, int right, int dataset_shift, bool is_last_sr) {
+    fout_field_function_3d(dataset, left, right, dataset_shift, is_last_sr, inv_function);
 }
 
 void spatial_region::fout_tracks(double a, int nm) {
