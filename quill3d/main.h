@@ -216,5 +216,4 @@ class var
 
 vector3d regulate(double&, double&, double&);
 var* find(std::string, var*);
-void copy(spatial_region&,int,int,int,spatial_region&,int,int,int);
 double lin_interpolation(double, std::vector<double>&, std::vector<double>&);
