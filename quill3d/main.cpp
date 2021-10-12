@@ -3553,10 +3553,7 @@ int init()
         catching_enabled = true;
     }
 
-    current = find("qed", first);
-    if (current->units == "off") {
-        qed_enabled = false;
-    }
+    qed_enabled = find_boolean(first, "qed", true);
 
     current = find("dump_photons", first);
     if (current->units == "on")
