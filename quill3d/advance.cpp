@@ -1,9 +1,14 @@
 #include <cmath>
+#include "compilation_defines.h"
 #include "main.h"
 #include "maxwell.h"
 #include "containers.h"
 
+#ifdef QUILL_NOQED
+const bool qed_enabled = false;
+#else
 extern bool qed_enabled;
+#endif
 extern bool dump_photons;
 
 void spatial_region::fadvance()
@@ -90,12 +95,17 @@ void spatial_region::padvance(double external_bz)
     vector3d displ;
     vector3d e;
     vector3d b;
-    vector3d u_interim;
     vector3d u_prev;
+    #ifdef QUILL_NOQED
+    const bool calc_qed = false;
+    #else
+    bool calc_qed;
+    vector3d u_interim;
     double g_prev,chi_prev,g_interim;
     double a, r;
-    bool calc_qed;
     particle* born;
+    #endif
+    
     int_vector3d position;
     //
     p_boundary();
@@ -145,6 +155,7 @@ void spatial_region::padvance(double external_bz)
                      */
                     if (current->cmr==0) // *current - фотон
                     {
+                        #ifndef QUILL_NOQED
                         if (qed_enabled) {
                             u_interim.x = current->ux;
                             u_interim.y = current->uy;
@@ -158,6 +169,7 @@ void spatial_region::padvance(double external_bz)
                         } else {
                             calc_qed = false;
                         }
+                        #endif
 
                         if (!calc_qed)
                         {
@@ -178,6 +190,7 @@ void spatial_region::padvance(double external_bz)
                              * фотона x^{n+1/2} для сохранения
                              * нейтральности и уменьшения
                              * электромагнитных шумов */
+                            #ifndef QUILL_NOQED
                             // electron
                             displ.x = current->x;
                             displ.y = current->y;
@@ -235,10 +248,14 @@ void spatial_region::padvance(double external_bz)
                                 (current->next)->previous = current->previous;
                             delete_particle(current);
                             current = tmp;
+                            #endif
                         }
                     }
                     else if (fabs(current->cmr)==1)
                     { // *current - электрон или позитрон
+                        #ifdef QUILL_NOQED
+                        advance_momentum(*current, e, b, dt); // p_n -> p_{n+1}
+                        #else
                         if (qed_enabled) {
                             u_prev.x = current->ux;
                             u_prev.y = current->uy;
@@ -258,6 +275,7 @@ void spatial_region::padvance(double external_bz)
                             advance_momentum(*current, e, b, dt); // p_n -> p_{n+1}
                             calc_qed = false;
                         }
+                        #endif
 
                         if (!calc_qed)
                         {
@@ -272,6 +290,7 @@ void spatial_region::padvance(double external_bz)
                         }
                         else
                         { // photon emission
+                            #ifndef QUILL_NOQED
                             a = 0.5*dt/g_prev;
                             displ.x = current->x - a*u_prev.x/dx;
                             displ.y = current->y - a*u_prev.y/dy;
@@ -335,6 +354,7 @@ void spatial_region::padvance(double external_bz)
                                 delete_particle(current);
                             }
                             current = tmp;
+                            #endif
                         }
 
                     }

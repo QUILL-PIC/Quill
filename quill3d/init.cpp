@@ -1,4 +1,5 @@
 #include <cmath>
+#include "compilation_defines.h"
 #include "main.h"
 #include "containers.h"
 
@@ -465,7 +466,9 @@ void spatial_region::fill_cell_by_particles(double cmr, int_vector3d& a, int_vec
                     tmp_p->g = sqrt(1 + (*tmp_p).ux*(*tmp_p).ux + (*tmp_p).uy*(*tmp_p).uy + (*tmp_p).uz*(*tmp_p).uz);
                 else
                     tmp_p->g = sqrt((*tmp_p).ux*(*tmp_p).ux + (*tmp_p).uy*(*tmp_p).uy + (*tmp_p).uz*(*tmp_p).uz);
+                #ifndef QUILL_NOQED
                 tmp_p->chi = 0;
+                #endif
                 tmp_p->trn = 0;
                 place(*tmp_p);
             }

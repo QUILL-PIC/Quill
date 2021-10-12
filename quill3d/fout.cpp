@@ -1,5 +1,6 @@
 #include <iostream>
 #include <fstream>
+#include "compilation_defines.h"
 #include "main.h"
 #include "containers.h"
 
@@ -719,7 +720,11 @@ void spatial_region::fout_tracks(double a, int nm) {
                         sprintf(file_num_pchar,"%d",current->trn);
                         file_name = file_name + file_num_pchar;
                         ofstream fout(file_name.c_str(),ios::app);
+                        #ifdef QUILL_NOQED
+                        fout<<current->q<<'\n'<<current->x*dx/2/PI+a<<'\n'<<current->y*dy/2/PI<<'\n'<<current->z*dz/2/PI<<'\n'<<current->ux<<'\n'<<current->uy<<'\n'<<current->uz<<'\n'<<current->g<<'\n'<< 0.0 <<'\n';
+                        #else
                         fout<<current->q<<'\n'<<current->x*dx/2/PI+a<<'\n'<<current->y*dy/2/PI<<'\n'<<current->z*dz/2/PI<<'\n'<<current->ux<<'\n'<<current->uy<<'\n'<<current->uz<<'\n'<<current->g<<'\n'<<current->chi<<'\n';
+                        #endif
                     }
                     current = current->next;
                 }

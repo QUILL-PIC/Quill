@@ -2,6 +2,7 @@
 #include <vector>
 #include <memory>
 #include <functional>
+#include "compilation_defines.h"
 #include "containers.h"
 #include "maxwell.h"
 
@@ -13,6 +14,7 @@ const double proton_mass = 1836.1526721; /* 1836... - отношение мас�
                                           */
 
 const std::string TERM_RED = "\033[31m";
+const std::string TERM_YELLOW = "\033[33m";
 const std::string TERM_NO_COLOR = "\033[0m";
 
 class spatial_region
@@ -76,9 +78,16 @@ class spatial_region
     {
         public:
             double cmr, q;
-            double x, y, z, ux, uy, uz, g, chi;
+            double x, y, z, ux, uy, uz, g;
+            #ifdef QUILL_NOQED
+            deleted_particle(double cmr, double q, double x, double y, double z, double ux, double uy, double uz, double g):
+                cmr(cmr), q(q), x(x), y(y), z(z), ux(ux), uy(uy), uz(uz), g(g) {};
+            #else
+            double chi;
             deleted_particle(double cmr, double q, double x, double y, double z, double ux, double uy, double uz, double g, double chi):
                 cmr(cmr), q(q), x(x), y(y), z(z), ux(ux), uy(uy), uz(uz), g(g), chi(chi) {};
+            #endif
+            
     };
     vector<deleted_particle> deleted_particles;
     spatial_region();
@@ -137,12 +146,14 @@ class spatial_region
     void erase(plist&);
     void compute_N(int,int,double);
     void compute_energy(int,int,double,double);
+    #ifndef QUILL_NOQED
     double chi(vector3d&,vector3d&,vector3d&,double&);
     double w(const double&,double&,const double&); /* осторожно,
                                                       эта функция может изменить r
                                                       (второй аргумент)! */
     double tilde_w(double&,double&,double&);
     double mathcal_W(vector3d&,vector3d&);
+    #endif
     void pmerging(double*,string);
     double _ppd(double,double); // вспомогательная функция
     void scale_j(double);

@@ -1,8 +1,13 @@
 #include <cmath>
+#include "compilation_defines.h"
 #include "main.h"
 #include "containers.h"
 
+#ifdef QUILL_NOQED
+const bool qed_enabled = false;
+#else
 extern bool qed_enabled;
+#endif
 
 double spatial_region::get_rand()
 {
@@ -17,6 +22,7 @@ double spatial_region::get_rand()
     return a;
 }
 
+#ifndef QUILL_NOQED
 double spatial_region::chi(vector3d& e, vector3d& b, vector3d& u, double& g)
 {
     double a1,a2;
@@ -131,11 +137,13 @@ particle* spatial_region::bear_particle(double cmr, vector3d& position, vector3d
     p->trn = 0;
     return p;
 }
+#endif
 
 void spatial_region::birth_from_vacuum(double q)
 {
     if (!qed_enabled)
         return;
+    #ifndef QUILL_NOQED
     vector3d e,b;
     vector3d position;
     vector3d direction;
@@ -184,6 +192,7 @@ void spatial_region::birth_from_vacuum(double q)
             }
         }
     }
+    #endif
 }
 
 double spatial_region::_ppd(double q, double q0) {

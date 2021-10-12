@@ -2,6 +2,7 @@
 #define CONTAINERS_H_
 
 #include <memory>
+#include "compilation_defines.h"
 
 struct vector3d
 {
@@ -54,7 +55,10 @@ private:
 
 struct particle
 {
-    double x,y,z,ux,uy,uz,g,q,cmr,chi; // cmr - charge to mass ratio,
+    double x,y,z,ux,uy,uz,g,q,cmr; // cmr - charge to mass ratio,
+    #ifndef QUILL_NOQED
+    double chi;
+    #endif
     int trn; // track name
     particle* next;
     particle* previous;

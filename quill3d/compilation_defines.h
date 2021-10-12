@@ -1,0 +1,6 @@
+#ifndef COMPILATION_DEFINES_H_
+#define COMPILATION_DEFINES_H_
+
+//#define QUILL_NOQED
+
+#endif

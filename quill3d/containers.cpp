@@ -1,4 +1,5 @@
 #include "containers.h"
+#include "compilation_defines.h"
 
 template <typename T>
 field3d<T>::field3d(int nx0, int ny0, int nz0) : nx(nx0), ny(ny0), nz(nz0) {
@@ -49,7 +50,9 @@ particle::particle()
     cmr=-1;
     next=0;
     previous=0;
+    #ifndef QUILL_NOQED
     chi = 0;
+    #endif
     trn = 0;
 }
 
