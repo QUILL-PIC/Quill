@@ -2516,7 +2516,8 @@ bool find_boolean(var * element, string name, bool default_value) {
         return false;
     } else {
         if (current->units != "") {
-            cout << TERM_RED << "Value [" << current->units << "] for [" << name << "] is incorrect, using the default value" << TERM_NO_COLOR << endl;
+            cout << TERM_RED << "Value [" << current->units << "] for [" << name << "] is incorrect, using the default value ["
+                 << (default_value ? "true" : "false") << "]" << TERM_NO_COLOR << endl;
         }
         return default_value;
     }
