@@ -13,6 +13,10 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(toml11)
 
+set(DIR_F_INIT ${CMAKE_CURRENT_SOURCE_DIR}/functional_init/zero/)
+include_directories(${DIR_F_INIT})
+include(${DIR_F_INIT}/CMakeLists.txt)
+
 # quill #
 
 set(SOURCE_QUILL

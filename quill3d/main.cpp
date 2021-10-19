@@ -13,6 +13,7 @@
 #include "maxwell.h"
 #include "containers.h"
 #include "balancing.h"
+#include "functional_init_interface.hpp"
 
 using namespace std;
 
@@ -66,6 +67,7 @@ int i_particle, i_particle_p, i_particle_ph, i_particle_i;  // for "writing down
 std::string e_components_for_output;
 std::string b_components_for_output;
 std::string j_components_for_output;
+std::string functional_init;
 std::string f_envelope;
 int sscos; // 0 - cos, 1 - super-super cos, 2 - pearl
 std::string beam;
@@ -2284,6 +2286,11 @@ int main(int argc, char * argv[])
     psr->f_init_boundaries();
     psr->interpolate_be();
 
+    if (functional_init == "on") {
+        auto f = Field_functions(42);
+        f.initial_ex(0,0,0,0);
+    }
+
     MPI_Barrier(MPI_COMM_WORLD);
 
     main_thread_time = times(&tms_struct) - main_thread_time;
@@ -2828,6 +2835,11 @@ int init()
     }
     current = find("external_bz",first);
     external_bz = current->value;
+    current = find("functional_init",first);
+    functional_init = current->units;
+    if (functional_init == "") {
+        functional_init = "off";
+    }
     current = find("f_envelope",first);
     f_envelope = current->units;
     if (f_envelope=="") {
@@ -3673,6 +3685,7 @@ int init()
         }
         fout_log<<"e_components_for_output\n"<<e_components_for_output<<"\n";
         fout_log<<"b_components_for_output\n"<<b_components_for_output<<"\n";
+        fout_log << "functional_init\n" << functional_init << '\n';
         if (sscos==0) {
             fout_log<<"f_envelope\n"<<f_envelope<<"\n";
         } else if (sscos == 1) {

@@ -123,6 +123,11 @@ W = 50 J # default units: cgs; possible: J
 shenergy = 1 # default = 0
 shphase = 0 pi # default: 0; default units: rad, possible: pi
 
+# if `off`, use the field and particles described in the config file (this file), instead (if `on`)
+# functions `initial_ex`, `initial_ey` etc from the source code are added to the fields and
+# density? from the conf-file
+functional_init = off # default: off; possible: on, off
+
 # движущееся окно; выключается при наличии нейтральных потоков (flows)
 mwindow = off # default: on; possible: on, off, auto
 # в случае использования auto окно автоматически перемещается на основе
