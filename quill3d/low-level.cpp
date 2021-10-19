@@ -245,8 +245,8 @@ particle* spatial_region::new_particle()
 
 void spatial_region::delete_particle(particle* a, bool force_delete)
 {
-    if ((catching_enabled && !spatial_region::is_inside_global(a->x, a->y, a->z) &&
-        !spatial_region::is_in_exchange_area(a->x)) || force_delete)
+    if (((catching_enabled && !spatial_region::is_inside_global(a->x, a->y, a->z)) || force_delete) &&
+        !spatial_region::is_in_exchange_area(a->x))
     {
         spatial_region::deleted_particle dparticle(a->cmr, a->q, a->x, a->y, a->z,
                                                    a->ux, a->uy, a->uz, a->g, a->chi);
