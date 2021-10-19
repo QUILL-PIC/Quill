@@ -27,6 +27,24 @@ public:
     virtual ~maxwell_solver() {}
 };
 
+class fp_solver: public maxwell_solver {
+private:
+    double ax;
+    double ay;
+    double az;
+    double bx;
+    double by;
+    double bz;
+    virtual void advance_b() override;
+    virtual void advance_e() override;
+    virtual void advance_b_boundaries() override;
+    virtual void advance_e_boundaries() override;
+public:
+    fp_solver(field3d<celle> & ce0, field3d<cellb> & cb0, field3d<cellj> & cj0, double dt, double dx, double dy,
+            double dz);
+    virtual void init_boundaries() override;
+};
+
 class ndfx_solver: public maxwell_solver {
 private:
     const static double kappa;

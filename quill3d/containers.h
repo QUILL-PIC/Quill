@@ -78,7 +78,7 @@ struct cellp
 };
 
 enum class maxwell_solver_enum {
-    FDTD, NDFX
+    FDTD, NDFX, FP
 };
 
 enum class pusher_enum {

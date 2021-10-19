@@ -3601,6 +3601,8 @@ int init()
         solver = maxwell_solver_enum::NDFX;
     } else if (solver_str == "fdtd") {
         solver = maxwell_solver_enum::FDTD;
+    } else if (solver_str == "fp") {
+        solver = maxwell_solver_enum::FP;
     } else {
         cout << TERM_RED << "Solver unknown: " << current->units << ". Aborting..." << TERM_NO_COLOR << endl;
         return 1;
