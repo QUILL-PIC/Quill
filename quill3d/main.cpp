@@ -13,7 +13,7 @@
 #include "maxwell.h"
 #include "containers.h"
 #include "balancing.h"
-#include "functional_init_interface.hpp"
+#include <functional_init_class.hpp>
 
 using namespace std;
 
@@ -2287,8 +2287,8 @@ int main(int argc, char * argv[])
     psr->interpolate_be();
 
     if (functional_init == "on") {
-        auto f = Field_functions(42);
-        f.initial_ex(0,0,0,0);
+        auto f = InitFunctions(42);
+        f.initial_ex(0, 0, 0);
     }
 
     MPI_Barrier(MPI_COMM_WORLD);

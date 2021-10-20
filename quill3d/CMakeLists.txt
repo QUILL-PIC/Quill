@@ -13,9 +13,9 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(toml11)
 
-set(DIR_F_INIT ${CMAKE_CURRENT_SOURCE_DIR}/functional_init/zero/)
-include_directories(${DIR_F_INIT})
-include(${DIR_F_INIT}/CMakeLists.txt)
+set(DIR_FUNCTIONAL_INIT ${CMAKE_CURRENT_SOURCE_DIR}/functional_init/zero/)
+include(${DIR_FUNCTIONAL_INIT}/CMakeLists.txt)
+include_directories(${DIR_FUNCTIONAL_INIT})
 
 # quill #
 

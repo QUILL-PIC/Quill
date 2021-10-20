@@ -6,6 +6,6 @@ project(zero
 
 add_library(zero INTERFACE)
 
-target_sources(zero INTERFACE "functional_init_functions.hpp")
-target_compile_options(zero INTERFACE -O3 -march=native -ffast-math -std=c++0x -Wall -Wextra)
+target_sources(zero INTERFACE "functional_init_class.hpp")
+target_compile_options(zero INTERFACE -O3 -march=native -ffast-math -std=c++11 -Wall -Wextra)
 
