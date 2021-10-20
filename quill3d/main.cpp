@@ -7,7 +7,6 @@
 #include <unistd.h>
 #include <memory>
 #include <cassert>
-#include "compilation_defines.h"
 #include "mpi.h"
 #include "main.h"
 #include "maxwell.h"

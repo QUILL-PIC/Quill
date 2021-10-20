@@ -1,5 +1,4 @@
 #include <cmath>
-#include "compilation_defines.h"
 #include "main.h"
 #include "maxwell.h"
 #include "containers.h"

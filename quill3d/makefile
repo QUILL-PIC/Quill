@@ -10,12 +10,21 @@ CXXLIBS :=
 OBJECTS := advance.o deposition.o fout.o init.o low-level.o main.o mc.o plist.o pusher.o maxwell.o containers.o balancing.o
 DEPS := $(patsubst %,$(DEPDIR)/%.d,$(basename $(OBJECTS)))
 
+CXX_COMPILATION_DEFINES := 
+QUILL_ENABLE_QED ?= 1
+
+ifeq ($(QUILL_ENABLE_QED), 0)
+CXX_COMPILATION_DEFINES += -DQUILL_NOQED
+else ifneq ($(QUILL_ENABLE_QED), 1)
+$(error Invalid value [$(QUILL_ENABLE_QED)] for QUILL_ENABLE_QED, only 0 or 1 are allowed)
+endif
+
 quill: $(OBJECTS) $(DEPS)
 	$(CXX) -o quill $(CXXFLAGS) $(OBJECTS) $(CXXLIBS)
 
 %.o: %.cpp
 %.o: %.cpp $(DEPDIR)/%.d
-	$(CXX) $(CXXFLAGS) $(DEPFLAGS) -o $@ -c $<
+	$(CXX) $(CXXFLAGS) $(DEPFLAGS) $(CXX_COMPILATION_DEFINES) -o $@ -c $<
 	$(POSTCOMPILE)
 
 $(DEPDIR)/%.d: ;

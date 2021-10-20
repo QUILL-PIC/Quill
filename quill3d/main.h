@@ -2,7 +2,6 @@
 #include <vector>
 #include <memory>
 #include <functional>
-#include "compilation_defines.h"
 #include "containers.h"
 #include "maxwell.h"
 

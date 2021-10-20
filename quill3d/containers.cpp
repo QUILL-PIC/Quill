@@ -1,5 +1,4 @@
 #include "containers.h"
-#include "compilation_defines.h"
 
 template <typename T>
 field3d<T>::field3d(int nx0, int ny0, int nz0) : nx(nx0), ny(ny0), nz(nz0) {

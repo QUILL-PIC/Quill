@@ -2,7 +2,6 @@
 #define CONTAINERS_H_
 
 #include <memory>
-#include "compilation_defines.h"
 
 struct vector3d
 {

@@ -36,6 +36,8 @@ When OpenMPI is used, the `OMPI_CXX` environment variable can be used to select 
 OMPI_CXX=clang++ make all
 ```
 
+The `QUILL_ENABLE_QED` environment variable can be used to switch between compilation with or without QED effects by setting to 0 or 1 (default 1).
+
 # Input files
 
 Input files for Quill should be placed in the `quill3d-conf` folder.

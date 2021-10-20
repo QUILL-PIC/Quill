@@ -1,6 +1,5 @@
 #include <iostream>
 #include <fstream>
-#include "compilation_defines.h"
 #include "main.h"
 #include "containers.h"
 
