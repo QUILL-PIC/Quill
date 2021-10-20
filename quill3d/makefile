@@ -35,10 +35,6 @@ clean:
 results_clean:
 	-rm -I results/*
 
-.PHONY : asy_clean
-asy_clean:
-	-rm -I asy/*.eps asy/movie/*.png asy/movie/*.gif
-
 .PHONY : py_clean
 py_clean:
 	-rm -I python/*.png python/movie.gif python/*.pyc

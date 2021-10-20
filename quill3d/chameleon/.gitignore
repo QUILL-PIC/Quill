@@ -3,8 +3,4 @@
 !.gitignore
 !*.cpp
 !*.py
-!*.cpp
-!*.R
 !makefile
-!
-!chameleon-haskell
