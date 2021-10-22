@@ -27,7 +27,7 @@ public:
     virtual ~maxwell_solver() {}
 };
 
-class fp_solver: public maxwell_solver {
+class five_point_solver: public maxwell_solver {
 private:
     double ax;
     double ay;
@@ -40,7 +40,7 @@ private:
     virtual void advance_b_boundaries() override;
     virtual void advance_e_boundaries() override;
 public:
-    fp_solver(field3d<celle> & ce0, field3d<cellb> & cb0, field3d<cellj> & cj0, double dt, double dx, double dy,
+    five_point_solver(field3d<celle> & ce0, field3d<cellb> & cb0, field3d<cellj> & cj0, double dt, double dx, double dy,
             double dz);
     virtual void init_boundaries() override;
 };

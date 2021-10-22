@@ -21,7 +21,7 @@ void maxwell_solver::advance() {
     advance_b_boundaries();
 }
 
-fp_solver::fp_solver(field3d<celle> & ce0, field3d<cellb> & cb0, field3d<cellj> & cj0, double dt, double dx,
+five_point_solver::five_point_solver(field3d<celle> & ce0, field3d<cellb> & cb0, field3d<cellj> & cj0, double dt, double dx,
         double dy, double dz) :
         maxwell_solver(ce0, cb0, cj0, dt, dx, dy, dz),
         ax(0.25 * (1 - dx / dt * sin(0.5 * PI * std::min(1.0, dt / dx)))),
@@ -32,7 +32,7 @@ fp_solver::fp_solver(field3d<celle> & ce0, field3d<cellb> & cb0, field3d<cellj> 
     bz = 1 - 2 * az;
 }
 
-void fp_solver::advance_b()
+void five_point_solver::advance_b()
 {
     const int nx = cb.get_nx();
     const int ny = cb.get_ny();
@@ -84,7 +84,7 @@ void fp_solver::advance_b()
     }
 }
 
-void fp_solver::advance_e()
+void five_point_solver::advance_e()
 {
     const int nx = ce.get_nx();
     const int ny = ce.get_ny();
@@ -124,15 +124,15 @@ void fp_solver::advance_e()
     }
 }
 
-void fp_solver::advance_b_boundaries() {
+void five_point_solver::advance_b_boundaries() {
     // заготовка для учета гранусловий
 }
 
-void fp_solver::advance_e_boundaries() {
+void five_point_solver::advance_e_boundaries() {
     // заготовка для учета гранусловий
 }
 
-void fp_solver::init_boundaries()
+void five_point_solver::init_boundaries()
 {
     const int nx = ce.get_nx();
     const int ny = ce.get_ny();
