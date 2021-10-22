@@ -8,7 +8,7 @@ The code is able to model the following processes using the Monte Carlo techniqu
 * photon emission by an electron in the strong field, with radiation reaction effects;
 * electron–positron pair creation from gamma photons (Breit–Wheeler process).
 
-The Maxwell solvers implemented in the code are NDFX (the scheme used in A. Pukhov's VLPL code), hybrid five-point FDTD (the scheme reduces numerical Cherenkov instability) and FDTD.
+The Maxwell solvers implemented in the code are FDTD, NDFX (the scheme used in A. Pukhov's VLPL code), and hybrid five-point FDTD (the scheme reduces numerical Cherenkov instability).
 The particles pushers implemented in the code use Vay or Boris scheme.
 
 # Dependencies
