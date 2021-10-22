@@ -3,8 +3,8 @@
 # we do not want the script to continue if anything fails
 set -e
 
-if [ ! -f ../quill3d-conf/quill.conf"$1" ]; then
-    echo "Config file ../quill3d-conf/quill.conf$1 not found! Create it or copy from ../quill3d-conf/example"
+if [ ! -f "$1" ]; then
+    echo "Config file $1 not found! Create it or copy from ../quill3d-conf/example"
     exit 1
 fi
 
@@ -27,7 +27,7 @@ echo "Threads: $threads"
 
 mkdir -p $folder
 
-cp ../quill3d-conf/quill.conf"$1" $folder/
+cp "$1" $folder/
 
 # 1. Parsing config file (parse.sh)
 # 2. Running quill with input from step 1

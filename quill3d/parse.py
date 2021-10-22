@@ -3,7 +3,6 @@ import os
 import sys
 import re
 
-prefix = '../quill3d-conf/quill.conf'
 
 # regex for numbers
 number_regex = r'([-+]?(\d+(\.\d*)?|\.\d+)([eE][-+]?\d+)?)'
@@ -24,7 +23,7 @@ eval_regex = r'eval\{(.+)\}'
 # Python statements that are to be executed during preprocessing
 exec_regex = r'exec\{(.+)\}'
 
-conf = prefix + sys.argv[1]
+conf = sys.argv[1]
 
 if not os.path.isfile(conf):
     raise Exception('Config file [%s] not found' % conf)
