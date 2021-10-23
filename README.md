@@ -38,20 +38,16 @@ OMPI_CXX=clang++ make all
 
 # Input files
 
-Input files for Quill should be placed in the `quill3d-conf` folder.
-An input file must begin with the `quill.conf` prefix.
-
 Example input files can be found in the `quill3d-conf/examples` folder.
 All possible parameters in the input file are described in the `quill.conf.example` file.
 
 # Run
 
-To run Quill, use the `run.sh` script from the `quill3d` folder and pass the name of the input file without the `quill.conf` prefix as a parameter.
+To run Quill, use the `run.sh` script from the `quill3d` folder and pass the name of the input file as a parameter.
 For example,
 ```
-./run.sh .my-problem
+./run.sh /home/user/my-problem
 ```
-will run Quill using the `quill-conf/quill.conf.my-problem` input file.
 
 By default, `run.sh` relies on `mpirun`.
 Rewrite the script itself if different behavior is required.
