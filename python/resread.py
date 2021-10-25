@@ -137,7 +137,7 @@ def density(name='rho',plane='xy', log=None):
     data_folder+*name*+t.'
     filename = os.path.join(data_folder, name + t)
     if output_mode == 1 and name != 'w' and name != 'inv':
-        sys.path.append(os.path.join('..', 'chameleon'))
+        sys.path.append(os.path.join('..', 'lib', 'chameleon'))
         try:
             import chameleon
         except Exception as e:

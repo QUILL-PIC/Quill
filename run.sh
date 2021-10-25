@@ -8,7 +8,7 @@ NOCOLOR='\033[0m'
 
 config_filepath="$1"
 if [ ! -f "$1" ]; then
-    old_config_filepath=../quill3d-conf/quill.conf"$1"
+    old_config_filepath=./conf/quill.conf"$1"
     if [ -f $old_config_filepath ]; then
         echo -e "${YELLOW}Defaulting to config [$old_config_filepath]. Prefer using absolute paths instead! ${NOCOLOR}"
         config_filepath=$old_config_filepath
@@ -43,4 +43,4 @@ cp "$config_filepath" $folder/
 # 2. Running quill with input from step 1
 # 3. Adding timestamps to the Quill's console output
 # 4. Duplicating output to a log file (quill_log.txt)
-mpirun -n $threads bash -c "stdbuf -o 0 ./parse.py \"$config_filepath\" | { ./quill; } 2>&1" | awk '{ print strftime("%Y-%m-%d %H:%M:%S\t"), $0; fflush(); }' | tee $folder/quill_log.txt
+mpirun -n $threads bash -c "stdbuf -o 0 ./parse.py \"$config_filepath\" | { ./build/quill; } 2>&1" | awk '{ print strftime("%Y-%m-%d %H:%M:%S\t"), $0; fflush(); }' | tee $folder/quill_log.txt

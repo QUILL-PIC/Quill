@@ -15,7 +15,7 @@ The particles pushers implemented in the code use Vay or Boris scheme.
 
 In order to build and run Quill, the following dependencies are required:
 * C++ compiler with C++11 support;
-* Make;
+* CMake (version 3.10 or higher);
 * MPI implementation;
 * Python3 interpreter (*optional*: NumPy and Matplotlib for data analysis).
 
@@ -23,18 +23,15 @@ Quill is developed and tested on Linux with the use of *g++* and *clang++* compi
 
 # Build
 
-To build Quill, run `make all` in the `quill3d` folder.
-
-*Note*: Running `make` without target `all` does not build the required `chameleon` package.
-Use `make` without targets only if `chameleon` is already built.
-
-By default, the build process invokes `mpicxx` which should automatically provide necessary include and library paths for the compiler and linker.
-Use the `CXX` environment variable to override this behavior.
-
-When OpenMPI is used, the `OMPI_CXX` environment variable can be used to select the C++ compiler, e.g.
+To build Quill, run CMake in the `build` folder, e.g.
 ```
-OMPI_CXX=clang++ make all
+cd build
+cmake ..
+make
 ```
+Or use your preferred way of building with CMake.
+
+Building in any other folder is not recommended, as scripts rely on executables being present in the `build` folder.
 
 # Input files
 
