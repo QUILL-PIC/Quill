@@ -8,14 +8,14 @@ The code is able to model the following processes using the Monte Carlo techniqu
 * photon emission by an electron in the strong field, with radiation reaction effects;
 * electron–positron pair creation from gamma photons (Breit–Wheeler process).
 
-The Maxwell solvers implemented in the code are NDFX (the scheme used in A. Pukhov's VLPL code) and FDTD.
+The Maxwell solvers implemented in the code are FDTD, NDFX (the scheme used in A. Pukhov's VLPL code), and hybrid five-point FDTD (the scheme reduces numerical Cherenkov instability).
 The particles pushers implemented in the code use Vay or Boris scheme.
 
 # Dependencies
 
 In order to build and run Quill, the following dependencies are required:
 * C++ compiler with C++11 support;
-* Make;
+* CMake (version 3.10 or higher);
 * MPI implementation;
 * Python3 interpreter (*optional*: NumPy and Matplotlib for data analysis).
 
@@ -23,37 +23,33 @@ Quill is developed and tested on Linux with the use of *g++* and *clang++* compi
 
 # Build
 
-To build Quill, run `make all` in the `quill3d` folder.
-
-*Note*: Running `make` without target `all` does not build the required `chameleon` package.
-Use `make` without targets only if `chameleon` is already built.
-
-By default, the build process invokes `mpicxx` which should automatically provide necessary include and library paths for the compiler and linker.
-Use the `CXX` environment variable to override this behavior.
-
-When OpenMPI is used, the `OMPI_CXX` environment variable can be used to select the C++ compiler, e.g.
+To build Quill, run CMake in the `build` folder, e.g.
 ```
-OMPI_CXX=clang++ make all
+cd build
+cmake ..
+make
 ```
+Or use your preferred way of building with CMake.
 
-The `QUILL_ENABLE_QED` environment variable can be used to switch between compilation with or without QED effects by setting to 0 or 1 (default 1).
+Building in any other folder is not recommended, as scripts rely on executables being present in the `build` folder.
+
+Quill can be compiled without QED support by setting the CMake option QUILL_ENABLE_QED to OFF (ON by default),
+```
+cmake .. -DQUILL_ENABLE_QED=OFF
+```
 
 # Input files
-
-Input files for Quill should be placed in the `quill3d-conf` folder.
-An input file must begin with the `quill.conf` prefix.
 
 Example input files can be found in the `quill3d-conf/examples` folder.
 All possible parameters in the input file are described in the `quill.conf.example` file.
 
 # Run
 
-To run Quill, use the `run.sh` script from the `quill3d` folder and pass the name of the input file without the `quill.conf` prefix as a parameter.
+To run Quill, use the `run.sh` script from the `quill3d` folder and pass the name of the input file as a parameter.
 For example,
 ```
-./run.sh .my-problem
+./run.sh /home/user/my-problem
 ```
-will run Quill using the `quill-conf/quill.conf.my-problem` input file.
 
 By default, `run.sh` relies on `mpirun`.
 Rewrite the script itself if different behavior is required.
