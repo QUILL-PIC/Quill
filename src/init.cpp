@@ -531,7 +531,7 @@ void spatial_region::add_beam(double cmr, double n0, double u0, double xb, doubl
     }
 }
 
-void spatial_region::film(double x0, double x1, double ne_y0, double ne_y1, bool ions, double
+void spatial_region::film(double x0, double x1, double ne_y0, double ne_y1, int ions, double
         cmr, double gradwidth, double y0, double y1, double z0, double z1,
         double T, double vx, bool is_profiled,
         int xnpic_film, int ynpic_film, int znpic_film, bool append_for_moving_window, double gradwidth_y)
