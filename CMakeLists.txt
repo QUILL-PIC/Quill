@@ -20,4 +20,13 @@ target_include_directories(quill PRIVATE "include")
 target_link_libraries(quill PUBLIC MPI::MPI_CXX)
 target_compile_options(quill PRIVATE -Wall -Wextra)
 
+option(QUILL_ENABLE_QED "Compile Quill with QED support" ON)
+
+if (QUILL_ENABLE_QED)
+    message(STATUS "QUILL_ENABLE_QED is set to ON, Quill will be compiled with QED support")
+else()
+    message(STATUS "QUILL_ENABLE_QED is set to OFF, Quill will be compiled without QED support")
+    target_compile_definitions(quill PRIVATE QUILL_NOQED)
+endif()
+
 add_library(chameleon SHARED lib/chameleon/chameleon-core.cpp)

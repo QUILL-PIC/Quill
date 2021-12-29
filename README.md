@@ -33,6 +33,11 @@ Or use your preferred way of building with CMake.
 
 Building in any other folder is not recommended, as scripts rely on executables being present in the `build` folder.
 
+Quill can be compiled without QED support by setting the CMake option QUILL_ENABLE_QED to OFF (ON by default),
+```
+cmake .. -DQUILL_ENABLE_QED=OFF
+```
+
 # Input files
 
 Example input files can be found in the `quill3d-conf/examples` folder.

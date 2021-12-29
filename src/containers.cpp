@@ -49,7 +49,9 @@ particle::particle()
     cmr=-1;
     next=0;
     previous=0;
+    #ifndef QUILL_NOQED
     chi = 0;
+    #endif
     trn = 0;
 }
 
