@@ -1,0 +1,12 @@
+title: Quill
+description: >- # this means to ignore newlines until "baseurl:"
+  Quill is a 3D QED-PIC code for simulations of interaction of electromagnetic radiation and particles with plasmas with QED effects such as gamma photon radiation and electron-positron pair production. 
+baseurl: "/quill/" 
+url: "" 
+
+# Build settings
+remote_theme: pmarsceill/just-the-docs
+
+# Required for MathJax, see https://github.com/pmarsceill/just-the-docs/issues/198
+compress_html:
+  blanklines: true
