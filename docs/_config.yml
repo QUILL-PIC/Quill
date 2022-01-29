@@ -10,3 +10,7 @@ remote_theme: pmarsceill/just-the-docs
 # Required for MathJax, see https://github.com/pmarsceill/just-the-docs/issues/198
 compress_html:
   blanklines: true
+
+aux_links:
+  "Quill on GitHub":
+    - "//github.com/QUILL-PIC/Quill"

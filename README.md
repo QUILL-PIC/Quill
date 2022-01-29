@@ -40,7 +40,7 @@ cmake .. -DQUILL_ENABLE_QED=OFF
 
 # Input files
 
-Example input files can be found in the `quill3d-conf/examples` folder.
+Example input files can be found in the `conf/examples` folder.
 All possible parameters in the input file are described in the `quill.conf.example` file.
 
 # Run
@@ -61,7 +61,7 @@ it is used to parse the input file.
 
 # Analyze results
 
-Results can be graphically analyzed with the `qplot` Python package located in the `quill3d/python` folder.
+Results can be graphically analyzed with the `qplot` Python package located in the `python` folder.
 Refer to the documentation within the package itself.
 Documentation in IPython or Jupyter Notebooks/Lab can also be accessed using the `?` command, e.g. `qplot.density?`
 
