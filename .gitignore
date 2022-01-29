@@ -4,7 +4,8 @@
 !src
 !include
 !python
-!doc
+!docs
+!old_doc
 !conf
 !lib
 !LICENSE
