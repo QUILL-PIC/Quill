@@ -7,11 +7,6 @@
 
 using namespace std;
 
-const double PI = 3.141592653589793;
-const double proton_mass = 1836.1526721; /* 1836... - отношение массы
-                                            протона к массе электрона
-                                          */
-
 const std::string TERM_RED = "\033[31m";
 const std::string TERM_YELLOW = "\033[33m";
 const std::string TERM_NO_COLOR = "\033[0m";

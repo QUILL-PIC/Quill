@@ -1,6 +1,7 @@
 #include <cmath>
 #include "main.h"
 #include "containers.h"
+#include "physical_constants.h"
 
 #ifdef QUILL_NOQED
 const bool qed_enabled = false;

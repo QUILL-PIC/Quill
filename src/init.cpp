@@ -1,6 +1,7 @@
 #include <cmath>
 #include "main.h"
 #include "containers.h"
+#include "physical_constants.h"
 
 void spatial_region::f_init_cos(double a0y, double a0z, double xsigma, double ysigma, double zsigma, double x0, int sscos, bool b_sign, double x1, double phase, double y0, double z0, bool append, double phi, double xtarget, double ytarget, double ztarget)
 {

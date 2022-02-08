@@ -7,6 +7,7 @@
 #include "maxwell.h"
 #include "containers.h"
 #include "pusher.h"
+#include "physical_constants.h"
 
 extern bool catching_enabled;
 extern double lambda;

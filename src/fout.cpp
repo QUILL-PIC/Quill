@@ -2,6 +2,7 @@
 #include <fstream>
 #include "main.h"
 #include "containers.h"
+#include "physical_constants.h"
 
 void spatial_region::compute_rho()
 {
