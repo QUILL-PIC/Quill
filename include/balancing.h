@@ -1,5 +1,4 @@
-#ifndef BALANCING_H_
-#define BALANCING_H_
+#pragma once
 
 #include <vector>
 
@@ -8,5 +7,3 @@ std::vector<double> calculate_partition_weights(const std::vector<double> & weig
 double calculate_partition_imbalance(const std::vector<double> & partition_weights);
 double calculate_partition_imbalance(const std::vector<double> & weights, const std::vector<int> & partition, int overlap);
 std::vector<int> normalize_new_partition(const std::vector<int> & old_partition, const std::vector<int> & new_partition, int overlap);
-
-#endif

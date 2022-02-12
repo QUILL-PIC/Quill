@@ -1,5 +1,4 @@
-#ifndef MAXWELL_H_
-#define MAXWELL_H_
+#pragma once
 
 #include <math.h>
 #include "containers.h"
@@ -75,5 +74,3 @@ public:
             double dz);
     virtual void init_boundaries() override;
 };
-
-#endif /* MAXWELL_H_ */

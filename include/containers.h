@@ -1,5 +1,4 @@
-#ifndef CONTAINERS_H_
-#define CONTAINERS_H_
+#pragma once
 
 #include <memory>
 
@@ -92,5 +91,3 @@ enum class pusher_enum {
 enum class moving_window {
     OFF, ON, AUTO
 };
-
-#endif /* CONTAINERS_H_ */
