@@ -11,6 +11,7 @@ using namespace std;
 
 const std::string TERM_RED = "\033[31m";
 const std::string TERM_YELLOW = "\033[33m";
+const std::string TERM_BOLD = "\033[1m";
 const std::string TERM_NO_COLOR = "\033[0m";
 
 class spatial_region
@@ -177,15 +178,6 @@ class film
         film();
 };
 
-class ddi
-{ // double, double, int
-    public:
-        ddi* prev;
-        ddi* next;
-        double t_end,output_period;
-        int f;
-};
-
 class var
 {
     public:
@@ -199,5 +191,5 @@ class var
 };
 
 vector3d regulate(double&, double&, double&);
-var* find(std::string, var*);
+var* find(const std::string &, var*);
 double lin_interpolation(double, std::vector<double>&, std::vector<double>&);

@@ -15,7 +15,8 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O3 -march=native -DNDEBUG")
 find_package(MPI REQUIRED COMPONENTS C CXX)
 
 add_executable(quill src/advance.cpp src/balancing.cpp src/containers.cpp src/deposition.cpp src/fout.cpp src/init.cpp 
-               src/low-level.cpp src/main.cpp src/maxwell.cpp src/mc.cpp src/plist.cpp src/pusher.cpp)
+               src/low-level.cpp src/main.cpp src/maxwell.cpp src/mc.cpp src/plist.cpp src/pusher.cpp
+               src/parameters.cpp)
 target_include_directories(quill PRIVATE "include")
 target_link_libraries(quill PUBLIC MPI::MPI_CXX)
 target_compile_options(quill PRIVATE -Wall -Wextra)

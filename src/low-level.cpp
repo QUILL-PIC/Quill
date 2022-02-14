@@ -450,7 +450,7 @@ int var::read()
     }
 }
 
-var* find(std::string a, var* b)
+var* find(const std::string & a, var * b)
 {
     var* tmp = b;
     while (tmp->next!=0) /* последняя переменная — пустая, поэтому её

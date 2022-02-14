@@ -13,6 +13,7 @@
 #include "containers.h"
 #include "balancing.h"
 #include "physical_constants.h"
+#include "parameters.h"
 
 using namespace std;
 
@@ -37,7 +38,6 @@ clock_t up_time;
 clock_t start_time;
 double seconds;
 clock_t main_thread_time;
-double file_name_accuracy;
 bool mwseed;
 moving_window mwindow;
 double mwtolerance; // the relative level of E^2 + B^2 causing the window to move in the AUTO mode
@@ -47,8 +47,7 @@ double crpc;
 double* ppd;
 double phase,phi,phi_rotate;
 double shenergy, shphase; // second harmonic relative energy and phase
-ddi* p_last_ddi; // ddi включает t_end, output_period и f - счётчик для вывода данных в файлы
-ddi* p_current_ddi;
+OutputIterations output_iterations;
 double t_add_mw;
 film* p_last_film;
 double x00,y00,z00;
@@ -197,16 +196,7 @@ void write_deleted_particles(bool write_p, bool write_ph)
     }
 
     std::string file_name;
-    char file_num_pchar[20];
-    sprintf(file_num_pchar,"%g",
-        int([](ddi* a) 
-        {
-            double b=a->f*a->output_period; 
-            if(a->prev!=0) 
-                b+=(a->prev)->t_end; 
-            return b;
-        } (p_current_ddi)/2/PI*file_name_accuracy
-        )/file_name_accuracy);
+    std::string file_name_suffix = output_iterations.get_current_iteration_string();
     
     double* spectrum_ph = new double[neps_ph];
     for(int i=0; i<neps_ph; i++) spectrum_ph[i] = 0;
@@ -215,13 +205,13 @@ void write_deleted_particles(bool write_p, bool write_ph)
     for(int n=0; n<n_sr; n++)
     {
         if (mpi_rank == n) {
-            file_name = data_folder + "/deleted" + file_num_pchar;
+            file_name = data_folder + "/deleted" + file_name_suffix;
             ofstream fout_deleted_e(file_name.c_str(), non_binary_mode);
 
-            file_name = data_folder + "/deleted_p" + file_num_pchar;
+            file_name = data_folder + "/deleted_p" + file_name_suffix;
             ofstream fout_deleted_p(file_name.c_str(), non_binary_mode);
 
-            file_name = data_folder + "/deleted_ph" + file_num_pchar;
+            file_name = data_folder + "/deleted_ph" + file_name_suffix;
             ofstream fout_deleted_ph(file_name.c_str(), non_binary_mode);
 
             ofstream* fout_deleted_i = new ofstream[n_ion_populations];
@@ -232,7 +222,7 @@ void write_deleted_particles(bool write_p, bool write_ph)
                 file_name = data_folder+"/deleted_";
                 file_name += s_cmr;
                 file_name += "_";
-                file_name += file_num_pchar;
+                file_name += file_name_suffix;
                 fout_deleted_i[m].open(file_name.c_str(), non_binary_mode);
             }
 
@@ -343,7 +333,7 @@ void write_deleted_particles(bool write_p, bool write_ph)
 
         //spectrum output
         if (mpi_rank == 0) {
-            file_name = data_folder + "/spectrum_deleted_ph" + file_num_pchar;
+            file_name = data_folder + "/spectrum_deleted_ph" + file_name_suffix;
             ofstream fout_spectrum_ph(file_name.c_str());
 
             double spectrum_norm_ph = 1.11485e13 * lambda*dx*dy*dz/(8*PI*PI*PI)/deps_ph;
@@ -380,16 +370,14 @@ void write_density(bool write_x, bool write_y, bool write_z,
         std::string x_folder, std::string y_folder, std::string z_folder,
         bool write_ions = false, bool scale_j = false)
 {
-    char file_num_pchar[20];
+    std::string file_name_suffix = output_iterations.get_current_iteration_string();
     ofstream* pof_x = 0;
     ofstream* pof_y = 0;
     ofstream* pof_z = 0;
 
-    sprintf(file_num_pchar,"%g",int([](ddi* a) {double b=a->f*a->output_period; if(a->prev!=0) b+=(a->prev)->t_end; return b;} (p_current_ddi)/2/PI*file_name_accuracy)/file_name_accuracy);
-
-    string file_name_x = data_folder + "/" + x_folder + file_num_pchar;
-    string file_name_y = data_folder + "/" + y_folder + file_num_pchar;
-    string file_name_z = data_folder + "/" + z_folder + file_num_pchar;
+    string file_name_x = data_folder + "/" + x_folder + file_name_suffix;
+    string file_name_y = data_folder + "/" + y_folder + file_name_suffix;
+    string file_name_z = data_folder + "/" + z_folder + file_name_suffix;
 
     int onx;
     int onx0;
@@ -458,7 +446,7 @@ void write_density(bool write_x, bool write_y, bool write_z,
             string file_name = data_folder+"/irho_";
             file_name += s_cmr;
             file_name += "_";
-            file_name += file_num_pchar;
+            file_name += file_name_suffix;
             for(int i=0;i<n_sr;i++)
             {
                 if (mpi_rank == i) {
@@ -497,7 +485,7 @@ void write_spectrum_phasespace(bool write_p, bool write_ph)
     }
 
     std::string file_name;
-    char file_num_pchar[20];
+    const std::string file_name_suffix = output_iterations.get_current_iteration_string();
     
     double* spectrum = new double[neps];
     for(int i=0;i<neps;i++) spectrum[i] = 0;
@@ -518,15 +506,11 @@ void write_spectrum_phasespace(bool write_p, bool write_ph)
     for(int n=0;n<n_sr;n++)
     {
         if (mpi_rank == n) {
-            file_name = data_folder+"/phasespace";
-            sprintf(file_num_pchar,"%g",int([](ddi* a) {double b=a->f*a->output_period; if(a->prev!=0) b+=(a->prev)->t_end; return b;} (p_current_ddi)/2/PI*file_name_accuracy)/file_name_accuracy);
-            file_name = file_name + file_num_pchar;
+            file_name = data_folder+ "/phasespace" + file_name_suffix;
             ofstream fout_phasespace(file_name.c_str(), non_binary_mode);
-            file_name = data_folder+"/phasespace_p";
-            file_name = file_name + file_num_pchar;
+            file_name = data_folder + "/phasespace_p" + file_name_suffix;
             ofstream fout_phasespace_p(file_name.c_str(), non_binary_mode);
-            file_name = data_folder+"/phasespace_ph";
-            file_name = file_name + file_num_pchar;
+            file_name = data_folder + "/phasespace_ph" + file_name_suffix;
             ofstream fout_phasespace_ph(file_name.c_str(), non_binary_mode);
 
             ofstream* fout_phasespace_i = new ofstream[n_ion_populations];
@@ -537,7 +521,7 @@ void write_spectrum_phasespace(bool write_p, bool write_ph)
                 file_name = data_folder+"/phasespace_";
                 file_name += s_cmr;
                 file_name += "_";
-                file_name += file_num_pchar;
+                file_name += file_name_suffix;
                 fout_phasespace_i[m].open(file_name.c_str(), non_binary_mode);
             }
             for(int i=nm*(n!=0);i<nx_sr[n]-nm*(n!=n_sr-1);i++)
@@ -684,15 +668,11 @@ void write_spectrum_phasespace(bool write_p, bool write_ph)
 
     // output of spectra
     if (mpi_rank == 0) {
-        file_name = data_folder+"/spectrum";
-        sprintf(file_num_pchar,"%g",int([](ddi* a) {double b=a->f*a->output_period; if(a->prev!=0) b+=(a->prev)->t_end; return b;} (p_current_ddi)/2/PI*file_name_accuracy)/file_name_accuracy);
-        file_name = file_name + file_num_pchar;
+        file_name = data_folder + "/spectrum" + file_name_suffix;
         ofstream fout_spectrum(file_name.c_str());
-        file_name = data_folder+"/spectrum_p";
-        file_name = file_name + file_num_pchar;
+        file_name = data_folder + "/spectrum_p" + file_name_suffix;
         ofstream fout_spectrum_p(file_name.c_str());
-        file_name = data_folder+"/spectrum_ph";
-        file_name = file_name + file_num_pchar;
+        file_name = data_folder + "/spectrum_ph" + file_name_suffix;
         ofstream fout_spectrum_ph(file_name.c_str());
 
         ofstream* fout_spectrum_i = new ofstream[n_ion_populations];
@@ -702,7 +682,7 @@ void write_spectrum_phasespace(bool write_p, bool write_ph)
             file_name = data_folder+"/spectrum_";
             file_name += s_cmr;
             file_name += "_";
-            file_name += file_num_pchar;
+            file_name += file_name_suffix;
             fout_spectrum_i[m].open(file_name.c_str());
         }
 
@@ -765,7 +745,7 @@ void write_spectrum_phasespace(bool write_p, bool write_ph)
 void write_fields()
 {
     std::string file_name;
-    char file_num_pchar[20];
+    const std::string file_name_suffix = output_iterations.get_current_iteration_string();
     int onx;
     int onx0;
     int ii;
@@ -773,9 +753,7 @@ void write_fields()
     //
     if (e_components_for_output=="x"||e_components_for_output=="xy"||e_components_for_output=="xz"||e_components_for_output=="xyz")
     {
-        file_name = data_folder+"/ex";
-        sprintf(file_num_pchar,"%g",int([](ddi* a) {double b=a->f*a->output_period; if(a->prev!=0) b+=(a->prev)->t_end; return b;} (p_current_ddi)/2/PI*file_name_accuracy)/file_name_accuracy);
-        file_name = file_name + file_num_pchar;
+        file_name = data_folder+ "/ex" + file_name_suffix;
         for(int i=0;i<n_sr;i++)
         {
             if (mpi_rank == i) {
@@ -805,9 +783,7 @@ void write_fields()
     //
     if (e_components_for_output=="y"||e_components_for_output=="xy"||e_components_for_output=="yz"||e_components_for_output=="xyz")
     {
-        file_name = data_folder+"/ey";
-        sprintf(file_num_pchar,"%g",int([](ddi* a) {double b=a->f*a->output_period; if(a->prev!=0) b+=(a->prev)->t_end; return b;} (p_current_ddi)/2/PI*file_name_accuracy)/file_name_accuracy);
-        file_name = file_name + file_num_pchar;
+        file_name = data_folder + "/ey" + file_name_suffix;
         for(int i=0;i<n_sr;i++)
         {
             if (mpi_rank == i) {
@@ -837,9 +813,7 @@ void write_fields()
     //
     if (e_components_for_output=="z"||e_components_for_output=="xz"||e_components_for_output=="yz"||e_components_for_output=="xyz")
     {
-        file_name = data_folder+"/ez";
-        sprintf(file_num_pchar,"%g",int([](ddi* a) {double b=a->f*a->output_period; if(a->prev!=0) b+=(a->prev)->t_end; return b;} (p_current_ddi)/2/PI*file_name_accuracy)/file_name_accuracy);
-        file_name = file_name + file_num_pchar;
+        file_name = data_folder + "/ez" + file_name_suffix;
         for(int i=0;i<n_sr;i++)
         {
             if (mpi_rank == i) {
@@ -868,9 +842,7 @@ void write_fields()
     //
     if (b_components_for_output=="x"||b_components_for_output=="xy"||b_components_for_output=="xz"||b_components_for_output=="xyz")
     {
-        file_name = data_folder+"/bx";
-        sprintf(file_num_pchar,"%g",int([](ddi* a) {double b=a->f*a->output_period; if(a->prev!=0) b+=(a->prev)->t_end; return b;} (p_current_ddi)/2/PI*file_name_accuracy)/file_name_accuracy);
-        file_name = file_name + file_num_pchar;
+        file_name = data_folder + "/bx" + file_name_suffix;
         for(int i=0;i<n_sr;i++)
         {
             if (mpi_rank == i) {
@@ -899,9 +871,7 @@ void write_fields()
     //
     if (b_components_for_output=="y"||b_components_for_output=="xy"||b_components_for_output=="yz"||b_components_for_output=="xyz")
     {
-        file_name = data_folder+"/by";
-        sprintf(file_num_pchar,"%g",int([](ddi* a) {double b=a->f*a->output_period; if(a->prev!=0) b+=(a->prev)->t_end; return b;} (p_current_ddi)/2/PI*file_name_accuracy)/file_name_accuracy);
-        file_name = file_name + file_num_pchar;
+        file_name = data_folder + "/by" + file_name_suffix;
         for(int i=0;i<n_sr;i++)
         {
             if (mpi_rank == i) {
@@ -930,9 +900,7 @@ void write_fields()
     //
     if (b_components_for_output=="z"||b_components_for_output=="xz"||b_components_for_output=="yz"||b_components_for_output=="xyz")
     {
-        file_name = data_folder+"/bz";
-        sprintf(file_num_pchar,"%g",int([](ddi* a) {double b=a->f*a->output_period; if(a->prev!=0) b+=(a->prev)->t_end; return b;} (p_current_ddi)/2/PI*file_name_accuracy)/file_name_accuracy);
-        file_name = file_name + file_num_pchar;
+        file_name = data_folder + "/bz" + file_name_suffix;
         for(int i=0;i<n_sr;i++)
         {
             if (mpi_rank == i) {
@@ -966,9 +934,7 @@ void write_fields()
         non_binary_mode = ios_base::out | ios_base::app;
     }
     //
-    file_name = data_folder+"/w";
-    sprintf(file_num_pchar,"%g",int([](ddi* a) {double b=a->f*a->output_period; if(a->prev!=0) b+=(a->prev)->t_end; return b;} (p_current_ddi)/2/PI*file_name_accuracy)/file_name_accuracy);
-    file_name = file_name + file_num_pchar;
+    file_name = data_folder + "/w" + file_name_suffix;
     for(int i=0;i<n_sr;i++)
     {
         if (mpi_rank == i) {
@@ -998,9 +964,7 @@ void write_fields()
     }
 
     //
-    file_name = data_folder+"/inv";
-    sprintf(file_num_pchar,"%g",int([](ddi* a) {double b=a->f*a->output_period; if(a->prev!=0) b+=(a->prev)->t_end; return b;} (p_current_ddi)/2/PI*file_name_accuracy)/file_name_accuracy);
-    file_name = file_name + file_num_pchar;
+    file_name = data_folder + "/inv" + file_name_suffix;
     for(int i=0;i<n_sr;i++)
     {
         if (mpi_rank == i) {
@@ -1063,12 +1027,7 @@ void write_layer_weights() {
     auto weights = calculate_global_layer_weights();
 
     if (mpi_rank == 0) {
-        string file_name;
-        char file_num_pchar[20];
-        
-        file_name = data_folder+"/weights";
-        sprintf(file_num_pchar,"%g",int([](ddi* a) {double b=a->f*a->output_period; if(a->prev!=0) b+=(a->prev)->t_end; return b;} (p_current_ddi)/2/PI*file_name_accuracy)/file_name_accuracy);
-        file_name = file_name + file_num_pchar;
+        const std::string file_name = data_folder + "/weights" + output_iterations.get_current_iteration_string();
 
         ofstream fout_weights(file_name.c_str(), ios_base::out);
 
@@ -2272,7 +2231,6 @@ int main(int argc, char * argv[])
 
     nx_ich = 8;
     nm = nx_ich/2;
-    file_name_accuracy = 100;
 
     if (init()==1) {
         MPI_Abort(MPI_COMM_WORLD, 1);
@@ -2340,8 +2298,6 @@ int main(int argc, char * argv[])
         fout_log<<"fill arrays: "<<seconds<<"s"<<endl;
     }
 
-    l=0;
-
     ofstream fout_N;
     ofstream fout_energy;
     ofstream fout_energy_deleted;
@@ -2359,7 +2315,8 @@ int main(int argc, char * argv[])
         }
     }
 
-    while(l<p_last_ddi->t_end/dt)
+    int last_iteration = output_iterations.get_last_iteration();
+    for (l = 0; l <= last_iteration; l++)
     {
         if (pmerging_now)
             psr->pmerging(ppd,pmerging);
@@ -2384,7 +2341,8 @@ int main(int argc, char * argv[])
         /* вывод плотности, спектра и 'phasespace'-данных для фотонов,
            электронов и позитронов в файлы */
 
-        if(l*dt >= [](ddi* a) {double b=a->f*a->output_period; if(a->prev!=0) b+=(a->prev)->t_end; return b;} (p_current_ddi))
+        bool is_output = (l == output_iterations.get_current_iteration());
+        if (is_output)
         {
             if (write_jx || write_jy || write_jz) {
                 write_density(write_jx, write_jy, write_jz, "jx", "jy", "jz", false, true);
@@ -2453,7 +2411,7 @@ int main(int argc, char * argv[])
 
 
         // вывод данных в файлы (продолжение)
-        if(l*dt>=[](ddi* a) {double b=a->f*a->output_period; if(a->prev!=0) b+=(a->prev)->t_end; return b;} (p_current_ddi))
+        if (is_output)
         {
             if (verbose_logging)
             {
@@ -2461,7 +2419,7 @@ int main(int argc, char * argv[])
             }
             
             if (mpi_rank == 0) {
-                cout<<"output# "<<"\033[1m"<<int([](ddi* a) {double b=a->f*a->output_period; if(a->prev!=0) b+=(a->prev)->t_end; return b;} (p_current_ddi)/2/PI*file_name_accuracy)/file_name_accuracy<<TERM_NO_COLOR<<flush;
+                cout<<"output# "<< TERM_BOLD << output_iterations.get_current_iteration_string() << TERM_NO_COLOR << flush;
             }
 
             write_fields(); // Ex..Ez, Bx..Bz, w (field energy density), inv (E^2-B^2 - relativistic invariant)
@@ -2469,15 +2427,8 @@ int main(int argc, char * argv[])
             if (mpi_rank == 0) {
                 cout<<"\t"<<"up: "<<(times(&tms_struct)-start_time)/100.0<<" s"<<endl;
             }
-            p_current_ddi->f++;
+            output_iterations.advance();
         }
-
-        if (l*dt>=p_current_ddi->t_end)
-        {
-            p_current_ddi = p_current_ddi->next;
-        }
-
-        l++;
     }
 
     delete[] icmr;
@@ -2496,13 +2447,6 @@ int main(int argc, char * argv[])
         }
     }
 
-    while(p_last_ddi!=0)
-    {
-        ddi* tmp = p_last_ddi->prev;
-        delete p_last_ddi;
-        p_last_ddi = tmp;
-    }
-
     if (mpi_rank == 0) {
         inaccurate_time = time(NULL);
         fout_log<<"stop time: "<<ctime(&inaccurate_time);
@@ -2511,7 +2455,7 @@ int main(int argc, char * argv[])
         fout_log<<"uptime: "<<seconds<<"s"<<endl;
         fout_log.close();
 
-        cout<<"\n\033[1mbye!\033[0m\n"<<endl;
+        cout << TERM_BOLD << "bye!" << TERM_NO_COLOR << endl;
     }
 
     MPI_Finalize();
@@ -2519,12 +2463,19 @@ int main(int argc, char * argv[])
 }
 
 double convert_units(double value, string initial_units, string desired_units) {
+    if (initial_units == desired_units) {
+        return value;
+    }
+
     if (desired_units == "1/k") {
         if (initial_units == "um") {
             value *= 2 * PI * 1e-4 / lambda;
+        } else if (initial_units == "mm") {
+            value *= 2 * PI * 0.1 / lambda;
+        } else if (initial_units == "cm") {
+            value *= 2 * PI / lambda;
         } else if (initial_units == "lambda") {
             value *= 2 * PI;
-        } else if (initial_units == "1/k") {
         } else {
             cout << TERM_RED << "Unknown units: " << initial_units << " for conversion to " << desired_units
                     << TERM_NO_COLOR << endl;
@@ -2539,10 +2490,14 @@ double convert_units(double value, string initial_units, string desired_units) {
     return value;
 }
 
-vector<double> find_array(var * element, string name, string desired_units, string default_units = "",
-        vector<double> default_array = { }) {
+std::string get_units(const var * element, const std::string & default_units = "") { 
+    return element->units == "#" ? default_units : element->units;
+}
+
+vector<double> find_array(var * element, const string & name, const string & desired_units,
+        const string & default_units = "", vector<double> default_array = { }) {
     var * current = find(name, element);
-    string units = current->units == "#" ? default_units : current->units;
+    const std::string units = get_units(current, default_units);
 
     if (!current->input_array.empty()) {
         vector<double> array = current->input_array;
@@ -2555,7 +2510,7 @@ vector<double> find_array(var * element, string name, string desired_units, stri
     }
 }
 
-bool find_boolean(var * element, string name, bool default_value) {
+bool find_boolean(var * element, const string & name, bool default_value) {
     var * current = find(name, element);
     if (current->units == "on" || current->units == "true") {
         return true;
@@ -2570,12 +2525,24 @@ bool find_boolean(var * element, string name, bool default_value) {
     }
 }
 
-double find_double(var * element, string name, double default_value) {
+double find_double(var * element, const string & name, double default_value = 0.0) {
     var * current = find(name, element);
     if (current->value == 0) {
         return default_value;
     } else {
         return current->value;
+    }
+}
+
+double find_double(var * element, const string & name, const string & desired_units, string default_units = "",
+        double default_value = 0.0) {
+    var * current = find(name, element);
+    string units = current->units == "#" ? default_units : current->units;
+
+    if (current->value == 0) {
+        return default_value;
+    } else {
+        return convert_units(current->value, units, desired_units);
     }
 }
 
@@ -2602,7 +2569,6 @@ int init()
         current->next = new var;
         current = current->next;
     }
-
     //
     current = find("dx",first);
     dx = current->value*2*PI; // from lambda to c/\omega
@@ -2675,59 +2641,26 @@ int init()
         current->units="lambda";
     }
     zlength = current->value*2*PI;
+
     var* tmp_last_t_end = first;
-    p_last_ddi = 0;
+    std::vector<double> output_period{};
+    std::vector<double> t_end{};
     do {
-        double t_end;
-        double output_period;
         current = find("t_end",tmp_last_t_end);
+        double current_t_end = convert_units(current->value, get_units(current, "lambda"), "1/k");
         tmp_last_t_end = current->next;
-        if (current->units=="um")
-        {
-            current->value = current->value*1e-4/lambda;
-            current->units="lambda";
+        double current_output_period;
+        current = find("output_period", tmp_last_t_end);
+        if (current->units == "t_end") {
+            current_output_period = current->value * current_t_end;
+        } else {
+            current_output_period = convert_units(current->value, get_units(current, "lambda"), "1/k");
         }
-        if (current->units=="mm")
-        {
-            current->value = current->value/10/lambda;
-            current->units="lambda";
-        }
-        if (current->units=="cm")
-        {
-            current->value = current->value/lambda;
-            current->units="lambda";
-        }
-        t_end = current->value*2*PI + dt;
-        current = find("output_period",tmp_last_t_end);
-        if (current->units=="um")
-        {
-            current->value = current->value*1e-4/lambda;
-            current->units="lambda";
-        }
-        if (current->units=="mm")
-        {
-            current->value = current->value/10/lambda;
-            current->units="lambda";
-        }
-        if (current->units=="cm")
-        {
-            current->value = current->value/lambda;
-            current->units="lambda";
-        }
-        if (current->units=="t_end") {
-            current-> value = current->value*(t_end-dt)/2/PI;
-        }
-        output_period = current->value*2*PI;
-        p_current_ddi = p_last_ddi;
-        p_last_ddi = new ddi;
-        if (p_current_ddi!=0)
-            p_current_ddi->next = p_last_ddi;
-        p_last_ddi->next = 0;
-        p_last_ddi->prev = p_current_ddi;
-        p_last_ddi->t_end = t_end;
-        p_last_ddi->output_period = output_period;
-        p_last_ddi->f = 0;
-    } while(find("t_end",tmp_last_t_end)->value!=0);
+        t_end.push_back(current_t_end);
+        output_period.push_back(current_output_period);
+    } while (find("t_end",tmp_last_t_end)->value != 0);
+    output_iterations = OutputIterations(t_end, output_period, dt);
+
     //
     current = find("t_add_mw", first);
     if (current->units == "um") {
@@ -2743,7 +2676,7 @@ int init()
     if (current->value != 0) {
         t_add_mw = current->value * 2 * PI;
     } else {
-        t_add_mw = p_last_ddi->t_end;
+        t_add_mw = output_iterations.get_last_iteration_time();
     }
     //
     current = find("xsigma",first);
@@ -3675,12 +3608,6 @@ int init()
     }
     delete current; // удаление последней переменной
 
-    ddi* tmp_ddi = p_last_ddi;
-    while (tmp_ddi != 0) {
-        p_current_ddi = tmp_ddi; // hence after the loop p_current_ddi points to the first ddi
-        tmp_ddi = tmp_ddi->prev;
-    }
-
     if (mpi_rank == 0) {
         ofstream fout_log(data_folder+"/log");
         fout_log<<"dx\n"<<dx/2/PI<<"\n";
@@ -3693,11 +3620,10 @@ int init()
         fout_log<<"lambda\n"<<lambda<<"\n";
         fout_log<<"ne\n"<<ne<<"\n";
 
-        ddi* tmp_ddi = p_last_ddi;
-        while (tmp_ddi!=0) {
-            fout_log<<"t_end\n"<<tmp_ddi->t_end/2/PI<<"\n";
-            fout_log<<"output_period\n"<<tmp_ddi->output_period/2/PI<<"\n";
-            tmp_ddi = tmp_ddi->prev;
+        const int size = t_end.size();
+        for (int i = size-1; i >= 0; i--) {
+            fout_log<<"t_end\n"<<t_end[i]/2/PI<<"\n";
+            fout_log<<"output_period\n"<<output_period[i]/2/PI<<"\n";
         }
         fout_log << "t_add_mw\n" << t_add_mw / (2 * PI) << '\n';
         fout_log<<"xsigma\n"<<xsigma/2/PI<<"\n";
@@ -3852,7 +3778,7 @@ int init()
         fout_log<<"xsigma = "<<xsigma/2/PI*lambda*1e4<<" um = c*"<<xsigma/2/PI*lambda/2.99792458e10*1e15<<" fs\n";
         fout_log<<"ysigma = "<<ysigma/2/PI*lambda*1e4<<" um\n";
         fout_log<<"zsigma = "<<zsigma/2/PI*lambda*1e4<<" um\n";
-        fout_log<<"last_t_end = "<<p_last_ddi->t_end/2/PI*lambda*10<<" mm\n";
+        fout_log<<"last_t_end = "<<output_iterations.get_last_iteration_time()/2/PI*lambda*10<<" mm\n";
         fout_log<<"n_cr = "<<PI/(2.818e-13*lambda*lambda)<<" cm^{-3}\n";
         fout_log<<"ne/n_cr = "<<ne/(PI/(2.818e-13*lambda*lambda))<<"\n";
         fout_log<<"#------------------------------\n";
