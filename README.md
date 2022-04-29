@@ -11,6 +11,8 @@ The code is able to model the following processes using the Monte Carlo techniqu
 The Maxwell solvers implemented in the code are FDTD, NDFX (the scheme used in A. Pukhov's VLPL code), and hybrid five-point FDTD (the scheme reduces numerical Cherenkov instability).
 The particles pushers implemented in the code use Vay or Boris scheme.
 
+Full documentation is available at https://quill-pic.github.io/Quill/
+
 # Dependencies
 
 In order to build and run Quill, the following dependencies are required:
@@ -40,12 +42,12 @@ cmake .. -DQUILL_ENABLE_QED=OFF
 
 # Input files
 
-Example input files can be found in the `conf/examples` folder.
+Example input files can be found in the `conf/example` folder.
 All possible parameters in the input file are described in the `quill.conf.example` file.
 
 # Run
 
-To run Quill, use the `run.sh` script from the `quill3d` folder and pass the name of the input file as a parameter.
+To run Quill, use the `run.sh` script from the root folder and pass the name of the input file as a parameter.
 For example,
 ```
 ./run.sh /home/user/my-problem
